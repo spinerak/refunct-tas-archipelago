@@ -432,12 +432,13 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     log!("{}", msg);
                     STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
 
-                    // Print each received network item on its own line as requested.
+                    //loop through received items
                     for net in &received.items {
                         let id = (net.item as i32) - 10;
-                        let line = format!("!!! The following item is received: Trigger Cluster #{}", id);
+                        let line = format!("APAPAP Trigger Cluster #{} in-game", id - 10000000);
                         log!("{}", line);
                         STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(line)).unwrap();
+                        // we want to trigger cluster id-10000000 in-game here
                     }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::LocationInfo(info))) => {
