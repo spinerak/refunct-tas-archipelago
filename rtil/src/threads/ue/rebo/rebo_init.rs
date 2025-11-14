@@ -1,24 +1,29 @@
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{ErrorKind, Write};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
+use archipelago_rs::protocol::ServerMessage;
 use crossbeam_channel::{Sender, TryRecvError};
-use clipboard::{ClipboardProvider, ClipboardContext};
 use image::Rgba;
-use rebo::{ExecError, ReboConfig, Stdlib, VmContext, Output, Value, DisplayValue, IncludeDirectoryConfig, Map};
+use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span, Stdlib, Value, VmContext};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use websocket::{ClientBuilder, Message, OwnedMessage, WebSocketError};
-use crate::native::{AMyCharacter, AMyHud, FApp, LevelState, ObjectWrapper, UWorld, UGameplayStatics, UTexture2D, EBlendMode, LEVELS, ActorWrapper, LevelWrapper, KismetSystemLibrary, FSlateApplication, unhook_fslateapplication_onkeydown, hook_fslateapplication_onkeydown, unhook_fslateapplication_onkeyup, hook_fslateapplication_onkeyup, unhook_fslateapplication_onrawmousemove, hook_fslateapplication_onrawmousemove, UMyGameInstance, ue::FVector, character::USceneComponent, UeScope, try_find_element_index, UObject, Level, ObjectIndex, UeObjectWrapperType, AActor};
+use crate::native::{character::USceneComponent, try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
 use protocol::{Request, Response};
-use crate::threads::{ReboToStream, StreamToRebo};
-use super::STATE;
+use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo};
+use super::{STATE, livesplit::{Game, NewGameGlitch, SplitsSaveError, SplitsLoadError}};
 use serde::{Serialize, Deserialize};
 use crate::threads::ue::{Suspend, UeEvent, rebo::YIELDER};
-use crate::native::{ElementIndex, ElementType, ue::FRotator, UEngine, TimeOfDay};
+use crate::native::{ElementIndex, ElementType, ue::{FRotator, FLinearColor}, UEngine, TimeOfDay, UWidgetBlueprintLibrary};
 use opener;
+use chrono::{DateTime, Local};
+use crate::threads::ue::rebo::livesplit;
+use crate::threads::ue::iced_ui::Clipboard;
+use crate::threads::ue::iced_ui::rebo_elements::{IcedButton, IcedColumn, IcedElement, IcedRow, IcedText, IcedWindow};
 
 pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
     let mut cfg = ReboConfig::new()
@@ -60,11 +65,15 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_movement_mode)
         .add_function(get_max_fly_speed)
         .add_function(set_max_fly_speed)
+        .add_function(get_max_walk_speed)
+        .add_function(get_base_speed)
+        .add_function(get_max_bonus_speed)
         .add_function(get_level_state)
         .add_function(restart_game)
         .add_function(wait_for_new_game)
         .add_function(draw_line)
         .add_function(draw_text)
+        .add_function(draw_rect)
         .add_function(draw_minimap)
         .add_function(set_minimap_alpha)
         .add_function(draw_player_minimap)
@@ -84,6 +93,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(move_on_server)
         .add_function(press_platform_on_server)
         .add_function(press_button_on_server)
+        .add_function(archipelago_connect)
+        .add_function(archipelago_disconnect)
         .add_function(new_game_pressed)
         .add_function(get_level)
         .add_function(set_level)
@@ -113,6 +124,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(disable_collision)
         .add_function(exit_water)
         .add_function(open_maps_folder)
+        .add_function(open_recordings_folder)
         .add_function(set_lighting_casts_shadows)
         .add_function(set_sky_light_enabled)
         .add_function(set_time_dilation)
@@ -133,6 +145,46 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_kill_z)
         .add_function(set_gamma)
         .add_function(set_screen_percentage)
+        .add_function(set_reticle_width)
+        .add_function(set_reticle_height)
+        .add_function(get_camera_mode)
+        .add_function(set_camera_mode)
+        .add_function(livesplit::livesplit_start)
+        .add_function(livesplit::livesplit_split)
+        .add_function(livesplit::livesplit_reset)
+        .add_function(livesplit::livesplit_get_game_time)
+        .add_function(livesplit::livesplit_set_game_time)
+        .add_function(livesplit::livesplit_pause_game_time)
+        .add_function(livesplit::livesplit_create_segment)
+        .add_function(livesplit::livesplit_get_game_name)
+        .add_function(livesplit::livesplit_set_game_info)
+        .add_function(livesplit::livesplit_get_category_name)
+        .add_function(livesplit::livesplit_get_segments)
+        .add_function(livesplit::livesplit_get_attempt_count)
+        .add_function(livesplit::livesplit_save_splits)
+        .add_function(livesplit::livesplit_load_splits)
+        .add_function(livesplit::livesplit_get_color)
+        .add_function(livesplit::livesplit_set_color)
+        .add_function(livesplit::livesplit_get_total_playtime)
+        .add_function(livesplit::livesplit_get_total_playtime_digits_format)
+        .add_function(livesplit::livesplit_set_total_playtime_digits_format)
+        .add_function(livesplit::livesplit_get_total_playtime_accuracy)
+        .add_function(livesplit::livesplit_set_total_playtime_accuracy)
+        .add_function(livesplit::livesplit_get_sum_of_best_segments)
+        .add_function(livesplit::livesplit_get_sum_of_best_digits_format)
+        .add_function(livesplit::livesplit_set_sum_of_best_digits_format)
+        .add_function(livesplit::livesplit_get_sum_of_best_accuracy)
+        .add_function(livesplit::livesplit_set_sum_of_best_accuracy)
+        .add_function(livesplit::livesplit_get_current_pace)
+        .add_function(livesplit::livesplit_get_current_pace_digits_format)
+        .add_function(livesplit::livesplit_set_current_pace_digits_format)
+        .add_function(livesplit::livesplit_get_current_pace_accuracy)
+        .add_function(livesplit::livesplit_set_current_pace_accuracy)
+        .add_function(livesplit::get_pb_chance)
+        .add_function(set_game_rendering_enabled)
+        .add_function(set_input_mode_game_only)
+        .add_function(set_input_mode_ui_only)
+        .add_function(flush_pressed_keys)
         .add_external_type(Location)
         .add_external_type(Rotation)
         .add_external_type(Velocity)
@@ -156,6 +208,21 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_external_type(ElementIndex)
         .add_external_type(Bounds)
         .add_external_type(TimeOfDay)
+        .add_external_type(Game)
+        .add_external_type(Segment)
+        .add_external_type(NewGameGlitch)
+        .add_external_type(SplitsSaveError)
+        .add_external_type(SplitsLoadError)
+        .add_external_type(livesplit::DigitsFormat)
+        .add_external_type(livesplit::Accuracy)
+        .add_external_type(livesplit::Comparison)
+        .add_external_type(livesplit::LiveSplitLayoutColor)
+        .add_external_type(IcedWindow)
+        .add_external_type(IcedElement)
+        .add_external_type(IcedButton)
+        .add_external_type(IcedText)
+        .add_external_type(IcedRow)
+        .add_external_type(IcedColumn)
         .add_required_rebo_function(element_pressed)
         .add_required_rebo_function(element_released)
         .add_required_rebo_function(on_key_down)
@@ -170,12 +237,13 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(player_pressed_new_game)
         .add_required_rebo_function(start_new_game_at)
         .add_required_rebo_function(disconnected)
+        .add_required_rebo_function(archipelago_disconnected)
         .add_required_rebo_function(on_level_state_change)
         .add_required_rebo_function(on_resolution_change)
         .add_required_rebo_function(on_menu_open)
     ;
     if let Some(working_dir) = &STATE.lock().unwrap().as_ref().unwrap().working_dir {
-        cfg = cfg.include_directory(IncludeDirectoryConfig::Path(PathBuf::from(working_dir)));
+        cfg = cfg.include_config(IncludeConfig::InDirectory(PathBuf::from(working_dir)));
     }
     cfg
 }
@@ -198,8 +266,16 @@ pub enum Disconnected {
     RoomNameTooLong,
 }
 
+#[derive(rebo::ExternalType)]
+pub struct Segment {
+    pub name: String,
+    pub time: f64,
+    pub pb_time: f64,
+    pub best_time: f64,
+}
+
 /// Check internal state and channels to see if we should stop.
-fn interrupt_function<'a, 'i>(_vm: &mut VmContext<'a, '_, '_, 'i>) -> Result<(), ExecError<'a, 'i>> {
+fn interrupt_function<'i>(_vm: &mut VmContext<'i, '_, '_>) -> Result<(), ExecError<'i>> {
     loop {
         let result = STATE.lock().unwrap().as_ref().unwrap().stream_rebo_rx.try_recv();
         match result {
@@ -240,13 +316,13 @@ fn print(..: _) {
 
 #[rebo::function(raw("Tas::step"))]
 fn step() -> Step {
-    step_internal(vm, Suspend::Return)?
+    step_internal(vm, expr_span, Suspend::Return)?
 }
-#[rebo::function(raw("Tas::yield"))]
+#[rebo::function(raw("Tas::yield_"))]
 fn step_yield() -> Step {
-    step_internal(vm, Suspend::Yield)?
+    step_internal(vm, expr_span, Suspend::Yield)?
 }
-fn step_internal<'a, 'i>(vm: &mut VmContext<'a, '_, '_, 'i>, suspend: Suspend) -> Result<Step, ExecError<'a, 'i>> {
+fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: Suspend) -> Result<Step, ExecError<'i>> {
     // get level state before and after we advance the UE frame to see changes created by Refunct itself
     let old_level_state = LevelState::get();
 
@@ -264,11 +340,43 @@ fn step_internal<'a, 'i>(vm: &mut VmContext<'a, '_, '_, 'i>, suspend: Suspend) -
             UeEvent::ElementReleased(index) => element_released(vm, index)?,
             UeEvent::NothingHappened => to_be_returned = Some(Step::Yield),
             UeEvent::NewGame => to_be_returned = Some(Step::NewGame),
-            UeEvent::KeyDown(key, char, repeat) => on_key_down(vm, key, char, repeat)?,
-            UeEvent::KeyUp(key, char, repeat) => on_key_up(vm, key, char, repeat)?,
-            UeEvent::MouseMove(x, y) => on_mouse_move(vm, x, y)?,
-            UeEvent::DrawHud => draw_hud(vm)?,
-            UeEvent::ApplyResolutionSettings => on_resolution_change(vm)?,
+            UeEvent::KeyDown(key, repeat) => {
+                let key = STATE.lock().unwrap().as_mut().unwrap().ui.key_pressed(key);
+                on_key_down(vm, key.raw_key_code, key.raw_character_code, repeat)?
+            },
+            UeEvent::KeyUp(key, repeat) => {
+                let key = STATE.lock().unwrap().as_mut().unwrap().ui.key_released(key);
+                on_key_up(vm, key.raw_key_code, key.raw_character_code, repeat)?
+            },
+            UeEvent::MouseMove(x, y) => {
+                let (absx, absy) = AMyCharacter::get_mouse_position();
+                STATE.lock().unwrap().as_mut().unwrap().ui.mouse_moved(absx as u32, absy as u32);
+                on_mouse_move(vm, x, y)?
+            },
+            UeEvent::MouseButtonDown(button) => {
+                STATE.lock().unwrap().as_mut().unwrap().ui.mouse_button_pressed(button.to_iced_button());
+            },
+            UeEvent::MouseButtonUp(button) => {
+                STATE.lock().unwrap().as_mut().unwrap().ui.mouse_button_released(button.to_iced_button());
+            },
+            UeEvent::MouseWheel(delta) => {
+                STATE.lock().unwrap().as_mut().unwrap().ui.mouse_wheel(delta);
+            },
+            UeEvent::DrawHud => {
+                // handle events
+                loop {
+                    let Some(function) = STATE.lock().unwrap().as_mut().unwrap().ui.next_ui_event() else { break };
+                    vm.call_bound_function(function, expr_span)?;
+                }
+
+                // draw old UI
+                draw_hud(vm)?
+            },
+            UeEvent::ApplyResolutionSettings => {
+                let (width, height) = AMyCharacter::get_player().get_viewport_size();
+                STATE.lock().unwrap().as_mut().unwrap().ui.resize(width.try_into().unwrap(), height.try_into().unwrap());
+                on_resolution_change(vm)?
+            },
             UeEvent::AddToScreen => on_menu_open(vm)?,
         }
 
@@ -294,6 +402,89 @@ fn step_internal<'a, 'i>(vm: &mut VmContext<'a, '_, '_, 'i>, suspend: Suspend) -
                 Response::RoomNameTooLong => {
                     disconnected(vm, Disconnected::RoomNameTooLong)?;
                 }
+            }
+        }
+
+        // check archipelago
+        loop {
+            let res = STATE.lock().unwrap().as_mut().unwrap().archipelago_rebo_rx.try_recv();
+            match res {
+                Err(TryRecvError::Empty) => break,
+                Err(TryRecvError::Disconnected) => panic!("archipelago_rebo_rx became disconnected"),
+                Ok(ArchipelagoToRebo::ConnectionAborted) => archipelago_disconnected(vm)?,
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::RoomInfo(info))) => {
+                    let msg = format!("Archipelago ServerMessage::RoomInfo: {:?}", info);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::ConnectionRefused(info))) => {
+                    let msg = format!("Archipelago ServerMessage::ConnectionRefused: {:?}", info);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::Connected(info))) => {
+                    let msg = format!("Archipelago ServerMessage::Connected: {:?}", info);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::ReceivedItems(received))) => {
+                    let msg = format!("Archipelago ServerMessage::ReceivedItems: {:?}", received);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+
+                    // Print each received network item on its own line as requested.
+                    for net in &received.items {
+                        let id = (net.item as i32) - 10;
+                        let line = format!("!!! The following item is received: Trigger Cluster #{}", id);
+                        log!("{}", line);
+                        STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(line)).unwrap();
+                    }
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::LocationInfo(info))) => {
+                    let msg = format!("Archipelago ServerMessage::LocationInfo: {:?}", info);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::RoomUpdate(info))) => {
+                    let msg = format!("Archipelago ServerMessage::RoomUpdate: {:?}", info);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::Print(text))) => {
+                    let msg = format!("Archipelago ServerMessage::Print: {:?}", text);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::PrintJSON(json))) => {
+                    let msg = format!("Archipelago ServerMessage::PrintJSON: {:?}", json);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::DataPackage(pkg))) => {
+                    let msg = format!("Archipelago ServerMessage::DataPackage: {:?}", pkg);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::Bounced(info))) => {
+                    let msg = format!("Archipelago ServerMessage::Bounced: {:?}", info);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::InvalidPacket(pkt))) => {
+                    let msg = format!("Archipelago ServerMessage::InvalidPacket: {:?}", pkt);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::Retrieved(info))) => {
+                    let msg = format!("Archipelago ServerMessage::Retrieved: {:?}", info);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::SetReply(reply))) => {
+                    let msg = format!("Archipelago ServerMessage::SetReply: {:?}", reply);
+                    log!("{}", msg);
+                    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+                },
             }
         }
 
@@ -327,6 +518,7 @@ extern "rebo" {
     fn player_pressed_new_game(id: u32);
     fn start_new_game_at(timestamp: u64);
     fn disconnected(reason: Disconnected);
+    fn archipelago_disconnected();
     fn on_level_state_change(old: LevelState, new: LevelState);
     fn on_resolution_change();
     fn on_menu_open();
@@ -340,7 +532,7 @@ fn config_path() -> PathBuf {
     }
     cfg_dir
 }
-fn data_path() -> PathBuf {
+pub(super) fn data_path() -> PathBuf {
     let cfg_dir = dirs::data_dir().unwrap()
         .join("refunct-tas");
     if !cfg_dir.is_dir() {
@@ -360,12 +552,27 @@ fn load_settings() -> Option<Map<String, String>> {
 fn store_settings(settings: Map<String, String>) {
     let path = config_path().join("settings.json");
     let mut file = File::create(path).unwrap();
-    let map = settings.clone_btreemap();
+    let map: HashMap<_, _> = settings.clone_map();
     serde_json::to_writer_pretty(&mut file, &map).unwrap();
     writeln!(file).unwrap();
 }
 
-#[derive(rebo::ExternalType, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
+struct Recording {
+    version: i32,
+    author: String,
+    steam_id: u64,
+    filename: String,
+    frame_count: i64,
+    recording_start_timestamp: DateTime<Local>,
+    recording_end_timestamp: DateTime<Local>,
+    recording_save_timestamp: DateTime<Local>,
+    base_speed: f32,
+    max_walk_speed: f32,
+    max_bonus_speed: f32,
+    frames: Vec<RecordFrame>,
+}
+#[derive(rebo::ExternalType, Serialize, Deserialize, Clone)]
 struct RecordFrame {
     delta: f64,
     events: Vec<InputEvent>,
@@ -374,7 +581,7 @@ struct RecordFrame {
     velocity: Velocity,
     acceleration: Acceleration,
 }
-#[derive(rebo::ExternalType, Serialize, Deserialize)]
+#[derive(rebo::ExternalType, Serialize, Deserialize, Clone)]
 enum InputEvent {
     KeyPressed(i32),
     KeyReleased(i32),
@@ -398,7 +605,21 @@ fn list_recordings() -> Vec<String> {
         }).collect()
 }
 #[rebo::function("Tas::save_recording")]
-fn save_recording(filename: String, recording: Vec<RecordFrame>) {
+fn save_recording(filename: String, frames: Vec<RecordFrame>, recording_start_timestamp: u64, recording_end_timestamp: u64) {
+    let recording = Recording {
+        version: 1,
+        author: AMyCharacter::get_player().get_player_name(),
+        steam_id: AMyCharacter::get_player().get_steamid(),
+        filename: filename.clone(),
+        frame_count: frames.len() as i64,
+        recording_start_timestamp: DateTime::from_timestamp_millis(recording_start_timestamp as i64).unwrap().into(),
+        recording_end_timestamp: DateTime::from_timestamp_millis(recording_end_timestamp as i64).unwrap().into(),
+        recording_save_timestamp: Local::now(),
+        base_speed: AMyCharacter::get_base_speed(),
+        max_walk_speed: AMyCharacter::get_max_walk_speed(),
+        max_bonus_speed: AMyCharacter::get_max_bonus_speed(),
+        frames,
+    };
     let filename = sanitize_filename::sanitize(filename);
     let path = recording_path().join(filename);
     let file = File::create(path).unwrap();
@@ -409,8 +630,8 @@ fn load_recording(filename: String) -> Vec<RecordFrame> {
     let filename = sanitize_filename::sanitize(filename);
     let path = recording_path().join(filename);
     let content = std::fs::read_to_string(path).unwrap();
-    let res = serde_json::from_str(&content).unwrap();
-    res
+    let res: Recording = serde_json::from_str(&content).unwrap();
+    res.frames
 }
 #[rebo::function("Tas::remove_recording")]
 fn remove_recording(filename: String) -> bool {
@@ -424,27 +645,20 @@ fn key_down(key_code: i32, character_code: u32, is_repeat: bool) {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
     state.pressed_keys.insert(key_code);
-    // we don't want to trigger our keyevent handler for emulated presses
-    unhook_fslateapplication_onkeydown();
-    FSlateApplication::press_key(key_code, character_code, is_repeat);
-    hook_fslateapplication_onkeydown();
+    state.hooks.fslateapplication.press_key(key_code, character_code, is_repeat);
 }
 #[rebo::function("Tas::key_up")]
 fn key_up(key_code: i32, character_code: u32, is_repeat: bool) {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
     state.pressed_keys.remove(&key_code);
-    // we don't want to trigger our keyevent handler for emulated presses
-    unhook_fslateapplication_onkeyup();
-    FSlateApplication::release_key(key_code, character_code, is_repeat);
-    hook_fslateapplication_onkeyup();
+    state.hooks.fslateapplication.release_key(key_code, character_code, is_repeat)
 }
 #[rebo::function("Tas::move_mouse")]
 fn move_mouse(x: i32, y: i32) {
-    // we don't want to trigger our mouseevent handler for emulated mouse movements
-    unhook_fslateapplication_onrawmousemove();
-    FSlateApplication::move_mouse(x, y);
-    hook_fslateapplication_onrawmousemove();
+    let mut state = STATE.lock().unwrap();
+    let state = state.as_mut().unwrap();
+    state.hooks.fslateapplication.move_mouse(x, y);
 }
 #[rebo::function("Tas::get_last_frame_delta")]
 fn get_last_frame_delta() -> f64 {
@@ -546,6 +760,18 @@ fn get_max_fly_speed() -> f32 {
 fn set_max_fly_speed(speed: f32) {
     AMyCharacter::get_player().set_max_fly_speed(speed);
 }
+#[rebo::function("Tas::get_max_walk_speed")]
+fn get_max_walk_speed() -> f32 {
+    AMyCharacter::get_max_walk_speed()
+}
+#[rebo::function("Tas::get_base_speed")]
+fn get_base_speed() -> f32 {
+    AMyCharacter::get_base_speed()
+}
+#[rebo::function("Tas::get_max_bonus_speed")]
+fn get_max_bonus_speed() -> f32 {
+    AMyCharacter::get_max_bonus_speed()
+}
 #[rebo::function("Tas::get_level_state")]
 fn get_level_state() -> LevelState {
     LevelState::get()
@@ -557,7 +783,7 @@ fn restart_game() {
 #[rebo::function(raw("Tas::wait_for_new_game"))]
 fn wait_for_new_game() {
     loop {
-        match step_internal(vm, Suspend::Return)? {
+        match step_internal(vm, expr_span, Suspend::Return)? {
             Step::Tick => continue,
             Step::NewGame => break,
             Step::Yield => unreachable!("step_internal(StepKind::Step) returned Yield"),
@@ -574,11 +800,11 @@ struct Line {
     thickness: f32,
 }
 #[derive(Debug, Clone, Copy, rebo::ExternalType)]
-struct Color {
-    red: f32,
-    green: f32,
-    blue: f32,
-    alpha: f32,
+pub struct Color {
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32,
+    pub alpha: f32,
 }
 #[rebo::function("Tas::draw_line")]
 fn draw_line(line: Line) {
@@ -598,6 +824,11 @@ struct DrawText {
 fn draw_text(text: DrawText) {
     let color = (text.color.red, text.color.green, text.color.blue, text.color.alpha);
     AMyHud::draw_text(text.text, color, text.x, text.y, text.scale, text.scale_position);
+}
+#[rebo::function("Tas::draw_rect")]
+fn draw_rect(color: Color, x: f32, y: f32, width: f32, height: f32) {
+    let color = FLinearColor { red: color.red, green: color.green, blue: color.blue, alpha: color.alpha };
+    AMyHud::draw_rect(color, x, y, width, height);
 }
 #[rebo::function("Tas::draw_minimap")]
 fn draw_minimap(x: f32, y: f32, scale: f32, scale_position: bool) {
@@ -725,6 +956,10 @@ fn pawn_location(pawn_id: u32) -> Location {
     let (x, y, z) = my_character.location();
     Location { x, y, z }
 }
+
+
+// SERVER / WEBSOCKET
+
 #[derive(rebo::ExternalType)]
 enum Server {
     Localhost,
@@ -791,7 +1026,7 @@ fn disconnect_from_server() {
     STATE.lock().unwrap().as_mut().unwrap().websocket.take();
     disconnected(vm, Disconnected::ManualDisconnect)?;
 }
-fn send_to_server<'a, 'i>(vm: &mut VmContext<'a, '_, '_, 'i>, desc: &str, request: Request) -> Result<(), ExecError<'a, 'i>> {
+fn send_to_server<'i>(vm: &mut VmContext<'i, '_, '_>, desc: &str, request: Request) -> Result<(), ExecError<'i>> {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
     if state.websocket.is_none() {
@@ -808,16 +1043,16 @@ fn send_to_server<'a, 'i>(vm: &mut VmContext<'a, '_, '_, 'i>, desc: &str, reques
     }
     Ok(())
 }
-enum ReceiveError<'a, 'i> {
-    ExecError(ExecError<'a, 'i>),
+enum ReceiveError<'i> {
+    ExecError(ExecError<'i>),
     Error,
 }
-impl<'a, 'i> From<ExecError<'a, 'i>> for ReceiveError<'a, 'i> {
-    fn from(e: ExecError<'a, 'i>) -> Self {
+impl<'i> From<ExecError<'i>> for ReceiveError<'i> {
+    fn from(e: ExecError<'i>) -> Self {
         ReceiveError::ExecError(e)
     }
 }
-fn receive_from_server<'a, 'i>(vm: &mut VmContext<'a, '_, '_, 'i>, nonblocking: bool) -> Result<Response, ReceiveError<'a, 'i>> {
+fn receive_from_server<'i>(vm: &mut VmContext<'i, '_, '_>, nonblocking: bool) -> Result<Response, ReceiveError<'i>> {
     if STATE.lock().unwrap().as_ref().unwrap().websocket.is_none() {
         return Err(ReceiveError::Error);
     }
@@ -866,6 +1101,23 @@ fn press_button_on_server(button_id: u8) {
 fn new_game_pressed() {
     send_to_server(vm, "new game pressed", Request::NewGamePressed)?;
 }
+
+// ARCHIPELAGO
+
+#[rebo::function(raw("Tas::archipelago_connect"))]
+fn archipelago_connect(server_and_port: String, game: String, slot: String, password: Option<String>) {
+    STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(ReboToArchipelago::Connect {
+        server_and_port, game, slot, password,
+        items_handling: Some(7),
+        tags: vec![],
+    }).unwrap();
+}
+#[rebo::function(raw("Tas::archipelago_disconnect"))]
+fn archipelago_disconnect() {
+    STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(ReboToArchipelago::Disconnect).unwrap();
+}
+
+
 #[rebo::function("Tas::get_level")]
 fn get_level() -> i32 {
     LevelState::get_level()
@@ -877,29 +1129,43 @@ fn set_level(level: i32) {
 #[rebo::function("Tas::trigger_element")]
 fn trigger_element(index: ElementIndex) {
     fn add_remove_based_character(actor: &ActorWrapper<'_>) {
-        crate::native::unhook_aliftbase_addbasedcharacter();
-        crate::native::unhook_aliftbase_removebasedcharacter();
-        let add_based_character = actor.class().find_function("AddBasedCharacter").unwrap();
-        let remove_based_character = actor.class().find_function("RemoveBasedCharacter").unwrap();
-        let args = add_based_character.create_argument_struct();
-        let character = unsafe { ObjectWrapper::new(AMyCharacter::get_player().as_ptr() as *mut UObject) };
-        args.get_field("BasedCharacter").set_object(&character);
-        unsafe { add_based_character.call(actor.as_ptr(), &args); }
-        unsafe { remove_based_character.call(actor.as_ptr(), &args); }
-        crate::native::hook_aliftbase_removebasedcharacter();
-        crate::native::hook_aliftbase_addbasedcharacter();
+        let state = STATE.lock().unwrap();
+        let state = state.as_ref().unwrap();
+        unsafe {
+            let liftbase = actor.as_ptr() as *mut ALiftBaseUE;
+            let character = AMyCharacter::get_player().as_ptr();
+            state.hooks.aliftbase.add_based_character(liftbase, character);
+            state.hooks.aliftbase.remove_based_character(liftbase, character);
+        }
+    }
+    fn collect_cube(actor: &ActorWrapper<'_>) {
+        let trigger_fn = actor
+            .class()
+            .find_function("BndEvt__Trigger_K2Node_ComponentBoundEvent_24_ComponentBeginOverlapSignature__DelegateSignature")
+            .unwrap();
+        let params = trigger_fn.create_argument_struct();
+        let movement = unsafe { ObjectWrapper::new(AMyCharacter::get_player().movement() as *mut UObject) };
+        let updated_primitive = movement.get_field("UpdatedPrimitive").unwrap::<ObjectWrapper>();
+        let trigger = actor.get_field("Trigger").unwrap::<ObjectWrapper>();
+        params.get_field("OverlappedComponent").set_object(&updated_primitive);
+        params.get_field("OtherComp").set_object(&trigger);
+        params.get_field("OtherActor").set_object(&actor);
+        params.get_field("OtherBodyIndex").unwrap::<&Cell<i32>>().set(0);
+        unsafe {
+            trigger_fn.call(actor.as_ptr(), &params);
+        }
     }
     UeScope::with(|scope| {
         let levels = LEVELS.lock().unwrap();
         match index.element_type {
             ElementType::Platform => add_remove_based_character(&*scope.get(levels[index.cluster_index].platforms[index.element_index])),
-            ElementType::Cube => (),
+            ElementType::Cube => collect_cube(&*scope.get(levels[index.cluster_index].cubes[index.element_index])),
             ElementType::Button => add_remove_based_character(&*scope.get(levels[index.cluster_index].buttons[index.element_index])),
             ElementType::Lift => add_remove_based_character(&*scope.get(levels[index.cluster_index].lifts[index.element_index])),
             ElementType::Pipe => (),
             ElementType::Springpad => (),
         }
-    })
+    });
 }
 #[rebo::function("Tas::set_start_seconds")]
 fn set_start_seconds(start_seconds: i32) {
@@ -931,20 +1197,11 @@ fn is_linux() -> bool {
 }
 #[rebo::function("Tas::get_clipboard")]
 fn get_clipboard() -> String {
-    (|| {
-        let mut ctx: ClipboardContext = ClipboardProvider::new()?;
-        ctx.get_contents()
-    })().unwrap_or_default()
+    Clipboard::get().unwrap_or_default()
 }
 #[rebo::function("Tas::set_clipboard")]
 fn set_clipboard(content: String) {
-    let _ = (|| {
-        let mut ctx: ClipboardContext = match ClipboardProvider::new() {
-            Ok(ctx) => ctx,
-            Err(_) => return,
-        };
-        let _ = ctx.set_contents(content);
-    })();
+    Clipboard::set(content)
 }
 #[rebo::function("Tas::show_hud")]
 fn show_hud() {
@@ -1228,7 +1485,7 @@ fn apply_map_cluster_speeds(map: RefunctMap) {
     UeScope::with(|scope| {
         let levels = LEVELS.lock().unwrap();
         assert_eq!(map.clusters.len(), levels.len());
-        for (cluster_index, (level, cluster)) in levels.iter().zip(&map.clusters).enumerate() {
+        for (_cluster_index, (level, cluster)) in levels.iter().zip(&map.clusters).enumerate() {
             let level_wrapper = scope.get(level.level);
             level_wrapper.set_speed(cluster.rise_speed);
         }
@@ -1301,6 +1558,12 @@ fn exit_water() {
 fn open_maps_folder() {
     if let Err(err) = opener::open(&map_path()) {
         log!("Error opening maps folder in file manager: {}", err);
+    }
+}
+#[rebo::function("Tas::open_recordings_folder")]
+fn open_recordings_folder() {
+    if let Err(err) = opener::open(&recording_path()) {
+        log!("Error opening recordings folder in file manager: {}", err);
     }
 }
 #[rebo::function("Tas::set_lighting_casts_shadows")]
@@ -1382,4 +1645,36 @@ fn set_gamma(value: f32) {
 #[rebo::function("Tas::set_screen_percentage")]
 fn set_screen_percentage(percentage: f32) {
     UWorld::set_screen_percentage(percentage);
+}
+#[rebo::function("Tas::set_reticle_width")]
+fn set_reticle_width(width: f32) {
+    AMyHud::set_reticle_width(width);
+}
+#[rebo::function("Tas::set_reticle_height")]
+fn set_reticle_height(height: f32) {
+    AMyHud::set_reticle_height(height);
+}
+#[rebo::function("Tas::get_camera_mode")]
+fn get_camera_mode() -> u8 {
+    AMyCharacter::camera_mode()
+}
+#[rebo::function("Tas::set_camera_mode")]
+fn set_camera_mode(mode: u8) {
+    AMyCharacter::set_camera_mode(mode);
+}
+#[rebo::function("Tas::set_game_rendering_enabled")]
+fn set_game_rendering_enabled(enable: bool) {
+    FViewport::set_game_rendering_enabled(enable);
+}
+#[rebo::function("Tas::set_input_mode_game_only")]
+fn set_input_mode_game_only() {
+    UWidgetBlueprintLibrary::set_input_mode_game_only();
+}
+#[rebo::function("Tas::set_input_mode_ui_only")]
+fn set_input_mode_ui_only() {
+    UWidgetBlueprintLibrary::set_input_mode_ui_only();
+}
+#[rebo::function("Tas::flush_pressed_keys")]
+fn flush_pressed_keys() {
+    AMyCharacter::flush_pressed_keys();
 }

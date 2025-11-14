@@ -25,6 +25,10 @@ fn create_misc_menu() -> Ui {
             label: Text { text: "Save Recording" },
             onclick: fn(label: Text) {
                 enter_ui(Ui::new_filechooser("Save Recording", Tas::list_recordings(), fn(input: string) {
+                    if TAS_STATE.is_recording {
+                        log("[TAS Component] Error: You cannot save file whilst recording!");
+                        return;
+                    }
                     tas_save_recording(input);
                     leave_ui();
                 }));
@@ -63,6 +67,10 @@ fn create_misc_menu() -> Ui {
             }
         }),
         UiElement::Button(UiButton {
+           label: Text { text: "Open Recordings Folder" },
+           onclick: fn(label: Text) { Tas::open_recordings_folder(); },
+        }),
+        UiElement::Button(UiButton {
             label: TAS_LABEL,
             onclick: fn(label: Text) {
                 if CURRENT_COMPONENTS.contains(TAS_COMPONENT) {
@@ -93,6 +101,12 @@ fn create_misc_menu() -> Ui {
             ),
             selected: Tas::get_movement_mode(),
             onchange: fn(index: int) { Tas::set_movement_mode(index); },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "Player" },
+            onclick: fn(label: Text) {
+                enter_ui(create_player_menu());
+            }
         }),
         UiElement::Button(UiButton {
             label: Text { text: "Minimap" },

@@ -12,6 +12,11 @@ const NAMES: &[(&str, &str)] = &[
     ("?OnKeyDown@FSlateApplication", "FSLATEAPPLICATION_ONKEYDOWN"),
     ("?OnKeyUp@FSlateApplication", "FSLATEAPPLICATION_ONKEYUP"),
     ("?OnRawMouseMove@FSlateApplication", "FSLATEAPPLICATION_ONRAWMOUSEMOVE"),
+    ("?OnMouseMove@FSlateApplication@@UAE_NXZ", "FSLATEAPPLICATION_ONMOUSEMOVE"),
+    ("?OnMouseDown@FSlateApplication@@UAE_NABV?$TSharedPtr@VFGenericWindow@@$0A@@@W4Type@EMouseButtons@@UFVector2D@@@Z", "FSLATEAPPLICATION_ONMOUSEDOWN"),
+    ("?OnMouseDoubleClick@FSlateApplication@@UAE_NABV?$TSharedPtr@VFGenericWindow@@$0A@@@W4Type@EMouseButtons@@UFVector2D@@@Z", "FSLATEAPPLICATION_ONMOUSEDOUBLECLICK"),
+    ("?OnMouseUp@FSlateApplication@@UAE_NW4Type@EMouseButtons@@UFVector2D@@@Z", "FSLATEAPPLICATION_ONMOUSEUP"),
+    ("?OnMouseWheel@FSlateApplication@@UAE_NMUFVector2D@@@Z", "FSLATEAPPLICATION_ONMOUSEWHEEL"),
     ("?PumpMessages@FWindowsPlatformMisc@@SAX_N@Z", "FPLATFORMMISC_PUMPMESSAGES"),
     ("?Tick@AMyCharacter", "AMYCHARACTER_TICK"),
     ("?ForcedUnCrouch@AMyCharacter", "AMYCHARACTER_FORCEDUNCROUCH"),
@@ -26,6 +31,8 @@ const NAMES: &[(&str, &str)] = &[
     ("?DrawText@AHUD@@QAEXABVFString@@UFLinearColor@@MMPAVUFont@@M_N@Z", "AHUD_DRAWTEXT"),
     ("?DrawTextureSimple@AHUD@@QAEXPAVUTexture@@MMM_N@Z", "AHUD_DRAWTEXTURESIMPLE"),
     ("?DrawTexture@AHUD@@QAEXPAVUTexture@@MMMMMMMMUFLinearColor@@W4EBlendMode@@M_NMUFVector2D@@@Z", "AHUD_DRAWTEXTURE"),
+    ("?DrawMaterialSimple@AHUD@@QAEXPAVUMaterialInterface@@MMMMM_N@Z", "AHUD_DRAWMATERIALSIMPLE"),
+    ("?DrawRect@AHUD@@QAEXUFLinearColor@@MMMM@Z", "AHUD_DRAWRECT"),
     ("?Project@AHUD@@QBE?AUFVector@@U2@@Z", "AHUD_PROJECT"),
     ("?GetTextSize@AHUD@@QBEXABVFString@@AAM1PAVUFont@@M@Z", "AHUD_GETTEXTSIZE"),
     ("=GWorld", "GWORLD"),
@@ -52,6 +59,11 @@ const NAMES: &[(&str, &str)] = &[
     ("?RemoveBasedCharacter@ALiftBase@@QAEXPAVAMyCharacter@@@Z", "ALIFTBASE_REMOVEBASEDCHARACTER"),
     ("?UnderwaterChanged@AMyCharacter@@QAEX_N@Z","AMYCHARACTER_UNDERWATERCHANGED"),
     ("?SetScalarParameterValue@UMaterialInstanceDynamic@@QAEXVFName@@M@Z", "UMATERIALINSTANCEDYNAMIC_SETSCALARPARAMETERVALUE"),
+    ("?SetGameRenderingEnabled@FViewport@@SAX_NH@Z","FVIEWPORT_SETGAMERENDERINGENABLED"),
+    ("?SetInputMode_GameOnly@UWidgetBlueprintLibrary@@SAXPAVAPlayerController@@@Z", "UWIDGETBLUEPRINTLIBRARY_SETINPUTMODE_GAMEONLY"),
+    ("?SetInputMode_UIOnlyEx@UWidgetBlueprintLibrary@@SAXPAVAPlayerController@@PAVUWidget@@W4EMouseLockMode@@@Z", "UWIDGETBLUEPRINTLIBRARY_SETINPUTMODE_UIONLYEX"),
+    ("?FlushPressedKeys@APlayerController@@UAEXXZ", "APLAYERCONTROLLER_FLUSHPRESSEDKEYS"),
+    ("?GetMousePosition@APlayerController@@QBE_NAAM0@Z", "APLAYERCONTROLLER_GETMOUSEPOSITION"),
 ];
 
 fn get_linux_level_pointer_path() -> String {

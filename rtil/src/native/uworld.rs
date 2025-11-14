@@ -1,8 +1,9 @@
 use std::{mem, ptr, cell::Cell};
 use std::sync::{OnceLock, atomic::Ordering};
-use crate::native::{Args, ArrayWrapper, BoolValueWrapper, ObjectIndex, ObjectWrapper, ObjectWrapperType, StructValueWrapper, UeScope};
+use crate::native::{ArrayWrapper, BoolValueWrapper, ObjectIndex, ObjectWrapper, ObjectWrapperType, StructValueWrapper, UeScope};
 
 #[cfg(unix)] use libc::{c_void, c_int};
+use hook::{ArgsRef, IsaAbi, RawHook};
 #[cfg(windows)] use winapi::ctypes::{c_void, c_int};
 
 use crate::native::ue::{FName, FVector, FRotator};
@@ -18,6 +19,7 @@ pub(in crate::native) type ULevel = c_void;
 pub static CLOUDS_INDEX: OnceLock<ObjectIndex<ObjectWrapperType>> = OnceLock::new();
 pub static JUMP6_INDEX: OnceLock<ObjectIndex<ObjectWrapperType>> = OnceLock::new();
 pub static ENGINE_INDEX: OnceLock<ObjectIndex<ObjectWrapperType>> = OnceLock::new();
+pub static CAMERA_INDEX: OnceLock<ObjectIndex<ObjectWrapperType>> = OnceLock::new();
 
 #[derive(Debug)]
 #[repr(u8)]
@@ -374,9 +376,9 @@ impl UWorld {
 
 /// TODO: Create a new `ObjectWrapper` from the `rdi` register of `_args` and get the name, check it is the menu widget,
 /// and only execute the function if it is.
-#[rtil_derive::hook_before(UUserWidget::AddToScreen)]
-fn add_to_screen(_args: &mut Args) {
+pub fn add_to_screen_hook<IA: IsaAbi>(hook: &RawHook<IA, ()>, args: ArgsRef<'_, IA>) {
     crate::threads::ue::add_to_screen();
+    unsafe { hook.call_original_function(args); }
 }
 
 pub fn init() {
@@ -393,6 +395,17 @@ pub fn init() {
             }
             if class_name == "GameEngine" && name != "Default__GameEngine" {
                 ENGINE_INDEX.set(scope.object_index(&object)).ok().unwrap();
+            }
+            if class_name == "CameraComponent" && name == "FirstPersonCamera" {
+                let fun = object.class().find_function("GetOwner").unwrap();
+                let params = fun.create_argument_struct();
+                unsafe {
+                    fun.call(object.as_ptr(), &params);
+                    let owner = params.get_field("ReturnValue").unwrap::<ObjectWrapper>();
+                    if owner.name() != "Default__MyCharacter" && owner.name() != "Default__BP_MyCharacter_C" {
+                        CAMERA_INDEX.set(scope.object_index(&object)).ok().unwrap();
+                    }
+                }
             }
         }
     })

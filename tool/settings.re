@@ -77,6 +77,23 @@ fn create_settings_menu() -> Ui {
                 }
             },
         }),
+        UiElement::FloatInput(FloatInput {
+            label: Text { text: "Log Message Duration (s)" },
+            input: f"{SETTINGS.log_message_duration.to_float() / 1000.}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_float() {
+                    Result::Ok(val) => {
+                        if 0.0 <= val {
+                            let milliseconds = val * 1000.;
+                            SETTINGS.log_message_duration = milliseconds.round(0).to_int();
+                            SETTINGS.store();
+                        }
+                    },
+                    Result::Err(e) => (),
+                }
+            },
+        }),
         UiElement::Button(UiButton {
             label: Text { text: "Reset Game Stats" },
             onclick: fn(label: Text) { GAME_STATS.reset() },
@@ -121,6 +138,11 @@ struct Settings {
     day_stars_brightness: float,
     night_stars_brightness: float,
     screen_percentage: float,
+    reticle_w: float,
+    reticle_h: float,
+    reticle_scale: float,
+    reticle_scale_position: bool,
+    log_message_duration: int,
 }
 static mut SETTINGS = Settings::load();
 
@@ -157,7 +179,7 @@ impl Settings {
             }
         };
         Settings {
-            ui_scale: get_float("ui_scale", 2.),
+            ui_scale: get_float("ui_scale", 1.),
             show_character_stats: get_bool("show_character_stats", false),
             show_game_stats: get_bool("show_game_stats", false),
             minimap_enabled: get_bool("minimap_enabled", false),
@@ -200,6 +222,11 @@ impl Settings {
             day_stars_brightness: get_float("day_stars_brightness", 0.),
             night_stars_brightness: get_float("night_stars_brightness", 5.),
             screen_percentage: get_float("screen_percentage", 100.),
+            reticle_w: get_float("reticle_w", 6.),
+            reticle_h: get_float("reticle_h", 6.),
+            reticle_scale: get_float("reticle_scale", 1.),
+            reticle_scale_position: get_bool("reticle_scale_position", false),
+            log_message_duration: get_int("log_message_duration", 10000),
         }
     }
 
@@ -237,6 +264,11 @@ impl Settings {
         map.insert("day_stars_brightness", f"{SETTINGS.day_stars_brightness}");
         map.insert("night_stars_brightness", f"{SETTINGS.night_stars_brightness}");
         map.insert("screen_percentage", f"{SETTINGS.screen_percentage}");
+        map.insert("reticle_w", f"{SETTINGS.reticle_w}");
+        map.insert("reticle_h", f"{SETTINGS.reticle_h}");
+        map.insert("reticle_scale", f"{SETTINGS.reticle_scale}");
+        map.insert("reticle_scale_position", f"{SETTINGS.reticle_scale_position}");
+        map.insert("log_message_duration", f"{SETTINGS.log_message_duration}");
         Tas::store_settings(map);
     }
 

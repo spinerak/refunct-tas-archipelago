@@ -104,6 +104,9 @@ static RANDOMIZER_COMPONENT = Component {
     on_yield: fn() {},
     on_new_game: randomizer_new_game_function,
     on_level_change: randomizer_on_level_change_function,
+    on_buttons_change: fn(old: int, new: int) {},
+    on_cubes_change: fn(old: int, new: int) {},
+    on_platforms_change: fn(old: int, new: int) {},
     on_reset: randomizer_on_reset_function,
     on_element_pressed: fn(index: ElementIndex) {},
     on_element_released: fn(index: ElementIndex) {},
@@ -320,7 +323,7 @@ fn randomizer_on_level_change_function(old: int, new: int) {
     if new <= 0 {
         return;
     }
-    next_level();
+    // next_level();
 }
 fn randomizer_on_reset_function(old: int, new: int) {
     RANDOMIZER_STATE.seq_index = 1;

@@ -52,6 +52,23 @@ fn press_buttons_until(buttons: int) {
         level_index += 1;
     }
 }
+fn collect_cubes_until(cubes: int) {
+    let map = Tas::current_map();
+    let mut cubes_collected = 0;
+    let mut level_index = 0;
+    while level_index < 31 {
+        let mut element_index = 0;
+        for cube in map.clusters.get(level_index).unwrap().cubes {
+            Tas::trigger_element(ElementIndex { cluster_index: level_index, element_type: ElementType::Cube, element_index: element_index });
+            element_index += 1;
+            cubes_collected += 1;
+            if cubes_collected >= cubes {
+                return;
+            }
+        }
+        level_index += 1;
+    }
+}
 
 static PRACTICE_COMPONENT = Component {
     id: PRACTICE_COMPONENT_ID,
@@ -73,6 +90,9 @@ static PRACTICE_COMPONENT = Component {
         Tas::set_acceleration(Acceleration { x: 0., y: 0., z: 0. });
     },
     on_level_change: fn(old: int, new: int) {},
+    on_buttons_change: fn(old: int, new: int) {},
+    on_cubes_change: fn(old: int, new: int) {},
+    on_platforms_change: fn(old: int, new: int) {},
     on_reset: fn(old: int, new: int) {
         Tas::exit_water();
         press_buttons_until(CURRENT_PRACTICE.button);

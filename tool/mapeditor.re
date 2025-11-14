@@ -31,6 +31,9 @@ static MAP_EDITOR_COMPONENT = Component {
     on_yield: fn() {},
     on_new_game: fn() {},
     on_level_change: fn(old: int, new: int) {},
+    on_buttons_change: fn(old: int, new: int) {},
+    on_cubes_change: fn(old: int, new: int) {},
+    on_platforms_change: fn(old: int, new: int) {},
     on_reset: fn(old: int, new: int) {},
     on_element_pressed: fn(index: ElementIndex) {},
     on_element_released: fn(index: ElementIndex) {},
@@ -465,6 +468,26 @@ fn create_map_editor_element_ui(mut element: Element, index: ElementIndex, selec
                     Result::Ok(num) => element.sizez = num,
                     Result::Err(e) => MAP_EDITOR_SIZEZ_LABEL.text = f"SizeZ (invalid value)",
                 }
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "Reset to original rotation" },
+            onclick: fn(label: Text) {
+                let original_map = Tas::original_map();
+                let cluster = original_map.clusters.get(index.cluster_index).unwrap();
+                let element_list = match index.element_type {
+                    ElementType::Platform => cluster.platforms,
+                    ElementType::Cube => cluster.cubes,
+                    ElementType::Button => cluster.buttons,
+                    ElementType::Lift => cluster.lifts,
+                    ElementType::Pipe => cluster.pipes,
+                    ElementType::Springpad => cluster.springpads,
+                };
+                let original_element = element_list.get(index.element_index).unwrap();
+                element.pitch = original_element.pitch;
+                element.yaw = original_element.yaw;
+                element.roll = original_element.roll;
+                submit();
             },
         }),
         UiElement::Button(UiButton {

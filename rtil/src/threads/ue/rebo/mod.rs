@@ -1,22 +1,25 @@
 use std::{ptr, thread};
-use std::collections::{HashSet, HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::error::Error;
 use std::sync::Mutex;
 use std::time::Duration;
 use std::cell::{Cell, RefCell};
 use corosensei::{CoroutineResult, Yielder};
 
-use crossbeam_channel::{Sender, Receiver};
+use crossbeam_channel::{Receiver, Sender};
 use image::{Rgba, RgbaImage};
 use once_cell::sync::Lazy;
+use tokio::sync::mpsc::UnboundedSender;
 use websocket::sync::Client;
 use websocket::stream::sync::NetworkStream;
 
-use crate::threads::{StreamToRebo, ReboToStream};
-use crate::native::{AMyCharacter, FPlatformMisc, FSlateApplication, hook_fslateapplication_onkeyup, REBO_DOESNT_START_SEMAPHORE, unhook_fslateapplication_onkeyup, UTexture2D, UWorld};
+use crate::threads::{StreamToRebo, ReboToStream, ArchipelagoToRebo, ReboToArchipelago};
+use crate::native::{AMyCharacter, FPlatformMisc, Hooks, UTexture2D, UWorld, REBO_DOESNT_START_SEMAPHORE};
 use crate::threads::ue::{Suspend, UeEvent};
+use crate::threads::ue::iced_ui::ReboUi;
 
 mod rebo_init;
+mod livesplit;
 
 type Coroutine = corosensei::Coroutine<UeEvent, Suspend, ()>;
 
@@ -28,6 +31,9 @@ thread_local! {
 }
 
 struct State {
+    hooks: Hooks,
+    ui: ReboUi,
+
     is_semaphore_acquired: bool,
     event_queue: VecDeque<UeEvent>,
 
@@ -35,6 +41,8 @@ struct State {
     delta: Option<f64>,
     stream_rebo_rx: Receiver<StreamToRebo>,
     rebo_stream_tx: Sender<ReboToStream>,
+    archipelago_rebo_rx: Receiver<ArchipelagoToRebo>,
+    rebo_archipelago_tx: UnboundedSender<ReboToArchipelago>,
     working_dir: Option<String>,
     pressed_keys: HashSet<i32>,
     websocket: Option<Client<Box<dyn NetworkStream + Send>>>,
@@ -52,13 +60,18 @@ pub(super) fn poll(event: UeEvent) {
     // check if we have acquired the semaphore
     {
         let mut state = STATE.lock().unwrap();
+        if state.is_none() {
+            return;
+        }
         let state = state.as_mut().unwrap();
         if !state.is_semaphore_acquired {
             if !REBO_DOESNT_START_SEMAPHORE.try_acquire() {
-                return
+                return;
             }
             state.is_semaphore_acquired = true;
             state.minimap_texture = Some(UTexture2D::create(&state.minimap_image));
+            let (width, height) = AMyCharacter::get_player().get_viewport_size();
+            state.ui.resize(width.try_into().unwrap(), height.try_into().unwrap());
             log!("rebo continuing as all this* have been acquired");
         }
     }
@@ -123,7 +136,11 @@ pub(super) fn poll(event: UeEvent) {
     }
 }
 
-pub fn init(stream_rebo_rx: Receiver<StreamToRebo>, rebo_stream_tx: Sender<ReboToStream>) {
+pub fn init(
+    stream_rebo_rx: Receiver<StreamToRebo>, rebo_stream_tx: Sender<ReboToStream>,
+    hooks: Hooks,
+    archipelago_rebo_rx: Receiver<ArchipelagoToRebo>, rebo_archipelago_tx: UnboundedSender<ReboToArchipelago>,
+) {
     log!("init rebo state");
     log!("checking for a new refunct-tas release");
     let new_version = check_for_new_version();
@@ -137,14 +154,17 @@ pub fn init(stream_rebo_rx: Receiver<StreamToRebo>, rebo_stream_tx: Sender<ReboT
     }
     let player_minimap_image = image::load_from_memory(PLAYER_MINIMAP).unwrap().to_rgba8();
 
-
     *STATE.lock().unwrap() = Some(State {
+        hooks,
+        ui: ReboUi::start(),
         is_semaphore_acquired: false,
         event_queue: VecDeque::new(),
         new_version_string: new_version.clone(),
         delta: None,
         stream_rebo_rx,
         rebo_stream_tx,
+        archipelago_rebo_rx,
+        rebo_archipelago_tx,
         working_dir: None,
         pressed_keys: HashSet::new(),
         websocket: None,
@@ -198,12 +218,9 @@ fn cleanup_after_rebo() {
         UWorld::destroy_amycharaccter(my_character);
     }
     state.pawn_id = 0;
-    // we don't want to trigger our keyevent handler for emulated presses
-    unhook_fslateapplication_onkeyup();
     for key in state.pressed_keys.drain() {
-        FSlateApplication::release_key(key, key as u32, false);
+        state.hooks.fslateapplication.release_key(key, key as u32, false);
     }
-    hook_fslateapplication_onkeyup();
     rebo_init::apply_map_internal(&rebo_init::ORIGINAL_MAP);
     state.rebo_stream_tx.send(ReboToStream::MiDone).unwrap();
     log!("Cleanup finished.");
@@ -211,16 +228,17 @@ fn cleanup_after_rebo() {
 
 fn check_for_new_version() -> Option<String> {
     const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
-    let res = ureq::AgentBuilder::new()
-        .redirects(0)
-        .timeout(Duration::from_secs(3))
-        .build()
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .max_redirects(0)
+        .timeout_global(Some(Duration::from_secs(3)))
+        .build().into();
+    let res = agent
         .get("https://github.com/oberien/refunct-tas/releases/latest")
         .call();
     match res {
         Ok(response) => {
             assert_eq!(response.status(), 302);
-            let loc = response.header("Location").unwrap();
+            let loc = response.headers().get("Location").unwrap().to_str().unwrap();
             let pos = loc.rfind("/v").unwrap();
             let version = &loc[pos+2..];
             if version != CURRENT_VERSION {
@@ -235,19 +253,14 @@ fn check_for_new_version() -> Option<String> {
         Err(err) => {
             log!("VERSION: Error checking for new version: err");
             match err {
-                ureq::Error::Status(status, _) => {
+                ureq::Error::StatusCode(status) => {
                     Some(format!("Error checking for new version: Got status {status}"))
                 },
-                ureq::Error::Transport(transport) => {
-                    let kind = transport.kind().to_string();
-                    let message = transport.message().map(|m| format!(": {m}"));
-                    let source = transport.source().map(|s| format!(": {s}"));
-                    let mut res = kind;
-                    if let Some(message) = message {
-                        res += &message;
-                    }
-                    if let Some(source) = source {
-                        res += &source;
+                e => {
+                    let message = format!("{e}");
+                    let mut res = message;
+                    if let Some(source) = e.source() {
+                        res += &format!("{source}");
                     }
                     Some(format!("Error checking for new version: {res}"))
                 }

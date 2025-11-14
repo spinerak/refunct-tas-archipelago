@@ -2,14 +2,64 @@ use std::cell::Cell;
 use std::ffi::c_void;
 use std::mem;
 use std::sync::atomic::{AtomicPtr, Ordering};
+use hook::{ArgsRef, RawHook, IsaAbi};
+use iced::mouse::Interaction;
 use crate::native::ue::{FVector, FRotator, FString, UeU64};
-use crate::native::{AMYCHARACTER_STATICCLASS, Args, REBO_DOESNT_START_SEMAPHORE, APLAYERCONTROLLER_GETVIEWPORTSIZE, ActorWrapper, ObjectWrapper, StructValueWrapper, BoolValueWrapper, AMYCHARACTER_UNDERWATERCHANGED, UObject};
+use crate::native::{AMYCHARACTER_STATICCLASS, REBO_DOESNT_START_SEMAPHORE, APLAYERCONTROLLER_GETVIEWPORTSIZE, ActorWrapper, ObjectWrapper, StructValueWrapper, BoolValueWrapper, AMYCHARACTER_UNDERWATERCHANGED, UObject, UeScope, APLAYERCONTROLLER_FLUSHPRESSEDKEYS, APLAYERCONTROLLER_GETMOUSEPOSITION};
 use crate::native::reflection::UClass;
+use crate::native::uworld::CAMERA_INDEX;
 
 static CURRENT_PLAYER: AtomicPtr<AMyCharacterUE> = AtomicPtr::new(std::ptr::null_mut());
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct AMyCharacter(*mut AMyCharacterUE);
+
+#[derive(Debug, Copy, Clone)]
+#[repr(u8)]
+#[allow(unused)]
+pub enum EMouseCursorType {
+    None,
+    Default,
+    TextEditBeam,
+    ResizeLeftRight,
+    ResizeUpDown,
+    ResizeSouthEast,
+    ResizeSouthWest,
+    CardinalCross,
+    Crosshairs,
+    Hand,
+    GrabHand,
+    GrabHandClosed,
+    SlashedCircle,
+    EyeDropper,
+    Custom,
+    TotalCursorCount,
+}
+impl From<Interaction> for EMouseCursorType {
+    fn from(interaction: Interaction) -> Self {
+        match interaction {
+            Interaction::None => EMouseCursorType::Default,
+            Interaction::Idle => EMouseCursorType::Default,
+            Interaction::Pointer => EMouseCursorType::Hand,
+            Interaction::Grab => EMouseCursorType::GrabHand,
+            Interaction::Text => EMouseCursorType::TextEditBeam,
+            Interaction::Crosshair => EMouseCursorType::Crosshairs,
+            Interaction::Working => EMouseCursorType::SlashedCircle,
+            Interaction::Grabbing => EMouseCursorType::GrabHandClosed,
+            Interaction::ResizingHorizontally => EMouseCursorType::ResizeLeftRight,
+            Interaction::ResizingVertically => EMouseCursorType::ResizeUpDown,
+            Interaction::ResizingDiagonallyUp => EMouseCursorType::ResizeSouthEast,
+            Interaction::ResizingDiagonallyDown => EMouseCursorType::ResizeSouthWest,
+            Interaction::NotAllowed => EMouseCursorType::Default,
+            Interaction::ZoomIn => EMouseCursorType::Default,
+            Interaction::ZoomOut => EMouseCursorType::Default,
+            Interaction::Cell => EMouseCursorType::Default,
+            Interaction::Move => EMouseCursorType::Default,
+            Interaction::Copy => EMouseCursorType::Default,
+            Interaction::Help => EMouseCursorType::Default,
+        }
+    }
+}
 
 // WARNING: somewhat unsound as some functions on AMyCharacter can only be called from
 // UE's update-loop thread. However, currently there's no way to ensure that it's constructed
@@ -25,10 +75,10 @@ impl AMyCharacter {
     fn root_component(&self) -> *mut USceneComponent {
         unsafe { (*self.0).root_component }
     }
-    fn controller(&self) -> *mut APlayerController {
+    pub fn controller(&self) -> *mut APlayerController {
         unsafe { (*self.0).controller }
     }
-    fn movement(&self) -> *mut UCharacterMovementComponent {
+    pub fn movement(&self) -> *mut UCharacterMovementComponent {
         unsafe { (*self.0).movement }
     }
     fn player_state(&self) -> *mut APlayerState {
@@ -104,6 +154,25 @@ impl AMyCharacter {
         unsafe { (*self.movement()).max_fly_speed = value };
     }
 
+    pub fn get_max_walk_speed() -> f32 {
+        unsafe {
+            let movement = ObjectWrapper::new(AMyCharacter::get_player().movement() as *mut UObject);
+            movement.get_field("MaxWalkSpeed").unwrap::<f32>()
+        }
+    }
+    pub fn get_base_speed() -> f32 {
+        unsafe {
+            let movement = ObjectWrapper::new(AMyCharacter::get_player().as_ptr() as *mut UObject);
+            movement.get_field("BaseSpeed").unwrap::<f32>()
+        }
+    }
+    pub fn get_max_bonus_speed() -> f32 {
+        unsafe {
+            let movement = ObjectWrapper::new(AMyCharacter::get_player().as_ptr() as *mut UObject);
+            movement.get_field("MaxBonusSpeed").unwrap::<f32>()
+        }
+    }
+    
     pub fn get_viewport_size(&self) -> (i32, i32) {
         let mut width: i32 = -1;
         let mut height: i32 = -1;
@@ -126,6 +195,41 @@ impl AMyCharacter {
             let params = fun.create_argument_struct();
             fun.call(obj.as_ptr(), &params);
         }
+    }
+    pub fn camera_mode() -> u8 {
+        UeScope::with(|scope| {
+            let cam = scope.get(CAMERA_INDEX.get().unwrap());
+            cam.get_field("ProjectionMode").unwrap::<u8>()
+        })
+    }
+    pub fn set_camera_mode(mode: u8) {
+        unsafe {
+            UeScope::with(|scope| {
+                let cam = scope.get(CAMERA_INDEX.get().unwrap());
+                let fun = cam.class().find_function("SetProjectionMode").unwrap();
+                let params = fun.create_argument_struct();
+                params.get_field("InProjectionMode").unwrap::<&Cell<u8>>().set(mode);
+                fun.call(cam.as_ptr(), &params);
+            });
+        }
+    }
+    pub fn flush_pressed_keys() {
+        let fun: extern_fn!(fn(this: *mut APlayerController))
+            = unsafe { ::std::mem::transmute(APLAYERCONTROLLER_FLUSHPRESSEDKEYS.load(Ordering::SeqCst)) };
+        fun(AMyCharacter::get_player().controller());
+    }
+    pub fn set_mouse_cursor(cursor: EMouseCursorType) {
+        let controller = unsafe { ObjectWrapper::new(AMyCharacter::get_player().controller() as *mut UObject) };
+        controller.get_field("CurrentMouseCursor").unwrap::<&Cell<u8>>().set(cursor as u8);
+    }
+    pub fn get_mouse_position() -> (f32, f32) {
+        let fun: extern_fn!(fn(this: *mut APlayerController, x: &mut f32, y: &mut f32)) = unsafe {
+            mem::transmute(APLAYERCONTROLLER_GETMOUSEPOSITION.load(Ordering::SeqCst))
+        };
+        let mut x = 0.;
+        let mut y = 0.;
+        fun(AMyCharacter::get_player().controller(), &mut x, &mut y);
+        (x, y)
     }
 }
 
@@ -184,7 +288,7 @@ impl USceneComponent {
 }
 
 #[repr(C)]
-struct UCharacterMovementComponent {
+pub struct UCharacterMovementComponent {
     #[cfg(unix)] _pad: [u8; 0x104],
     #[cfg(windows)] _pad: [u8; 0xb4],
     velocity: FVector,
@@ -200,7 +304,7 @@ struct UCharacterMovementComponent {
 }
 
 #[repr(C)]
-struct APlayerController {
+pub struct APlayerController {
     #[cfg(unix)] _pad: [u8; 0x3a8],
     #[cfg(windows)] _pad: [u8; 0x2c8],
     player_state: *mut APlayerState,
@@ -232,9 +336,8 @@ struct FUniqueNetIdSteam {
     steamid: UeU64,
 }
 
-#[rtil_derive::hook_once(AMyCharacter::Tick)]
-fn save(args: &mut Args) {
-    let this = unsafe { args.nth_integer_arg(0) } as *mut AMyCharacterUE;
+pub fn tick_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, mut args: ArgsRef<'_, IA>) {
+    let this = args.load::<*mut AMyCharacterUE>();
     CURRENT_PLAYER.store(this, Ordering::SeqCst);
     let my_character = AMyCharacter::get_player();
     log!("Got AMyCharacter: {:p}", this);
@@ -244,5 +347,7 @@ fn save(args: &mut Args) {
     log!("Got AMyCharacter::Movement::MovementMode: {:p}", unsafe { &(*my_character.movement()).movement_mode });
     log!("Got AMyCharacter::Movement::Acceleration: {:p}", unsafe { &(*my_character.movement()).acceleration });
     log!("Got AMyCharacter::Movement::MaxFlySpeed : {:p}", unsafe { &(*my_character.movement()).max_fly_speed });
+    hook.disable();
+    unsafe { hook.call_original_function(args) };
     REBO_DOESNT_START_SEMAPHORE.release();
 }

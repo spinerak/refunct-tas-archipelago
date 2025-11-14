@@ -1,6 +1,6 @@
-use crate::native::Args;
+use hook::{ArgsRef, IsaAbi, RawHook};
 
-#[rtil_derive::hook_before(AMyCharacter::ForcedUnCrouch)]
-fn new_game(_args: &mut Args) {
+pub fn new_game_hook<IA: IsaAbi>(hook: &RawHook<IA, ()>, args: ArgsRef<'_, IA>) {
     crate::threads::ue::new_game();
+    unsafe { hook.call_original_function(args) };
 }

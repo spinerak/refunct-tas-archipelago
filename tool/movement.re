@@ -110,6 +110,15 @@ static MOVEMENT_COMPONENT = Component {
     on_yield: fn() {},
     on_new_game: fn() {},
     on_level_change: fn(old: int, new: int) {},
+    on_buttons_change: fn(old: int, new: int) {
+        log(f"MovementComponent.on_buttons_change: {old} -> {new}");
+    },
+    on_cubes_change: fn(old: int, new: int) {
+        log(f"MovementComponent.on_cubes_change: {old} -> {new}");
+    },
+    on_platforms_change: fn(old: int, new: int) {
+        log(f"MovementComponent.on_platforms_change: {old} -> {new}");
+    },
     on_reset: fn(old: int, new: int) {},
     on_element_pressed: fn(index: ElementIndex) {},
     on_element_released: fn(index: ElementIndex) {},

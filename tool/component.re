@@ -15,6 +15,7 @@ static TIMER_COMPONENT_ID = 9;
 static MOVEMENT_COMPONENT_ID = 10;
 static MINIMAP_COMPONENT_ID = 11;
 static MAP_EDITOR_COMPONENT_ID = 12;
+static ARCHIPELAGO_COMPONENT_ID = 13;
 
 struct Component {
     id: int,
@@ -28,6 +29,9 @@ struct Component {
     on_yield: fn(),
     on_new_game: fn(),
     on_level_change: fn(int, int),
+    on_buttons_change: fn(int, int),
+    on_cubes_change: fn(int, int),
+    on_platforms_change: fn(int, int),
     on_reset: fn(int, int),
     on_element_pressed: fn(ElementIndex),
     on_element_released: fn(ElementIndex),

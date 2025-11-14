@@ -2,8 +2,6 @@ use std::env;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use libc::{self, c_void, PROT_READ, PROT_WRITE, PROT_EXEC};
-
 // Shoutout to https://github.com/geofft/redhook/blob/master/src/ld_preload.rs#L18
 // Rust doesn't directly expose __attribute__((constructor)), but this
 // is how GNU implements it.
@@ -81,6 +79,11 @@ find! {
     FSLATEAPPLICATION_ONKEYDOWN, "^FSlateApplication::OnKeyDown(int, unsigned int, bool)",
     FSLATEAPPLICATION_ONKEYUP, "^FSlateApplication::OnKeyUp(int, unsigned int, bool)",
     FSLATEAPPLICATION_ONRAWMOUSEMOVE, "^FSlateApplication::OnRawMouseMove(int, int)",
+    FSLATEAPPLICATION_ONMOUSEMOVE, "^FSlateApplication::OnMouseMove()",
+    FSLATEAPPLICATION_ONMOUSEDOWN, "^FSlateApplication::OnMouseDown(TSharedPtr<FGenericWindow, (ESPMode)0> const&, EMouseButtons::Type, FVector2D)",
+    FSLATEAPPLICATION_ONMOUSEDOUBLECLICK, "^FSlateApplication::OnMouseDoubleClick(TSharedPtr<FGenericWindow, (ESPMode)0> const&, EMouseButtons::Type, FVector2D)",
+    FSLATEAPPLICATION_ONMOUSEUP, "^FSlateApplication::OnMouseUp(EMouseButtons::Type, FVector2D)",
+    FSLATEAPPLICATION_ONMOUSEWHEEL, "^FSlateApplication::OnMouseWheel(float, FVector2D)",
     FPLATFORMMISC_PUMPMESSAGES, "^FLinuxPlatformMisc::PumpMessages(bool)",
     UENGINE_UPDATETIMEANDHANDLEMAXTICKRATE, "^UEngine::UpdateTimeAndHandleMaxTickRate()",
     AMYCHARACTER_TICK, "^AMyCharacter::Tick(float)",
@@ -95,6 +98,8 @@ find! {
     AHUD_DRAWTEXT, "^AHUD::DrawText(FString const&, FLinearColor, float, float, UFont*, float, bool)",
     AHUD_DRAWTEXTURESIMPLE, "^AHUD::DrawTextureSimple(UTexture*, float, float, float, bool)",
     AHUD_DRAWTEXTURE, "^AHUD::DrawTexture(UTexture*, float, float, float, float, float, float, float, float, FLinearColor, EBlendMode, float, bool, float, FVector2D)",
+    AHUD_DRAWMATERIALSIMPLE, "^AHUD::DrawMaterialSimple(UMaterialInterface*, float, float, float, float, float, bool)",
+    AHUD_DRAWRECT, "^AHUD::DrawRect(FLinearColor, float, float, float, float)",
     AHUD_PROJECT, "^AHUD::Project(FVector)",
     AHUD_GETTEXTSIZE, "^AHUD::GetTextSize(FString const&, float&, float&, UFont*, float)",
     GWORLD, "^GWorld",
@@ -121,16 +126,10 @@ find! {
     ALIFTBASE_REMOVEBASEDCHARACTER, "^ALiftBase::RemoveBasedCharacter(AMyCharacter*)",
     AMYCHARACTER_UNDERWATERCHANGED, "^AMyCharacter::UnderwaterChanged(bool)",
     UMATERIALINSTANCEDYNAMIC_SETSCALARPARAMETERVALUE, "^UMaterialInstanceDynamic::SetScalarParameterValue(FName, float)",
-}
-
-pub(in crate::native) fn make_rw(addr: usize) {
-    let page = addr & !0xfff;
-    let page = page as *mut c_void;
-    unsafe { libc::mprotect(page, 0x1000, PROT_READ | PROT_WRITE); }
-}
-
-pub(in crate::native) fn make_rx(addr: usize) {
-    let page = addr & !0xfff;
-    let page = page as *mut c_void;
-    unsafe { libc::mprotect(page, 0x1000, PROT_READ | PROT_EXEC); }
+    UFONTBULKDATA_INITIALIZE, "^UFontBulkData::Initialize(void const*, int)",
+    FVIEWPORT_SETGAMERENDERINGENABLED, "^FViewport::SetGameRenderingEnabled(bool, int)",
+    UWIDGETBLUEPRINTLIBRARY_SETINPUTMODE_GAMEONLY, "^UWidgetBlueprintLibrary::SetInputMode_GameOnly(APlayerController*)",
+    UWIDGETBLUEPRINTLIBRARY_SETINPUTMODE_UIONLYEX, "^UWidgetBlueprintLibrary::SetInputMode_UIOnlyEx(APlayerController*, UWidget*, EMouseLockMode)",
+    APLAYERCONTROLLER_FLUSHPRESSEDKEYS, "^APlayerController::FlushPressedKeys()",
+    APLAYERCONTROLLER_GETMOUSEPOSITION, "^APlayerController::GetMousePosition(float&, float&)",
 }

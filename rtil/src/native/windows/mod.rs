@@ -6,11 +6,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use winapi::ctypes::c_void;
 use winapi::shared::minwindef::FALSE;
-use winapi::um::winnt::{PAGE_READWRITE, PAGE_EXECUTE_READ, HANDLE, THREAD_ALL_ACCESS};
+use winapi::um::winnt::{HANDLE, THREAD_ALL_ACCESS};
 use winapi::um::tlhelp32::{CreateToolhelp32Snapshot, TH32CS_SNAPTHREAD, THREADENTRY32, Thread32First, Thread32Next};
 use winapi::um::handleapi::{INVALID_HANDLE_VALUE, CloseHandle};
 use winapi::um::processthreadsapi::{GetCurrentThreadId, GetCurrentProcessId, OpenThread, SuspendThread, ResumeThread};
-use winapi::um::memoryapi::VirtualProtect;
 use winapi::um::libloaderapi::GetModuleHandleA;
 
 // https://www.unknowncheats.me/forum/general-programming-and-reversing/123333-demo-pure-rust-internal-coding.html
@@ -127,6 +126,11 @@ find! {
     FSLATEAPPLICATION_ONKEYDOWN,
     FSLATEAPPLICATION_ONKEYUP,
     FSLATEAPPLICATION_ONRAWMOUSEMOVE,
+    FSLATEAPPLICATION_ONMOUSEMOVE,
+    FSLATEAPPLICATION_ONMOUSEDOUBLECLICK,
+    FSLATEAPPLICATION_ONMOUSEDOWN,
+    FSLATEAPPLICATION_ONMOUSEUP,
+    FSLATEAPPLICATION_ONMOUSEWHEEL,
     FPLATFORMMISC_PUMPMESSAGES,
     AMYCHARACTER_TICK,
     AMYCHARACTER_FORCEDUNCROUCH,
@@ -141,6 +145,8 @@ find! {
     AHUD_DRAWTEXT,
     AHUD_DRAWTEXTURESIMPLE,
     AHUD_DRAWTEXTURE,
+    AHUD_DRAWMATERIALSIMPLE,
+    AHUD_DRAWRECT,
     AHUD_PROJECT,
     AHUD_GETTEXTSIZE,
     GWORLD,
@@ -167,18 +173,10 @@ find! {
     ALIFTBASE_REMOVEBASEDCHARACTER,
     AMYCHARACTER_UNDERWATERCHANGED,
     UMATERIALINSTANCEDYNAMIC_SETSCALARPARAMETERVALUE,
-}
-
-pub(in crate::native) fn make_rw(addr: usize) {
-    let page = addr & !0xfff;
-    let page = page as *mut std::ffi::c_void;
-    let mut out = 0;
-    unsafe { VirtualProtect(page, 0x1000, PAGE_READWRITE, &mut out); }
-}
-
-pub(in crate::native) fn make_rx(addr: usize) {
-    let page = addr & !0xfff;
-    let page = page as *mut std::ffi::c_void;
-    let mut out = 0;
-    unsafe { VirtualProtect(page, 0x1000, PAGE_EXECUTE_READ, &mut out); }
+    UFONTBULKDATA_INITIALIZE,
+    FVIEWPORT_SETGAMERENDERINGENABLED,
+    UWIDGETBLUEPRINTLIBRARY_SETINPUTMODE_GAMEONLY,
+    UWIDGETBLUEPRINTLIBRARY_SETINPUTMODE_UIONLYEX,
+    APLAYERCONTROLLER_FLUSHPRESSEDKEYS,
+    APLAYERCONTROLLER_GETMOUSEPOSITION,
 }

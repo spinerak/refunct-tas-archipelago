@@ -1,6 +1,3 @@
-#![feature(naked_functions)]
-#![feature(abi_thiscall)]
-
 #[cfg(all(target_os = "linux", not(target_pointer_width = "64")))]
 compile_error!("must be compiled as 64bit on Linux (e.g. with `--target x86_64-unknown-linux-gnu`");
 #[cfg(all(target_os = "windows", not(target_pointer_width = "32")))]
@@ -15,10 +12,11 @@ use std::thread;
 use std::panic;
 
 mod error;
-#[macro_use] mod statics;
+#[macro_use] mod log;
 mod native;
 mod threads;
 mod semaphore;
+mod watch;
 
 #[cfg(unix)] pub use crate::native::INITIALIZE_CTOR;
 #[cfg(windows)] pub use native::DllMain;
@@ -37,7 +35,7 @@ pub extern "C" fn initialize() {
             };
             let thread = thread::current();
             let name = thread.name().unwrap_or("<unnamed>");
-            log!("thread '{}' panicked at '{}'\nBacktrace: {:?}", name, msg, backtrace::Backtrace::new());
+            log!("thread '{}' panicked with '{}' at {:?}\nBacktrace: {:?}", name, msg, info.location(), backtrace::Backtrace::new());
         }));
         env_logger::init();
         log!("initialize");
@@ -50,16 +48,16 @@ pub extern "C" fn initialize() {
                 log!("Starting initialize");
                 // on Linux we need to wait for the packer to finish
                 if cfg!(unix) {
-                    ::std::thread::sleep(::std::time::Duration::from_secs(5));
+                    ::std::thread::sleep(::std::time::Duration::from_secs(7));
                 }
-                // start threads
-                threads::start();
                 // hook stuff
                 #[cfg(windows)]
                 let handles = native::suspend_threads();
-                native::init();
+                let hooks = native::init();
                 #[cfg(windows)]
                 native::resume_threads(handles);
+                // start threads
+                threads::start(hooks);
             });
         }
     });

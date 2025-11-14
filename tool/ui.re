@@ -120,6 +120,13 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     if key.to_small() == KEY_M.to_small() && !TAS_STATE.step_frame_mode && UI_STACK.len() == 1 {
         enter_ui(create_base_menu());
     }
+    if key.to_small() == KEY_N.to_small() {
+        Tas::set_input_mode_ui_only();
+        Tas::flush_pressed_keys();
+    }
+    if key.to_small() == KEY_S.to_small() {
+        Tas::set_input_mode_game_only();
+    }
     match UI_STACK.last() {
         Option::Some(ui) => ui.onkey(key, chr),
         Option::None => (),
@@ -170,7 +177,9 @@ fn draw_hud() {
         Option::Some(ui) => ui.draw(),
         Option::None => (),
     }
+    draw_log_messages();
 }
+
 
 fn on_resolution_change() {
     for component in CURRENT_COMPONENTS {
@@ -221,6 +230,8 @@ impl Ui {
         }
     }
     fn draw(self) {
+        // This padding dictates how much space there will be between elements. Got no clue why it's done like this.
+        let padding = 48.;
         match self.on_draw {
             Option::Some(f) => f(),
             Option::None => (),
@@ -236,7 +247,7 @@ impl Ui {
         let mut i = 0;
         for element in self.elements {
             let color = if self.selected == i { COLOR_RED } else { COLOR_BLACK };
-            element.draw(12. + i.to_float() * 12., color);
+            element.draw(padding + i.to_float() * padding, color);
             i = i + 1;
         }
     }

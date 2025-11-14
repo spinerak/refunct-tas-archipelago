@@ -5,7 +5,7 @@ md build\practice-windows
 del /Q build\practice-windows\*
 echo Building
 cd rtil
-cargo +nightly build --release --target=i686-pc-windows-msvc || exit /b
+cargo build --release --target=i686-pc-windows-msvc || exit /b
 cd ..\tool
 cargo build --target=i686-pc-windows-msvc || exit /b
 cd ..
@@ -22,6 +22,7 @@ copy tool\randomizer.re build\practice-windows
 copy tool\teleport.re build\practice-windows
 copy tool\ui.re build\practice-windows
 copy tool\multiplayer.re build\practice-windows
+copy tool\archipelago.re build\practice-windows
 copy tool\tas.re build\practice-windows
 copy tool\windshieldwipers.re build\practice-windows
 copy tool\settings.re build\practice-windows
@@ -31,6 +32,8 @@ copy tool\movement.re build\practice-windows
 copy tool\minimap.re build\practice-windows
 copy tool\mapeditor.re build\practice-windows
 copy tool\world_options.re build\practice-windows
+copy tool\player.re build\practice-windows
+copy tool\log.re build\practice-windows
 echo Converting lf to crlf
 call :convert main.re
 call :convert prelude.re
@@ -42,6 +45,7 @@ call :convert randomizer.re
 call :convert teleport.re
 call :convert ui.re
 call :convert multiplayer.re
+call :convert archipelago.re
 call :convert tas.re
 call :convert windshieldwipers.re
 call :convert settings.re
@@ -51,6 +55,8 @@ call :convert movement.re
 call :convert minimap.re
 call :convert mapeditor.re
 call :convert world_options.re
+call :convert player.re
+call :convert log.re
 
 echo Don't forget to create a zip
 exit /b 0
