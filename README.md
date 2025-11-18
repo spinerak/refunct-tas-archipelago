@@ -1,3 +1,37 @@
+# Refunct for Archipelago
+
+How does it work, what are items and locations?
+- You will have to unlock every cluster of platforms (that normally rise by pressing a button).
+- Location checks are making platforms grassy (200+ locations).
+- BUTTONS ARE NOT CHECKS, IN FACT PRESSING A RED BUTTON BUGS THE GAME FOR NOW, SO DON'T PRESS IT :)
+- Your goal is to collect 100 Grass and then jump on platform 20-1 in the very bottom-left.
+
+## Here's how to play Refunct in Archipelago.
+- You need to own the original game Refunct (via Steam for example).
+- Download the refunct-tas.exe from releases. Unzip the contents into any folder.
+- Do the usual Archipelago things: get your yaml, generate and host.
+- Open a notepad (etc) and write your creditionals like this: `archipelago.gg:38281,PlayerName`
+- Copy those credentials (CTRL-C).
+- Open Refunct.
+- Click New Game (back-up your save if you want).
+- Double-click refunct-tas.exe (note: it may crash, just try again a couple of times, or check troubleshooting at the very bottom).
+- After a short lag, you'll see "Press 'm' to open the menu" top-left.
+- Navigate to Archipelago, paste your credentials (CTRL-V) and press enter.
+- You should now see "Connected to Archipelago". You're good to go!
+- NEVER PRESS A RED BUTTON IN-GAME. THEY ARE NOT CHECKS AND PRESSING THEM WILL BUG THE GAME.
+
+## Other stuff
+- NEVER PRESS A RED BUTTON IN-GAME. If you did, please close Refunct and refunct-tas.exe and login again.
+- PLATFORMS WITH A RED BUTTON ON THEM ARE NEVER CHECKS. No need to risk your life to get those.
+- Universal Tracker can help you to figure out which platforms are accessible.
+- You should be able to quit a game and continue it later, just follow the steps again. However, for now, platforms you touched before, won't show as grassy.
+- The final cluster in the game won't appear and will stay underwater for now (the final button is weird).
+- There's many improvements to be made, regarding the buttons and the grassy platforms. I don't know how to do that yet. Of course also more yaml options, but let's test this for now.
+
+## Important
+- NEVER PRESS A RED BUTTON IN-GAME. If you see a red button, and wonder whether you can press it, the answer is: no.
+
+# Below text is the text of the original read me for the Refunct TaS Tool
 # Refunct TaS Tool
 
 This project is a tool enabling Tool assisted Speedruns in the game
