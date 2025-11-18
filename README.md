@@ -1,4 +1,5 @@
 # Refunct for Archipelago
+⚠️ Very new and quite untested ⚠️
 
 How does it work, what are items and locations?
 - You will have to unlock every cluster of platforms (that normally rise by pressing a button).
@@ -9,7 +10,7 @@ How does it work, what are items and locations?
 ## Here's how to play Refunct in Archipelago.
 - You need to own the original game Refunct (via Steam for example).
 - Download the refunct-tas.exe from releases. Unzip the contents into any folder.
-- Do the usual Archipelago things: get your yaml, generate and host.
+- Do the usual [Archipelago custom games things](https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds): get your yaml and apworld from the release, generate and host.
 - Open a notepad (etc) and write your creditionals like this: `archipelago.gg:38281,PlayerName`
 - Copy those credentials (CTRL-C).
 - Open Refunct.
@@ -17,14 +18,14 @@ How does it work, what are items and locations?
 - Double-click refunct-tas.exe (note: it may crash, just try again a couple of times, or check troubleshooting at the very bottom).
 - After a short lag, you'll see "Press 'm' to open the menu" top-left.
 - Navigate to Archipelago, paste your credentials (CTRL-V) and press enter.
-- You should now see "Connected to Archipelago". You're good to go!
+- After closing the menu (escape), you should now see "Connected to Archipelago". You're good to go!
 - NEVER PRESS A RED BUTTON IN-GAME. THEY ARE NOT CHECKS AND PRESSING THEM WILL BUG THE GAME.
 
 ## Other stuff
 - NEVER PRESS A RED BUTTON IN-GAME. If you did, please close Refunct and refunct-tas.exe and login again.
 - PLATFORMS WITH A RED BUTTON ON THEM ARE NEVER CHECKS. No need to risk your life to get those.
 - Universal Tracker can help you to figure out which platforms are accessible.
-- You should be able to quit a game and continue it later, just follow the steps again. However, for now, platforms you touched before, won't show as grassy.
+- You should be able to quit a game and continue it later, just follow the steps again.
 - The final cluster in the game won't appear and will stay underwater for now (the final button is weird).
 - There's many improvements to be made, regarding the buttons and the grassy platforms. I don't know how to do that yet. Of course also more yaml options, but let's test this for now.
 
