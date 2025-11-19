@@ -9,8 +9,8 @@ How does it work, what are items and locations?
 
 ## Here's how to play Refunct in Archipelago.
 - You need to own the original game Refunct (via Steam for example).
-- Download the refunct-tas.exe from releases. Unzip the contents into any folder.
-- Do the usual [Archipelago custom games things](https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds): get your yaml and apworld from the release, generate and host.
+- Download the practice-windows.zip from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest). Unzip the contents into any folder.
+- Do the usual [Archipelago custom games things](https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds): get your yaml and apworld from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest), generate and host.
 - Open a notepad (etc) and write your creditionals like this: `archipelago.gg:38281,PlayerName`
 - Copy those credentials (CTRL-C).
 - Open Refunct.
