@@ -173,7 +173,7 @@ impl<'a> Pointer for ObjectWrapper<'a> {
 }
 impl<'a> ObjectWrapper<'a> {
     pub unsafe fn new(object: *mut UObject) -> ObjectWrapper<'a> {
-        assert!(!object.is_null());
+        // allow creating a wrapper for a null pointer so callers can check `.as_ptr()` / nullness
         ObjectWrapper { object, _marker: PhantomData }
     }
     pub unsafe fn new_nullable(object: *mut UObject) -> Option<ObjectWrapper<'a>> {
@@ -182,7 +182,9 @@ impl<'a> ObjectWrapper<'a> {
     pub fn as_ptr(&self) -> *mut UObject {
         self.object
     }
-
+    pub fn is_null(&self) -> bool {
+        self.object.is_null()
+    }
     pub fn vtable(&self) -> *const () {
         unsafe { (*self.object).vtable }
     }

@@ -24,6 +24,7 @@ use chrono::{DateTime, Local};
 use crate::threads::ue::rebo::livesplit;
 use crate::threads::ue::iced_ui::Clipboard;
 use crate::threads::ue::iced_ui::rebo_elements::{IcedButton, IcedColumn, IcedElement, IcedRow, IcedText, IcedWindow};
+use crate::native::{BoolValueWrapper};
 
 pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
     let mut cfg = ReboConfig::new()
@@ -101,6 +102,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(get_level)
         .add_function(set_level)
         .add_function(trigger_element)
+        .add_function(activate_all_buttons)
+        .add_function(deactivate_all_buttons)
         .add_function(set_start_seconds)
         .add_function(set_start_partial_seconds)
         .add_function(set_end_seconds)
@@ -1158,6 +1161,62 @@ fn get_level() -> i32 {
 #[rebo::function("Tas::set_level")]
 fn set_level(level: i32) {
     LevelState::set_level(level);
+}
+#[rebo::function("Tas::deactivate_all_buttons")]
+fn deactivate_all_buttons(index: i32) {
+    // Disable all buttons in the game immediately
+    let msg = format!("Gonna deactivate all buttons");
+    log!("{}", msg);
+    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+    UeScope::with(|scope| {  
+        for item in scope.iter_global_object_array() {
+            let object = item.object();
+            if object.is_null() {
+                log!("Object is null, skipping");
+                continue;
+            }
+            let class_name = object.class().name();
+            let name = object.name();
+            if class_name == "BP_Button_C" && name != "Default__BP_Button_C" {
+                if index < 0 || name == format!("BP_Button_C_{}", index) {
+                    // let state_pressed = object.get_field("IsPressed").unwrap::<BoolValueWrapper>()._get();
+                    // let msggg = format!("(deactivate) Name of button: {:?} StatePressed: {:?}", name, state_pressed);
+                    // log!("{}", msggg);
+                    // STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msggg)).unwrap();
+
+                    object.get_field("IsPressed").unwrap::<BoolValueWrapper>().set(true);
+                }
+            }
+        }
+    });
+}
+#[rebo::function("Tas::activate_all_buttons")]
+fn activate_all_buttons(index: i32) {
+    // Enable all buttons in the game immediately
+    let msg = format!("Gonna activate all buttons");
+    log!("{}", msg);
+    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+    UeScope::with(|scope| {  
+        for item in scope.iter_global_object_array() {
+            let object = item.object();
+            if object.is_null() {
+                log!("Object is null, skipping");
+                continue;
+            }
+            let class_name = object.class().name();
+            let name = object.name();
+            if class_name == "BP_Button_C" && name != "Default__BP_Button_C" {
+                if index < 0 || name == format!("BP_Button_C_{}", index) {
+                    // let state_pressed = object.get_field("IsPressed").unwrap::<BoolValueWrapper>()._get();
+                    // let msggg = format!("(activate) Name of button: {:?} StatePressed: {:?}", name, state_pressed);
+                    // log!("{}", msggg);
+                    // STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msggg)).unwrap();
+
+                    object.get_field("IsPressed").unwrap::<BoolValueWrapper>().set(false);
+                }
+            }
+        }
+    });
 }
 #[rebo::function("Tas::trigger_element")]
 fn trigger_element(index: ElementIndex) {

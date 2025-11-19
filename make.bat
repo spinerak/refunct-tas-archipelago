@@ -6,9 +6,9 @@ del /Q build\practice-windows\*
 echo Building
 
 cd rtil
-cargo build --release --target=i686-pc-windows-msvc --verbose || exit /b
+cargo build --release --target=i686-pc-windows-msvc || exit /b
 cd ..\tool
-cargo build --target=i686-pc-windows-msvc --verbose || exit /b
+cargo build --target=i686-pc-windows-msvc || exit /b
 cd ..
 echo Copying files
 copy rtil\target\i686-pc-windows-msvc\release\rtil.dll build\practice-windows

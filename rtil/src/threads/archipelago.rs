@@ -7,6 +7,7 @@ use crossbeam_channel::Sender;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::task::AbortHandle;
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago};
+use crate::native::{BoolValueWrapper};
 
 use crate::native::UeScope;
 
@@ -34,23 +35,22 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                             receiver_abort_handle = Some(join_handle.abort_handle());
 
 
-                            // Disable all buttons in the game immediately
-                            UeScope::with(|scope| {
+                            // // Disable all buttons in the game immediately
+                            // UeScope::with(|scope| {
                                 
-                                for item in scope.iter_global_object_array() {
-                                    let object = item.object();
-                                    let class_name = object.class().name();
-                                    let name = object.name();
-                                    log!("Found object: {} {}", class_name, name);
+                            //     for item in scope.iter_global_object_array() {
+                            //         let object = item.object();
+                            //         let class_name = object.class().name();
+                            //         let name = object.name();
 
-                                    if class_name == "BP_Button_C" && name != "Default__BP_Button_C" {
-                                        
-                                    }
-
-                                    // // DISABLE BUTTONS HERE
-                                }
-                            });
-                            log!("Disabled all buttons in the game");
+                            //         if class_name == "BP_Button_C" && name != "Default__BP_Button_C" {
+                            //             unsafe {
+                            //                 object.get_field("IsPressed").unwrap::<BoolValueWrapper>().set(true);
+                            //             }
+                            //         }
+                            //     }
+                            // });
+                            // log!("Disabled all buttons in the game");
 
                         },
                         ReboToArchipelago::ClientMessage(msg) => sender.as_mut().unwrap().send(msg).await?,

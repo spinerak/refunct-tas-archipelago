@@ -106,6 +106,7 @@ fn archipelago_disconnected() {
 fn archipelago_trigger_cluster(item_index: int){
     let clusterindex = item_index - 10000000;
     if clusterindex < 32 {
+        Tas::activate_all_buttons(-1);
         let last_unlocked = ARCHIPELAGO_STATE.last_level_unlocked;
         log(f"Received Trigger Cluster {clusterindex}");
         Tas::set_level(clusterindex - 2);
@@ -127,17 +128,24 @@ fn archipelago_trigger_cluster(item_index: int){
         }
         Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 0 });
         ARCHIPELAGO_STATE.last_level_unlocked = clusterindex;
+        Tas::deactivate_all_buttons(-1);
     }
 
-    if item_index >= 20000000 {
-        if item_index < 30000000 {
-            log(f"DEBUG set_level {item_index - 20000000}");
-            Tas::set_level(item_index - 20000000);
-        }
+    if item_index >= 20000000 && item_index < 30000000 {
+        log(f"DEBUG set_level {item_index - 20000000}");
+        Tas::set_level(item_index - 20000000);
     }
-    if item_index >= 30000000 {
+    if item_index >= 30000000 && item_index < 40000000{
         log(f"DEBUG trigger_element {item_index - 30000000} Button 0");
         Tas::trigger_element(ElementIndex { cluster_index: item_index - 30000000, element_type: ElementType::Button, element_index: 0 });
+    }
+    if item_index >= 40000000 && item_index < 50000000{
+        log(f"DEBUG activate button {item_index - 40000000} Button 0");
+        Tas::activate_all_buttons(item_index-40000000);
+    }
+    if item_index >= 50000000 && item_index < 60000000{
+        log(f"DEBUG deactivate button {item_index - 50000000} Button 0");
+        Tas::deactivate_all_buttons(item_index-50000000);
     }
 }
 
