@@ -4,7 +4,7 @@
 How does it work, what are items and locations?
 - You will have to unlock every cluster of platforms (that normally rise by pressing a button).
 - Starting from v0.1.0, you also have to find your abilities to swim, ledge grab, wall kick and jump on jumppads!
-- Location checks are making platforms grassy (200+ locations).
+- Location checks are making platforms grassy by jumping on 'em (200+ locations).
 - Your goal is to collect enough grass and go to the final platform (adjustable via yaml, shown in-game).
 
 ### Completely new to Archipelago?
