@@ -29,6 +29,7 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 - Universal Tracker can help you to figure out which platforms are accessible. The mini-map should help!
 - You should be able to quit a game and continue it later, just follow the steps again. Make sure to "New game" before logging into AP.
 - The final cluster in the game won't appear and will stay underwater for now (the final button is weird).
+- Softlocked?? Disconnect Archipelago, press New Game, then connect to AP again.
 
 # Below text is the text of the original read me for the Refunct TaS Tool
 # Refunct TaS Tool
