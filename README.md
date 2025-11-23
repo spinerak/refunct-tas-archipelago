@@ -3,8 +3,9 @@
 
 How does it work, what are items and locations?
 - You will have to unlock every cluster of platforms (that normally rise by pressing a button).
+- Starting from v0.1.0, you also have to find your abilities to swim, ledge grab, wall kick and jump on jumppads!
 - Location checks are making platforms grassy (200+ locations).
-- Your goal is to collect 100 Grass and then jump on platform 20-1 in the very bottom-left.
+- Your goal is to collect enough grass and go to the final platform (adjustable via yaml, shown in-game).
 
 ### Completely new to Archipelago?
 Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_HELP.md) helps.
@@ -20,15 +21,14 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 - Double-click refunct-tas.exe (note: it may crash, just try again a couple of times, or check troubleshooting at the very bottom).
 - After a short lag, you'll see "Press 'm' to open the menu" top-left.
 - Navigate to Archipelago, paste your credentials (CTRL-V) and press enter.
-- After closing the menu (escape), you should now see "Connected to Archipelago". You're good to go!
-- Red buttons don't do anything, so don't worry about it.
+- After closing the menu (escape), you should now see "Connected to Archipelago" and much more. You're good to go!
+- Red buttons don't do anything in this randomizer.
 
 ## Other stuff
 - Buttons and platforms underneath buttons are not checks. (Red) buttons don't do anything.
-- Universal Tracker can help you to figure out which platforms are accessible.
-- You should be able to quit a game and continue it later, just follow the steps again.
+- Universal Tracker can help you to figure out which platforms are accessible. The mini-map should help!
+- You should be able to quit a game and continue it later, just follow the steps again. Make sure to "New game" before logging into AP.
 - The final cluster in the game won't appear and will stay underwater for now (the final button is weird).
-- There's many improvements to be made still.
 
 # Below text is the text of the original read me for the Refunct TaS Tool
 # Refunct TaS Tool
