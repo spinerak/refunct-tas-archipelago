@@ -11,16 +11,16 @@ How does it work, what are items and locations?
 Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_HELP.md) helps.
 
 ## Here's how to play Refunct in Archipelago.
+The 1️⃣, 2️⃣, 3️⃣, 4️⃣ order is very important, also when you login again later.
 - You need to own the original game Refunct (via Steam for example).
 - Download the practice-windows.zip from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest). Unzip the contents into any folder.
 - Do the usual [Archipelago custom games things](https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds): get your yaml and apworld from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest), generate and host.
 - Open a notepad (etc) and write your creditionals like this: `archipelago.gg:38281,PlayerName`
 - Copy those credentials (CTRL-C).
-- Open Refunct.
-- Click New Game (back-up your save if you want).
-- Double-click refunct-tas.exe (note: it may crash, just try again a couple of times, or check troubleshooting at the very bottom).
-- After a short lag, you'll see "Press 'm' to open the menu" top-left.
-- Navigate to Archipelago, paste your credentials (CTRL-V) and press enter.
+- 1️⃣ Open Refunct.
+- 2️⃣ Once it's loaded, double-click refunct-tas.exe (note: it may crash, just try again a couple of times, or check troubleshooting at the very bottom).
+- 3️⃣ Click New Game (back-up your save if you want).
+- 4️⃣ After a short lag, you'll see "Press 'm' to open the menu" top-left. Navigate to Archipelago, paste your credentials (CTRL-V) and press enter to login.
 - After closing the menu (escape), you should now see "Connected to Archipelago" and much more. You're good to go!
 - Red buttons don't do anything in this randomizer.
 
@@ -29,7 +29,7 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 - Universal Tracker can help you to figure out which platforms are accessible. The mini-map should help!
 - You should be able to quit a game and continue it later, just follow the steps again. Make sure to "New game" before logging into AP.
 - The final cluster in the game won't appear and will stay underwater for now (the final button is weird).
-- Softlocked?? Disconnect Archipelago, press New Game, then connect to AP again.
+- Softlocked or wanna continue a game? (Close Refunct) and follow 1️⃣2️⃣3️⃣4️⃣.
 
 # Below text is the text of the original read me for the Refunct TaS Tool
 # Refunct TaS Tool
