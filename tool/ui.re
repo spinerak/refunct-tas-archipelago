@@ -201,6 +201,7 @@ fn on_menu_open() {
 static COLOR_BLACK = Color { red: 0., green: 0., blue: 0., alpha: 1. };
 static COLOR_RED = Color { red: 1., green: 0., blue: 0., alpha: 1. };
 static COLOR_WHITE = Color { red: 1., green: 1., blue: 1., alpha: 1. };
+static COLOR_BLUE = Color { red: 0., green: 0., blue: 1., alpha: 1. };
 
 impl Ui {
     fn onclick(self) {
@@ -239,15 +240,48 @@ impl Ui {
         }
         Tas::draw_text(DrawText {
             text: self.name.text,
-            color: COLOR_WHITE,
-            x: 0.,
-            y: 0.,
+            color: COLOR_BLACK,
+            x: 8.,
+            y: 8.,
             scale: SETTINGS.ui_scale,
             scale_position: true,
         });
+        Tas::draw_text(DrawText {
+            text: self.name.text,
+            color: COLOR_BLACK,
+            x: 12.,
+            y: 12.,
+            scale: SETTINGS.ui_scale,
+            scale_position: true,
+        });
+        Tas::draw_text(DrawText {
+            text: self.name.text,
+            color: COLOR_BLACK,
+            x: 8.,
+            y: 12.,
+            scale: SETTINGS.ui_scale,
+            scale_position: true,
+        });
+        Tas::draw_text(DrawText {
+            text: self.name.text,
+            color: COLOR_BLACK,
+            x: 12.,
+            y: 8.,
+            scale: SETTINGS.ui_scale,
+            scale_position: true,
+        });
+        Tas::draw_text(DrawText {
+            text: self.name.text,
+            color: COLOR_WHITE,
+            x: 10.,
+            y: 10.,
+            scale: SETTINGS.ui_scale,
+            scale_position: true,
+        });
+
         let mut i = 0;
         for element in self.elements {
-            let color = if self.selected == i { COLOR_RED } else { COLOR_BLACK };
+            let color = if self.selected == i { COLOR_BLUE } else { COLOR_BLACK };
             element.draw(padding + i.to_float() * padding, color);
             i = i + 1;
         }

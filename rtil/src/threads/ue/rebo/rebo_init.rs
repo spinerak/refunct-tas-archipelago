@@ -13,7 +13,8 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use websocket::{ClientBuilder, Message, OwnedMessage, WebSocketError};
 use crate::log;
-use crate::native::{character::USceneComponent, try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
+use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX};
+use crate::native::{try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
 use protocol::{Request, Response};
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo, archipelago};
 use super::{STATE, livesplit::{Game, NewGameGlitch, SplitsSaveError, SplitsLoadError}};
@@ -27,6 +28,7 @@ use crate::threads::ue::iced_ui::Clipboard;
 use crate::threads::ue::iced_ui::rebo_elements::{IcedButton, IcedColumn, IcedElement, IcedRow, IcedText, IcedWindow};
 
 use crate::native::{BoolValueWrapper};
+use crate::native::reflection::DerefToObjectWrapper;
 
 pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
     let mut cfg = ReboConfig::new()
@@ -108,6 +110,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(archipelago_deactivate_all_buttons)
         .add_function(archipelago_set_wall_jump_and_ledge_grab)
         .add_function(archipelago_set_jump_pads)
+        .add_function(archipelago_trigger_goal_animation)
         .add_function(set_start_seconds)
         .add_function(set_start_partial_seconds)
         .add_function(set_end_seconds)
@@ -1200,7 +1203,7 @@ fn archipelago_deactivate_all_buttons(index: i32) {
     // Disable all buttons in the game immediately
     let msg = format!("Gonna deactivate all buttons");
     log!("{}", msg);
-    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+    
     UeScope::with(|scope| {  
         for item in scope.iter_global_object_array() {
             let object = item.object();
@@ -1231,7 +1234,7 @@ fn archipelago_activate_all_buttons(index: i32) {
     // Enable all buttons in the game immediately
     let msg = format!("Gonna activate all buttons");
     log!("{}", msg);
-    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
+    
     UeScope::with(|scope| {  
         for item in scope.iter_global_object_array() {
             let object = item.object();
@@ -1416,6 +1419,22 @@ fn archipelago_set_wall_jump_and_ledge_grab(wall_jump: i32, ledge_grab: i32) {
         }
 
     }
+}
+#[rebo::function("Tas::archipelago_trigger_goal_animation")]
+fn archipelago_trigger_goal_animation() {
+    log!("Archipelago: triggering goal animation");
+    UeScope::with(|scope| {
+        let levels = LEVELS.lock().unwrap();
+        let jump6 = scope.get(JUMP6_INDEX.get().unwrap());
+        let foo = &*scope.get(levels[0].buttons[0]);
+        log!("Archipelago: triggering goal animation on {:?} {:?}", jump6.name(), foo.name());
+        let fun = jump6.class().find_function("ButtonPressed_Event").unwrap();
+        let params = fun.create_argument_struct();
+        params.get_field("Reference").set_object(foo.get_object_wrapper());
+        unsafe {
+            fun.call(jump6.as_ptr(), &params);
+        }
+    })
 }
 #[rebo::function("Tas::set_start_seconds")]
 fn set_start_seconds(start_seconds: i32) {

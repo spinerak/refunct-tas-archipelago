@@ -12,11 +12,22 @@ struct LogMessage {
 }
 
 fn log(content: string) {
-    let message = LogMessage {
-        content: content,
-        added_timestamp: current_time_millis(),
-    };
-    LOG.messages.push(message);
+
+    if content.starts_with("$") {
+        let trimmed = content.slice(1);
+        let message = LogMessage {
+            content: trimmed,
+            added_timestamp: current_time_millis() - 9000,
+        };
+        LOG.messages.push(message);
+    } else {
+        let message = LogMessage {
+            content: content,
+            added_timestamp: current_time_millis(),
+        };
+        LOG.messages.push(message);
+    }
+
 }
 
 fn draw_log_messages() {
