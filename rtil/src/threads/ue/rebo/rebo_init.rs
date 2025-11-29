@@ -476,6 +476,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     let msg = format!("Archipelago ServerMessage::ReceivedItems: {:?}", received);
                     log!("{}", msg);
 
+                    let mut index = received.index;
                     //loop through received items
                     for net in &received.items {
                         let id = net.item as i32;
@@ -484,9 +485,11 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                         // we want to trigger cluster id-10000000 in-game here
 
                         archipelago_received_item(vm,
+                            index as usize,
                             id as usize
                         )?;
 
+                        index += 1;
                     }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::LocationInfo(info))) => {
@@ -571,7 +574,7 @@ extern "rebo" {
     fn on_level_state_change(old: LevelState, new: LevelState);
     fn on_resolution_change();
     fn on_menu_open();
-    fn archipelago_received_item(cluster_index: usize);
+    fn archipelago_received_item(index: usize, cluster_index: usize);
     fn archipelago_got_grass();
     fn archipelago_checked_location(cluster: usize, platform: usize);
     fn archipelago_received_slot_data(name_of_options: String, value_of_options: String);

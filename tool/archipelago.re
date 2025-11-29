@@ -42,6 +42,8 @@ struct ArchipelagoState {
     final_platform_c: int,
     final_platform_p: int,
     final_platform_known: bool,
+    triggered_platforms: Set<int>,
+    highest_index_received: int,
 }
 static mut ARCHIPELAGO_STATE = ArchipelagoState {
     last_level_unlocked: 1,
@@ -54,6 +56,8 @@ static mut ARCHIPELAGO_STATE = ArchipelagoState {
     final_platform_c: 100,
     final_platform_p: 1,
     final_platform_known: false,
+    triggered_platforms: Set::new(),
+    highest_index_received: -1,
 };
 
 static mut ARCHIPELAGO_COMPONENT = Component {
@@ -137,7 +141,12 @@ fn archipelago_disconnected() {
 };
 
 // triggers cluster clusterindex
-fn archipelago_received_item(item_index: int){
+fn archipelago_received_item(index: int, item_index: int){
+    if index <= ARCHIPELAGO_STATE.highest_index_received {
+        log(f"Ignoring duplicate or out-of-order item index {index} (highest received: {ARCHIPELAGO_STATE.highest_index_received})");
+        return;
+    }
+    ARCHIPELAGO_STATE.highest_index_received = index;
     if item_index == 9999990 {  // Ledge Grab
         log("Received Ledge Grab!");
         ARCHIPELAGO_STATE.ledge_grab += 1;
@@ -166,29 +175,33 @@ fn archipelago_received_item(item_index: int){
     }
     let clusterindex = item_index - 10000000;
     if clusterindex >= 2 && clusterindex < 32 {
-        Tas::archipelago_activate_all_buttons(-1);
-        let last_unlocked = ARCHIPELAGO_STATE.last_level_unlocked;
-        log(f"Received Trigger Cluster {clusterindex}");
-        Tas::set_level(clusterindex - 2);
-        if last_unlocked == 7 {
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
+        if !ARCHIPELAGO_STATE.triggered_platforms.contains(clusterindex) {
+            Tas::archipelago_activate_all_buttons(-1);
+            let last_unlocked = ARCHIPELAGO_STATE.last_level_unlocked;
+            log(f"Received Trigger Cluster {clusterindex}");
+            Tas::set_level(clusterindex - 2);
+            if last_unlocked == 7 {
+                Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
+            }
+            if last_unlocked == 10 {
+                Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
+            }
+            if last_unlocked == 18 {
+                Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
+            }
+            if last_unlocked == 26 {
+                Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
+                Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 2 });
+            }
+            if last_unlocked == 28 {
+                Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
+            }
+            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 0 });
+            ARCHIPELAGO_STATE.last_level_unlocked = clusterindex;
+            Tas::archipelago_deactivate_all_buttons(-1);
+
+            ARCHIPELAGO_STATE.triggered_platforms.insert(clusterindex);
         }
-        if last_unlocked == 10 {
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-        }
-        if last_unlocked == 18 {
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-        }
-        if last_unlocked == 26 {
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 2 });
-        }
-        if last_unlocked == 28 {
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-        }
-        Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 0 });
-        ARCHIPELAGO_STATE.last_level_unlocked = clusterindex;
-        Tas::archipelago_deactivate_all_buttons(-1);
     }
 
     if item_index >= 20000000 && item_index < 30000000 {
