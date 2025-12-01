@@ -63,7 +63,7 @@ static mut ARCHIPELAGO_STATE = ArchipelagoState {
 };
 
 static AP_COLOR_RED    = Color { red: 0.600, green: 0.160, blue: 0.227, alpha: 1. };
-static AP_COLOR_BLUE   = Color { red: 0.165, green: 0.231, blue: 0.600, alpha: 1. };
+static AP_COLOR_CYAN   = Color { red: 0.000, green: 0.627, blue: 0.698, alpha: 1. };
 static AP_COLOR_GREEN  = Color { red: 0.231, green: 0.600, blue: 0.165, alpha: 1. };
 static AP_COLOR_YELLOW = Color { red: 0.600, green: 0.533, blue: 0.165, alpha: 1. };
 
@@ -104,12 +104,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         let final_platform = if ARCHIPELAGO_STATE.final_platform_known { f"{ARCHIPELAGO_STATE.final_platform_c}-{ARCHIPELAGO_STATE.final_platform_p}" } else { "????" };
         draw_text_line(
             f"Goal: Platform {final_platform}",
-            if ARCHIPELAGO_STATE.has_goaled { AP_COLOR_GREEN } else { AP_COLOR_BLUE }
+            if ARCHIPELAGO_STATE.has_goaled { AP_COLOR_GREEN } else { AP_COLOR_CYAN }
         );
 
         draw_text_line(
             f"Grass: {ARCHIPELAGO_STATE.grass}/{ARCHIPELAGO_STATE.required_grass}",
-            if ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass { AP_COLOR_GREEN } else { AP_COLOR_BLUE }
+            if ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass { AP_COLOR_GREEN } else { AP_COLOR_CYAN }
         );
 
         line_index.i += 1.; // Spacing
