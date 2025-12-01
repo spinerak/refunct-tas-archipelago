@@ -62,6 +62,11 @@ static mut ARCHIPELAGO_STATE = ArchipelagoState {
     has_goaled: false,
 };
 
+static AP_COLOR_RED    = Color { red: 0.600, green: 0.160, blue: 0.227, alpha: 1. };
+static AP_COLOR_BLUE   = Color { red: 0.165, green: 0.231, blue: 0.600, alpha: 1. };
+static AP_COLOR_GREEN  = Color { red: 0.231, green: 0.600, blue: 0.165, alpha: 1. };
+static AP_COLOR_YELLOW = Color { red: 0.600, green: 0.533, blue: 0.165, alpha: 1. };
+
 static mut ARCHIPELAGO_COMPONENT = Component {
     id: ARCHIPELAGO_COMPONENT_ID,
     conflicts_with: List::of(ARCHIPELAGO_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID),
@@ -69,22 +74,72 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     requested_delta_time: Option::None,
     on_tick: update_players,
     on_yield: fn() {},
-    draw_hud_text: fn(text: string) -> string {
-        let ledge_grab = if ARCHIPELAGO_STATE.ledge_grab > 0 { "YES" } else { "NO" };
-        let wall_jump = if ARCHIPELAGO_STATE.wall_jump >= 2 { "INF" } else if ARCHIPELAGO_STATE.wall_jump == 1 { "ONE" } else { "NO" };
-        let jumppads = if ARCHIPELAGO_STATE.jumppads > 0 { "YES" } else { "NO" };
-        let swim = if ARCHIPELAGO_STATE.swim > 0 { "YES" } else { "NO" };
-        let final_platform = if ARCHIPELAGO_STATE.final_platform_known { f"{ARCHIPELAGO_STATE.final_platform_c}-{ARCHIPELAGO_STATE.final_platform_p}" } else { "????" };
-        return f"Archipelago Randomizer\nGoal: get grass {ARCHIPELAGO_STATE.grass}/{ARCHIPELAGO_STATE.required_grass}
--> go to Platform {final_platform}
+    draw_hud_text: fn(text: string) -> string { text },
+    draw_hud_always: fn() {
+        let viewport = Tas::get_viewport_size();
+        let text_size = Tas::get_text_size("Archipelago Randomizer ", SETTINGS.ui_scale);
+        let line_height = text_size.height;
+        let text_width = text_size.width;
+        let title_text_x_pos = viewport.width.to_float() - text_width - 5.;
 
-Abilities
-Ledge Grab: {ledge_grab}
-Wall Jump: {wall_jump}
-Jumppads: {jumppads}
-Swim: {swim}"
+        // We have to do this struct nonsense to modify the index from the closure
+        struct TextLineIndex { i: float };
+        let mut line_index = TextLineIndex { i: 0.};
+
+        // Convenience Function
+        let draw_text_line = fn(text: string, color: Color) {
+            Tas::draw_text(DrawText {
+                text: text, color: color,
+                x: title_text_x_pos, y: line_index.i*line_height,
+                scale: SETTINGS.ui_scale, scale_position: false
+            });
+            line_index.i += 1.;
+        };
+
+        // Draw Background
+        Tas::draw_rect(Color { red: 0., green: 0., blue: 0., alpha: 0.5 }, title_text_x_pos - 5., 0., text_width + 10., line_height * 9. + 5.);
+
+        draw_text_line("Archipelago Randomizer", COLOR_WHITE);
+
+        let final_platform = if ARCHIPELAGO_STATE.final_platform_known { f"{ARCHIPELAGO_STATE.final_platform_c}-{ARCHIPELAGO_STATE.final_platform_p}" } else { "????" };
+        draw_text_line(
+            f"Goal: Platform {final_platform}",
+            if ARCHIPELAGO_STATE.has_goaled { AP_COLOR_GREEN } else { AP_COLOR_BLUE }
+        );
+
+        draw_text_line(
+            f"Grass: {ARCHIPELAGO_STATE.grass}/{ARCHIPELAGO_STATE.required_grass}",
+            if ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass { AP_COLOR_GREEN } else { AP_COLOR_BLUE }
+        );
+
+        line_index.i += 1.; // Spacing
+
+        draw_text_line("Abilities", COLOR_WHITE);
+
+        let ledge_grab_state = if ARCHIPELAGO_STATE.ledge_grab > 0 { "YES" } else { "NO" };
+        draw_text_line(
+            f"Ledge Grab: { ledge_grab_state }",
+            if ARCHIPELAGO_STATE.ledge_grab > 0 { AP_COLOR_GREEN } else { AP_COLOR_RED }
+        );
+
+        let wall_jump_state = if ARCHIPELAGO_STATE.wall_jump >= 2 { "INF" } else if ARCHIPELAGO_STATE.wall_jump == 1 { "ONE" } else { "NO" };
+        draw_text_line(
+            f"Wall Jump:  { wall_jump_state }",
+            if ARCHIPELAGO_STATE.wall_jump >= 2 { AP_COLOR_GREEN } else if ARCHIPELAGO_STATE.wall_jump == 1 { AP_COLOR_YELLOW } else { AP_COLOR_RED }
+        );
+
+        let jump_pad_state = if ARCHIPELAGO_STATE.jumppads > 0 { "YES" } else { "NO" };
+        draw_text_line(
+            f"Jump Pads:  { jump_pad_state }",
+            if ARCHIPELAGO_STATE.jumppads > 0 { AP_COLOR_GREEN } else { AP_COLOR_RED }
+        );
+
+        let swim_state = if ARCHIPELAGO_STATE.swim > 0 { "YES" } else { "NO" };
+        draw_text_line(
+            f"Swim:       { swim_state }",
+            if ARCHIPELAGO_STATE.swim > 0 { AP_COLOR_GREEN } else { AP_COLOR_RED }
+        );
     },
-    draw_hud_always: fn() {},
     on_new_game: fn() {
         ARCHIPELAGO_STATE.last_level_unlocked = 1;
         ARCHIPELAGO_STATE.grass = 0;
