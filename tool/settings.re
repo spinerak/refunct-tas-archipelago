@@ -143,6 +143,8 @@ struct Settings {
     reticle_scale: float,
     reticle_scale_position: bool,
     log_message_duration: int,
+    archipelago_display_style: ArchipelagoDisplayStyle,
+    archipelago_display_position: MinimapPosition,
 }
 static mut SETTINGS = Settings::load();
 
@@ -227,6 +229,22 @@ impl Settings {
             reticle_scale: get_float("reticle_scale", 1.),
             reticle_scale_position: get_bool("reticle_scale_position", false),
             log_message_duration: get_int("log_message_duration", 10000),
+            archipelago_display_style: match get_string("archipelago_display_style", "ColorCoded") {
+                "Classic" => ArchipelagoDisplayStyle::Classic,
+                "ColorCoded" => ArchipelagoDisplayStyle::ColorCoded,
+                pos => panic(f"unknown archipelago display style: {pos}"),
+            },
+            archipelago_display_position: match get_string("archipelago_display_position", "TopRight") {
+                "TopLeft" => MinimapPosition::TopLeft,
+                "TopCenter" => MinimapPosition::TopCenter,
+                "TopRight" => MinimapPosition::TopRight,
+                "CenterRight" => MinimapPosition::CenterRight,
+                "BottomRight" => MinimapPosition::BottomRight,
+                "BottomCenter" => MinimapPosition::BottomCenter,
+                "BottomLeft" => MinimapPosition::BottomLeft,
+                "CenterLeft" => MinimapPosition::CenterLeft,
+                pos => panic(f"unknown/invalid archipelago display position: {pos}"),
+            },
         }
     }
 
@@ -269,6 +287,8 @@ impl Settings {
         map.insert("reticle_scale", f"{SETTINGS.reticle_scale}");
         map.insert("reticle_scale_position", f"{SETTINGS.reticle_scale_position}");
         map.insert("log_message_duration", f"{SETTINGS.log_message_duration}");
+        map.insert("archipelago_display_style", f"{SETTINGS.archipelago_display_style}");
+        map.insert("archipelago_display_position", f"{SETTINGS.archipelago_display_position}");
         Tas::store_settings(map);
     }
 
