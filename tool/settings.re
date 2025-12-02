@@ -228,7 +228,7 @@ impl Settings {
             reticle_scale: get_float("reticle_scale", 1.),
             reticle_scale_position: get_bool("reticle_scale_position", false),
             log_message_duration: get_int("log_message_duration", 10000),
-            archipelago_display_style: match get_string("archipelago_display_style", "Classic") {
+            archipelago_display_style: match get_string("archipelago_display_style", "ColorCoded") {
                 "Classic" => ArchipelagoDisplayStyle::Classic,
                 "ColorCoded" => ArchipelagoDisplayStyle::ColorCoded,
                 pos => panic(f"unknown minimap position {pos}"),
