@@ -53,12 +53,19 @@ pub fn inject() {
 }
 
 fn pidof() -> u32 {
-    let output = Command::new("wmic")
-        .args(&["process", "where", "Name='Refunct-Win32-Shipping.exe'", "get", "ProcessId"])
+    let output = Command::new("powershell")
+        .args(&[
+            "-NoProfile",
+            "-Command",
+            "Get-Process -Name 'Refunct-Win32-Shipping' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id"
+        ])
         .output()
         .expect("Cannot get pid of Refunct");
-    let s = String::from_utf8(output.stdout).expect("Output of pidof is not utf8");
-    let mut lines = s.lines();
-    assert_eq!(lines.next().map(|s| s.trim()), Some("ProcessId"), "could not get pid of Refunct");
-    lines.next().expect("No line containing pid").trim().parse().expect("Pidof returned non-number")
+
+    let s = String::from_utf8(output.stdout)
+        .expect("Output of pidof is not utf8");
+
+    s.trim()
+        .parse()
+        .expect("Could not find or parse pid of Refunct")
 }
