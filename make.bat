@@ -13,6 +13,7 @@ cd ..
 echo Copying files
 copy rtil\target\i686-pc-windows-msvc\release\rtil.dll build\practice-windows
 copy tool\target\i686-pc-windows-msvc\debug\refunct-tas.exe build\practice-windows
+copy tool\debug.bat build\practice-windows
 copy tool\main.re build\practice-windows
 copy tool\prelude.re build\practice-windows
 copy tool\component.re build\practice-windows
