@@ -143,6 +143,7 @@ struct Settings {
     reticle_scale: float,
     reticle_scale_position: bool,
     log_message_duration: int,
+    archipelago_display_style: ArchipelagoDisplayStyle
 }
 static mut SETTINGS = Settings::load();
 
@@ -227,6 +228,11 @@ impl Settings {
             reticle_scale: get_float("reticle_scale", 1.),
             reticle_scale_position: get_bool("reticle_scale_position", false),
             log_message_duration: get_int("log_message_duration", 10000),
+            archipelago_display_style: match get_string("archipelago_display_style", "Classic") {
+                "Classic" => ArchipelagoDisplayStyle::Classic,
+                "Colorful" => ArchipelagoDisplayStyle::Colorful,
+                pos => panic(f"unknown minimap position {pos}"),
+            },
         }
     }
 
@@ -269,6 +275,7 @@ impl Settings {
         map.insert("reticle_scale", f"{SETTINGS.reticle_scale}");
         map.insert("reticle_scale_position", f"{SETTINGS.reticle_scale_position}");
         map.insert("log_message_duration", f"{SETTINGS.log_message_duration}");
+        map.insert("archipelago_display_style", f"{SETTINGS.archipelago_display_style}");
         Tas::store_settings(map);
     }
 

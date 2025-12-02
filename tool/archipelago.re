@@ -24,11 +24,35 @@ fn create_archipelago_menu() -> Ui {
                 // leave_ui();
             },
         }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Display Style" },
+            options: List::of(
+                Text { text: "Classic" },
+                Text { text: "Colorful" }
+            ),
+            selected: match SETTINGS.archipelago_display_style {
+                ArchipelagoDisplayStyle::Classic => 0,
+                ArchipelagoDisplayStyle::Colorful => 1
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.archipelago_display_style = ArchipelagoDisplayStyle::Classic },
+                    1 => { SETTINGS.archipelago_display_style = ArchipelagoDisplayStyle::Colorful },
+                    _ => panic(f"unknown display_style index {index}"),
+                }
+                SETTINGS.store();
+            }
+        }),
         UiElement::Button(UiButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
         }),
     ))
+}
+
+enum ArchipelagoDisplayStyle {
+    Classic,
+    Colorful
 }
 
 struct ArchipelagoState {
@@ -75,8 +99,26 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     requested_delta_time: Option::None,
     on_tick: update_players,
     on_yield: fn() {},
-    draw_hud_text: fn(text: string) -> string { text },
+    draw_hud_text: fn(text: string) -> string {
+        if SETTINGS.archipelago_display_style != ArchipelagoDisplayStyle::Classic { return text; }
+
+        let ledge_grab = if ARCHIPELAGO_STATE.ledge_grab > 0 { "YES" } else { "NO" };
+        let wall_jump = if ARCHIPELAGO_STATE.wall_jump >= 2 { "INF" } else if ARCHIPELAGO_STATE.wall_jump == 1 { "ONE" } else { "NO" };
+        let jumppads = if ARCHIPELAGO_STATE.jumppads > 0 { "YES" } else { "NO" };
+        let swim = if ARCHIPELAGO_STATE.swim > 0 { "YES" } else { "NO" };
+        let final_platform = if ARCHIPELAGO_STATE.final_platform_known { f"{ARCHIPELAGO_STATE.final_platform_c}-{ARCHIPELAGO_STATE.final_platform_p}" } else { "????" };
+        return f"Archipelago Randomizer\nGoal: get grass {ARCHIPELAGO_STATE.grass}/{ARCHIPELAGO_STATE.required_grass}
+-> go to Platform {final_platform}
+
+Abilities
+Ledge Grab: {ledge_grab}
+Wall Jump: {wall_jump}
+Jumppads: {jumppads}
+Swim: {swim}"
+    },
     draw_hud_always: fn() {
+        if SETTINGS.archipelago_display_style != ArchipelagoDisplayStyle::Colorful { return; }
+
         // First, build all the lines of text
         struct TextLine { text: string, color: Color };
         let mut text_lines = List::new();
