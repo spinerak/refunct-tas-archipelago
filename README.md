@@ -13,7 +13,7 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 ## Here's how to play Refunct in Archipelago.
 The 1️⃣, 2️⃣, 3️⃣, 4️⃣ order is very important, also when you login again later.
 - You need to own the original game Refunct (via Steam for example).
-- Download the practice-windows.zip from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest). Unzip the contents into any folder.
+- Download the `practice-windows.zip` from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest). Unzip the contents into any folder.
 - Do the usual [Archipelago custom games things](https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds): get your yaml and apworld from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest), generate and host.
 - Open a notepad (etc) and write your creditionals like this: `archipelago.gg:38281,PlayerName`
 - Copy those credentials (CTRL-C).
@@ -25,6 +25,7 @@ The 1️⃣, 2️⃣, 3️⃣, 4️⃣ order is very important, also when you lo
 - Red buttons don't do anything in this randomizer.
 
 ## AP help
+- Opening the exe does nothing? Perhaps the version in `practice-windows-PID.zip` works? (This version will be the main version soon) 
 - Softlocked or wanna continue a game? (Close Refunct) and follow 1️⃣2️⃣3️⃣4️⃣.
 - Can't login? If on Windows: more information is in the log file, located at `C:\Users\yourname\AppData\Local\Temp\refunct-tas.log`
 
