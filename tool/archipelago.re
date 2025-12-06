@@ -27,7 +27,7 @@ fn create_archipelago_menu() -> Ui {
         UiElement::Chooser(Chooser {
             label: Text { text: "Display Style" },
             options: List::of(
-                Text { text: "Classic" },
+                Text { text: "Classic (shown on main menu)" },
                 Text { text: "Color Coded" }
             ),
             selected: match SETTINGS.archipelago_display_style {
