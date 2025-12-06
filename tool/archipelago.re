@@ -43,6 +43,44 @@ fn create_archipelago_menu() -> Ui {
                 SETTINGS.store();
             }
         }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Position" },
+            options: List::of(
+                Text { text: "Top Left" },
+                Text { text: "Top Center" },
+                Text { text: "Top Right" },
+                Text { text: "Center Right" },
+                Text { text: "Bottom Right" },
+                Text { text: "Bottom Center" },
+                Text { text: "Bottom Left" },
+                Text { text: "Center Left" }
+            ),
+            selected: match SETTINGS.archipelago_display_position {
+                MinimapPosition::TopLeft => 0,
+                MinimapPosition::TopCenter => 1,
+                MinimapPosition::TopRight => 2,
+                MinimapPosition::CenterRight => 3,
+                MinimapPosition::BottomRight => 4,
+                MinimapPosition::BottomCenter => 5,
+                MinimapPosition::BottomLeft => 6,
+                MinimapPosition::CenterLeft => 7,
+                pos => panic(f"unknown archipelago display position: {pos}"),
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.archipelago_display_position = MinimapPosition::TopLeft; },
+                    1 => { SETTINGS.archipelago_display_position = MinimapPosition::TopCenter; },
+                    2 => { SETTINGS.archipelago_display_position = MinimapPosition::TopRight; },
+                    3 => { SETTINGS.archipelago_display_position = MinimapPosition::CenterRight; },
+                    4 => { SETTINGS.archipelago_display_position = MinimapPosition::BottomRight; },
+                    5 => { SETTINGS.archipelago_display_position = MinimapPosition::BottomCenter; },
+                    6 => { SETTINGS.archipelago_display_position = MinimapPosition::BottomLeft; },
+                    7 => { SETTINGS.archipelago_display_position = MinimapPosition::CenterLeft; },
+                    pos => panic(f"unknown archipelago display position: {pos}"),
+                }
+                SETTINGS.store();
+            },
+        }),
         UiElement::Button(UiButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
@@ -174,22 +212,81 @@ Swim: {swim}"
             text_width = float::max(text_size.width, text_width);
             line_height = text_size.height;
         }
+        let text_height = text_lines.len().to_float() * line_height;
 
         let viewport = Tas::get_viewport_size();
-        let title_text_x_pos = viewport.width.to_float() - text_width - 5.0;
+        let mut title_text_x = 0.0;
+        let mut title_text_y = 0.0;
+
+        match SETTINGS.archipelago_display_position {
+            MinimapPosition::TopLeft => {
+                title_text_x = 5.0;
+                title_text_y = 0.0;
+
+                // let mut text = "";
+                // for comp in CURRENT_COMPONENTS {
+                //     let draw_hud_text = comp.draw_hud_text;
+                //     text = draw_hud_text(text);
+                // }
+
+                // let mut line_count = 0;
+                // let mut i = 0;
+                // while i < text.len_grapheme_clusters() {
+                //     let c = text.slice(i, i+1);
+                //     if c == "\n" { line_count += 1; }
+                //     i += 1;
+                // }
+                match UI_STACK.last() {
+                    Option::Some(ui) => {
+                        let elements = ui.elements;
+                        title_text_y += line_height * (elements.len().to_float() + 1.5);
+                    },
+                    Option::None => (),
+                }
+            },
+            MinimapPosition::TopCenter => {
+                title_text_x = (viewport.width.to_float() - text_width)/2.0;
+                title_text_y = 5.0;
+            },
+            MinimapPosition::TopRight => {
+                title_text_x = viewport.width.to_float() - text_width - 5.0;
+                title_text_y = 5.0;
+            },
+            MinimapPosition::CenterRight => {
+                title_text_x = viewport.width.to_float() - text_width - 5.0;
+                title_text_y = (viewport.height.to_float() - text_height)/2.0;
+            },
+            MinimapPosition::BottomRight => {
+                title_text_x = viewport.width.to_float() - text_width - 5.0;
+                title_text_y = viewport.height.to_float() - text_height - 5.0;
+            },
+            MinimapPosition::BottomCenter => {
+                title_text_x = (viewport.width.to_float() - text_width)/2.0;
+                title_text_y = viewport.height.to_float() - text_height - 5.0;
+            },
+            MinimapPosition::BottomLeft => {
+                title_text_x = 5.0;
+                title_text_y = viewport.height.to_float() - text_height - 5.0;
+            },
+            MinimapPosition::CenterLeft => {
+                title_text_x = 5.0;
+                title_text_y = (viewport.height.to_float() - text_height)/2.0;
+            },
+            pos => panic(f"unknown/invalid archipelago display position: {pos}"),
+        };
 
         // Draw background rectangle for visibility
         Tas::draw_rect(
             AP_COLOR_BG,
-            title_text_x_pos - 5.0, 0.0,
-            text_width + 10.0, line_height * text_lines.len().to_float() + 5.0
+            title_text_x - 5.0, title_text_y - 5.0,
+            text_width + 10.0, text_height + 10.0
         );
 
         let mut i = 0.0;
         for text_line in text_lines {
             Tas::draw_text(DrawText {
                 text: text_line.text, color: text_line.color,
-                x: title_text_x_pos, y: i*line_height,
+                x: title_text_x, y: title_text_y + i*line_height,
                 scale: SETTINGS.ui_scale, scale_position: false
             });
             i += 1.0;
