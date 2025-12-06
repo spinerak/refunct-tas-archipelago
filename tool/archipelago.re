@@ -176,7 +176,6 @@ Swim: {swim}"
         });
 
         text_lines.push(TextLine { text: "", color: COLOR_WHITE });
-
         text_lines.push(TextLine { text: "Abilities", color: COLOR_WHITE });
 
         let ledge_grab_state = if ARCHIPELAGO_STATE.ledge_grab > 0 { "YES" } else { "NO" };
@@ -223,19 +222,7 @@ Swim: {swim}"
                 title_text_x = 5.0;
                 title_text_y = 0.0;
 
-                // let mut text = "";
-                // for comp in CURRENT_COMPONENTS {
-                //     let draw_hud_text = comp.draw_hud_text;
-                //     text = draw_hud_text(text);
-                // }
-
-                // let mut line_count = 0;
-                // let mut i = 0;
-                // while i < text.len_grapheme_clusters() {
-                //     let c = text.slice(i, i+1);
-                //     if c == "\n" { line_count += 1; }
-                //     i += 1;
-                // }
+                // Make sure we don't overlap with the menu
                 match UI_STACK.last() {
                     Option::Some(ui) => {
                         let elements = ui.elements;
@@ -276,11 +263,7 @@ Swim: {swim}"
         };
 
         // Draw background rectangle for visibility
-        Tas::draw_rect(
-            AP_COLOR_BG,
-            title_text_x - 5.0, title_text_y - 5.0,
-            text_width + 10.0, text_height + 10.0
-        );
+        Tas::draw_rect(AP_COLOR_BG, title_text_x - 5.0, title_text_y - 5.0, text_width + 10.0, text_height + 10.0);
 
         let mut i = 0.0;
         for text_line in text_lines {
