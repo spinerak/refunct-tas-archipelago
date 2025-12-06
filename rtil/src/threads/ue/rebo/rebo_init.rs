@@ -254,7 +254,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_got_grass)
         .add_required_rebo_function(archipelago_checked_location)
         .add_required_rebo_function(archipelago_received_slot_data)
-        .add_required_rebo_function(archipelago_start)
+        .add_required_rebo_function(archipelago_init)
         .add_required_rebo_function(on_level_state_change)
         .add_required_rebo_function(on_resolution_change)
         .add_required_rebo_function(on_menu_open)
@@ -454,14 +454,11 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     //    slot_info: {1: NetworkSlot { name: "Player1", game: "Refunct", type: Player, group_members: [] }}, 
                     //    hint_points: 2 
                     // }
-                    archipelago_start(vm)?;
+                    archipelago_init(vm, 0 as usize)?;
                     for loc in &info.checked_locations {
-                        let value: i64 = loc - 10010000;
-                        let cluster: i64 = value / 100;
-                        let platform: i64 = value % 100;
+                        let value: i64 = *loc;
                         archipelago_checked_location(vm,
-                            cluster as usize,
-                            platform as usize
+                            value as usize,
                         )?;
                     }
                     for (key, value) in info.slot_data.as_object().unwrap() {
@@ -576,9 +573,9 @@ extern "rebo" {
     fn on_menu_open();
     fn archipelago_received_item(index: usize, cluster_index: usize);
     fn archipelago_got_grass();
-    fn archipelago_checked_location(cluster: usize, platform: usize);
+    fn archipelago_checked_location(id: usize);
     fn archipelago_received_slot_data(name_of_options: String, value_of_options: String);
-    fn archipelago_start();
+    fn archipelago_init(gamemode: usize);
 }
 
 fn config_path() -> PathBuf {
@@ -1204,8 +1201,7 @@ fn set_level(level: i32) {
 #[rebo::function("Tas::archipelago_deactivate_all_buttons")]
 fn archipelago_deactivate_all_buttons(index: i32) {
     // Disable all buttons in the game immediately
-    let msg = format!("Gonna deactivate all buttons");
-    log!("{}", msg);
+    log!("Gonna deactivate all buttons");
     
     UeScope::with(|scope| {  
         for item in scope.iter_global_object_array() {
@@ -1231,6 +1227,7 @@ fn archipelago_deactivate_all_buttons(index: i32) {
             }
         }
     });
+    log!("Done deactivating buttons");
 }
 #[rebo::function("Tas::archipelago_activate_all_buttons")]
 fn archipelago_activate_all_buttons(index: i32) {
@@ -1324,7 +1321,7 @@ fn archipelago_set_jump_pads(enabled: i32) {
     }
 }
 #[rebo::function("Tas::archipelago_set_wall_jump_and_ledge_grab")]
-fn archipelago_set_wall_jump_and_ledge_grab(wall_jump: i32, ledge_grab: i32) {
+fn archipelago_set_wall_jump_and_ledge_grab(wall_jump: i32, ledge_grab: i32, change_physics: bool) {
     // 0 is off, 1 is on, 2 is keep current
     log!("Archipelago: setting wall jump to {}", wall_jump);
     log!("Archipelago: setting ledge grab to {}", ledge_grab);
@@ -1398,9 +1395,15 @@ fn archipelago_set_wall_jump_and_ledge_grab(wall_jump: i32, ledge_grab: i32) {
         // }
 
         if wall_jump >= 0 {
-            character.get_field("MinForcedWallJumpAngle").unwrap::<&Cell<f32>>().set(-0.8);
-            character.get_field("MinWallJumpAngleDiff").unwrap::<&Cell<f32>>().set(0.8);
-            character.get_field("MaxForcedWallJumpAngle").unwrap::<&Cell<f32>>().set(0.8);
+            if change_physics {
+                character.get_field("MinForcedWallJumpAngle").unwrap::<&Cell<f32>>().set(-0.8);
+                character.get_field("MinWallJumpAngleDiff").unwrap::<&Cell<f32>>().set(0.8);
+                character.get_field("MaxForcedWallJumpAngle").unwrap::<&Cell<f32>>().set(0.8);
+            } else {
+                character.get_field("MinForcedWallJumpAngle").unwrap::<&Cell<f32>>().set(-0.5);
+                character.get_field("MinWallJumpAngleDiff").unwrap::<&Cell<f32>>().set(0.5);
+                character.get_field("MaxForcedWallJumpAngle").unwrap::<&Cell<f32>>().set(0.5);
+            }
             if wall_jump == 0 {  // no wall jump
                 character.get_field("LastWallJumpTime").unwrap::<&Cell<f32>>().set(385738752.);
                 character.get_field("MinWallJumpInterval").unwrap::<&Cell<f32>>().set(385738752.);

@@ -70,14 +70,14 @@ Resets: {GAME_STATS.total_resets} | Any%: {GAME_STATS.total_runs_completed} | 10
 
 fn create_base_menu() -> Ui {
     Ui::new("Menu:", List::of(
-        UiElement::Button(UiButton {
-            label: Text { text: "Practice" },
-            onclick: fn(label: Text) { enter_ui(create_practice_menu()); },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: "Randomizer" },
-            onclick: fn(label: Text) { enter_ui(create_randomizer_menu()); },
-        }),
+//        UiElement::Button(UiButton {
+//            label: Text { text: "Practice" },
+//            onclick: fn(label: Text) { enter_ui(create_practice_menu()); },
+//        }),
+//        UiElement::Button(UiButton {
+//            label: Text { text: "Randomizer" },
+//            onclick: fn(label: Text) { enter_ui(create_randomizer_menu()); },
+//        }),
 //        UiElement::Button(UiButton {
 //            label: Text { text: "New Game Actions" },
 //            onclick: fn(label: Text) { enter_ui(create_new_game_actions_menu()); },
@@ -87,7 +87,7 @@ fn create_base_menu() -> Ui {
 //            onclick: fn(label: Text) { enter_ui(create_multiplayer_menu()); },
 //        }),
         UiElement::Button(UiButton {
-            label: Text { text: "Archipelago (PRESS NEW GAME FIRST)" },
+            label: Text { text: "Archipelago" },
             onclick: fn(label: Text) { enter_ui(create_archipelago_menu()); },
         }),
 //        UiElement::Button(UiButton {

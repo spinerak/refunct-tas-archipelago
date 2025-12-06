@@ -18,6 +18,12 @@ fn create_archipelago_menu() -> Ui {
             onchange: fn(input: string) {},
         }),
         UiElement::Button(UiButton {
+            label: Text { text: "Change gamemode" },
+            onclick: fn(label: Text) {
+                enter_ui(create_archipelago_gamemodes_menu());
+            },
+        }),
+        UiElement::Button(UiButton {
             label: Text { text: "Want to disconnect? -> RESTART GAME" },
             onclick: fn(label: Text) {
                 // remove_component(ARCHIPELAGO_COMPONENT);
@@ -31,6 +37,8 @@ fn create_archipelago_menu() -> Ui {
     ))
 }
 
+
+
 struct ArchipelagoState {
     last_level_unlocked: int,
     grass: int,
@@ -42,9 +50,13 @@ struct ArchipelagoState {
     final_platform_c: int,
     final_platform_p: int,
     final_platform_known: bool,
-    triggered_platforms: Set<int>,
+    received_items: List<int>,
+    started: int,
+    triggered_clusters: List<int>,
+    stepped_on_platforms: List<int>,
     highest_index_received: int,
     has_goaled: bool,
+    gamemode: int,
 }
 static mut ARCHIPELAGO_STATE = ArchipelagoState {
     last_level_unlocked: 1,
@@ -57,9 +69,13 @@ static mut ARCHIPELAGO_STATE = ArchipelagoState {
     final_platform_c: 100,
     final_platform_p: 1,
     final_platform_known: false,
-    triggered_platforms: Set::new(),
+    received_items: List::new(),
+    started: 0,
+    triggered_clusters: List::new(),
+    stepped_on_platforms: List::new(),
     highest_index_received: -1,
     has_goaled: false,
+    gamemode: 0,
 };
 
 static mut ARCHIPELAGO_COMPONENT = Component {
@@ -70,12 +86,23 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     on_tick: update_players,
     on_yield: fn() {},
     draw_hud_text: fn(text: string) -> string {
+        if ARCHIPELAGO_STATE.started == 0 {
+            return f"Archipelago\nPress new game.";
+        }
+        if ARCHIPELAGO_STATE.started == 1 {
+            return f"Archipelago\nTouch a platform to start!";
+        }
+
+        if ARCHIPELAGO_STATE.gamemode == 1 {
+            return f"Archipelago - Vanilla game\nGoal: press the final button!";
+        }
+
         let ledge_grab = if ARCHIPELAGO_STATE.ledge_grab > 0 { "YES" } else { "NO" };
         let wall_jump = if ARCHIPELAGO_STATE.wall_jump >= 2 { "INF" } else if ARCHIPELAGO_STATE.wall_jump == 1 { "ONE" } else { "NO" };
         let jumppads = if ARCHIPELAGO_STATE.jumppads > 0 { "YES" } else { "NO" };
         let swim = if ARCHIPELAGO_STATE.swim > 0 { "YES" } else { "NO" };
         let final_platform = if ARCHIPELAGO_STATE.final_platform_known { f"{ARCHIPELAGO_STATE.final_platform_c}-{ARCHIPELAGO_STATE.final_platform_p}" } else { "????" };
-        return f"Archipelago Randomizer\nGoal: get grass {ARCHIPELAGO_STATE.grass}/{ARCHIPELAGO_STATE.required_grass}
+        return f"Archipelago - Move rando\nGoal: get grass {ARCHIPELAGO_STATE.grass}/{ARCHIPELAGO_STATE.required_grass}
 -> go to Platform {final_platform}
 
 Abilities
@@ -86,14 +113,10 @@ Swim: {swim}"
     },
     draw_hud_always: fn() {},
     on_new_game: fn() {
-        ARCHIPELAGO_STATE.last_level_unlocked = 1;
-        ARCHIPELAGO_STATE.grass = 0;
-        ARCHIPELAGO_STATE.ledge_grab = 0;
-        ARCHIPELAGO_STATE.wall_jump = 0;
-        ARCHIPELAGO_STATE.swim = 0;
-        ARCHIPELAGO_STATE.jumppads = 0;
-        Tas::archipelago_deactivate_all_buttons(-1);
-        log("Reset last_level_unlocked");
+        Tas::set_kill_z(-6000.);
+        log("[AP] on_new_game called");
+        ARCHIPELAGO_STATE.started = 1;
+        ARCHIPELAGO_STATE.triggered_clusters.clear();
     },
     on_level_change: fn(old: int, new: int) {},
     on_buttons_change: fn(old: int, new: int) {
@@ -107,22 +130,38 @@ Swim: {swim}"
     },
     on_reset: fn(old: int, new: int) {},
     on_element_pressed: fn(index: ElementIndex) {
+        if ARCHIPELAGO_STATE.started == 0 {
+            return;
+        }
+        if ARCHIPELAGO_STATE.started == 1 {
+            archipelago_start();
+            log("Archipelago started!");
+        }
+        
         // log(f"[AP] Pressed {index.element_type} {index.element_index} in cluster {index.cluster_index}");
         if index.element_type == ElementType::Button {
-            // log(f"Send location check {10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1} to Archipelago server");
-            Tas::archipelago_send_check(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
-
-            // if index.cluster_index == 30 { // 31 - 1
-            //     Tas::archipelago_goal();
-            // }
+            // log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
+            if ARCHIPELAGO_STATE.gamemode == 1 {
+                Tas::archipelago_send_check(10020000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+                // log(f"Vanilla mode - sending button press {10020000 + (index.cluster_index + 1) * 100 + index.element_index + 1}");
+            }
         }
+
+        if ARCHIPELAGO_STATE.gamemode == 1 {
+            return;
+        }
+
         if index.element_type == ElementType::Platform {
+
             log(f"$Platform {index.cluster_index + 1}-{index.element_index + 1}");
             Tas::archipelago_send_check(10010000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+            ARCHIPELAGO_STATE.stepped_on_platforms.push((index.cluster_index + 1) * 10 + (index.element_index + 1));
 
             if index.cluster_index == ARCHIPELAGO_STATE.final_platform_c - 1 && index.element_index == ARCHIPELAGO_STATE.final_platform_p - 1 && ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass {
                 Tas::archipelago_goal();
                 if !ARCHIPELAGO_STATE.has_goaled {
+                    let loc = Location { x: 2625., y: -2250., z: 1357. };
+                    Tas::set_location(loc);
                     ARCHIPELAGO_STATE.has_goaled = true;
                     Tas::archipelago_trigger_goal_animation();
                 }
@@ -145,22 +184,22 @@ fn archipelago_disconnected() {
     remove_component(ARCHIPELAGO_COMPONENT);
 };
 
-// triggers cluster clusterindex
-fn archipelago_received_item(index: int, item_index: int){
-    if index <= ARCHIPELAGO_STATE.highest_index_received {
-        log(f"Ignoring duplicate or out-of-order item index {index} (highest received: {ARCHIPELAGO_STATE.highest_index_received})");
+fn archipelago_process_item(item_index: int) {
+    if ARCHIPELAGO_STATE.gamemode == 1 {
+        // log("Vanilla mode - ignoring received item");
         return;
     }
-    ARCHIPELAGO_STATE.highest_index_received = index;
+
+    // log(f"Processing received item index {item_index}");
     if item_index == 9999990 {  // Ledge Grab
         log("Received Ledge Grab!");
         ARCHIPELAGO_STATE.ledge_grab += 1;
-        Tas::archipelago_set_wall_jump_and_ledge_grab(-1, 1);
+        Tas::archipelago_set_wall_jump_and_ledge_grab(-1, 1, true);
     }
     if item_index == 9999991 {  // Wall Jump
         log("Received Wall Jump!");
         ARCHIPELAGO_STATE.wall_jump += 1;
-        Tas::archipelago_set_wall_jump_and_ledge_grab(ARCHIPELAGO_STATE.wall_jump, -1);
+        Tas::archipelago_set_wall_jump_and_ledge_grab(ARCHIPELAGO_STATE.wall_jump, -1, true);
     }
     if item_index == 9999992 {  // Swim
         log("Received Swim!");
@@ -180,7 +219,7 @@ fn archipelago_received_item(index: int, item_index: int){
     }
     let clusterindex = item_index - 10000000;
     if clusterindex >= 2 && clusterindex < 32 {
-        if !ARCHIPELAGO_STATE.triggered_platforms.contains(clusterindex) {
+        if !ARCHIPELAGO_STATE.triggered_clusters.contains(clusterindex) {
             Tas::archipelago_activate_all_buttons(-1);
             let last_unlocked = ARCHIPELAGO_STATE.last_level_unlocked;
             log(f"Received Trigger Cluster {clusterindex}");
@@ -205,7 +244,9 @@ fn archipelago_received_item(index: int, item_index: int){
             ARCHIPELAGO_STATE.last_level_unlocked = clusterindex;
             Tas::archipelago_deactivate_all_buttons(-1);
 
-            ARCHIPELAGO_STATE.triggered_platforms.insert(clusterindex);
+            if !ARCHIPELAGO_STATE.triggered_clusters.contains(clusterindex) {
+                ARCHIPELAGO_STATE.triggered_clusters.push(clusterindex);
+            }
         }
     }
 
@@ -226,10 +267,10 @@ fn archipelago_received_item(index: int, item_index: int){
         Tas::archipelago_deactivate_all_buttons(item_index-50000000);
     }
     if item_index == 60000000{
-        Tas::archipelago_set_wall_jump_and_ledge_grab(0, 0);
+        Tas::archipelago_set_wall_jump_and_ledge_grab(0, 0, true);
     }
     if item_index == 60000001{
-        Tas::archipelago_set_wall_jump_and_ledge_grab(1, -1);
+        Tas::archipelago_set_wall_jump_and_ledge_grab(1, -1, true);
     }
     if item_index == 60000005{
         Tas::set_kill_z(-60.);
@@ -242,24 +283,106 @@ fn archipelago_received_item(index: int, item_index: int){
     }
 }
 
+// triggers cluster clusterindex
+fn archipelago_received_item(index: int, item_index: int){
+    // log(f"Received item index {item_index} (cluster index {index})");
+    if index <= ARCHIPELAGO_STATE.highest_index_received {
+        log(f"Ignoring duplicate or out-of-order item index {index} (highest received: {ARCHIPELAGO_STATE.highest_index_received})");
+        return;
+    }else{
+        if item_index < 10000000 {
+            ARCHIPELAGO_STATE.highest_index_received = index;
+        }
+    }
+
+    ARCHIPELAGO_STATE.received_items.push(item_index);
+    if ARCHIPELAGO_STATE.started < 2 {
+        return;
+    }
+    archipelago_process_item(item_index);
+    
+}
+
 fn archipelago_got_grass(){
     ARCHIPELAGO_STATE.grass += 1;
     log("Got grass!");
 }
 
+fn archipelago_init(gamemode: int){
+    log("Archipelago started, waiting for new game");
+    ARCHIPELAGO_STATE.started = 0;
+    ARCHIPELAGO_STATE.gamemode = gamemode;
+    // probably want to set speed to 0 here
+}
+
 fn archipelago_start(){
+    if ARCHIPELAGO_STATE.gamemode == 0 {
+        log("Starting Move Rando gamemode");
+        archipelago_main_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 1 {
+        log("Starting Vanilla gamemode");
+        archipelago_vanilla_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 2 {
+        log("Starting Original Randomizer gamemode");
+        // original randomizer start
+    }
+    if ARCHIPELAGO_STATE.gamemode == 3 {
+        log("Starting Seeker gamemode");
+        // seeker start
+    }
+}
+
+fn archipelago_main_start(){
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.grass = 0;
     ARCHIPELAGO_STATE.wall_jump = 0;
+    ARCHIPELAGO_STATE.ledge_grab = 0;
+    ARCHIPELAGO_STATE.swim = 0;
+    ARCHIPELAGO_STATE.jumppads = 0;
+    
+    ARCHIPELAGO_STATE.triggered_clusters = List::new();
+    ARCHIPELAGO_STATE.has_goaled = false;
+
     Tas::set_kill_z(-60.);
-    Tas::archipelago_set_wall_jump_and_ledge_grab(0, 0);
+    Tas::archipelago_set_wall_jump_and_ledge_grab(0, 0, true);
     Tas::archipelago_set_jump_pads(0);
-    log("Archipelago started");
+
+    archipelago_activate_stepped_on_platforms();
+
+    ARCHIPELAGO_STATE.started = 2;
+    for item in ARCHIPELAGO_STATE.received_items {
+        archipelago_process_item(item);
+    }
+
 }
 
-fn archipelago_checked_location(cluster: int, platform: int){
-    log(f"Already checked locations {cluster} {platform}");
-    Tas::trigger_element(ElementIndex { cluster_index: cluster-1, element_type: ElementType::Platform, element_index: platform-1 });
+fn archipelago_vanilla_start(){
+    Tas::set_kill_z(-6000.);
+    Tas::archipelago_set_wall_jump_and_ledge_grab(2, 1, false);
+    Tas::archipelago_set_jump_pads(1);
+    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+    ARCHIPELAGO_STATE.started = 2;
+}
+
+fn archipelago_checked_location(id: int){
+    if id >= 10010000 && id < 10020000 {
+        if ARCHIPELAGO_STATE.stepped_on_platforms.contains(id) {
+            return;
+        }
+        ARCHIPELAGO_STATE.stepped_on_platforms.push(id);
+    }
+
+}
+
+fn archipelago_activate_stepped_on_platforms(){
+    for id in ARCHIPELAGO_STATE.stepped_on_platforms {
+        let cluster = (id - 10010000) / 100;
+        let plat = (id - 10010000) % 100;
+
+        Tas::trigger_element(ElementIndex { cluster_index: cluster-1, element_type: ElementType::Platform, element_index: plat-1 });
+    }
 }
 
 fn archipelago_received_slot_data(key: string, value: string){
@@ -287,4 +410,46 @@ fn archipelago_received_slot_data(key: string, value: string){
             ARCHIPELAGO_STATE.final_platform_known = false;
         }
     }
+}
+
+fn create_archipelago_gamemodes_menu() -> Ui {
+    Ui::new("Archipelago:", List::of(
+        UiElement::Button(UiButton {
+            label: Text { text: "Move rando (main)" },
+            onclick: fn(label: Text) {
+                log("Set gamemode to main game");
+                archipelago_init(0);
+                leave_ui();
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "Vanilla game" },
+            onclick: fn(label: Text) {
+                log("Set gamemode to OG game");
+                archipelago_init(1);
+                leave_ui();
+            },
+        }),
+//        UiElement::Button(UiButton {
+//            label: Text { text: "Original randomizer" },
+//            onclick: fn(label: Text) {
+//                log("Set gamemode to OG game");
+//                archipelago_init(2);
+//                leave_ui();
+//            },
+//        }),
+//        UiElement::Button(UiButton {
+//            label: Text { text: "Seeker" },
+//            onclick: fn(label: Text) {
+//                log("Set gamemode to Seeker");
+//                archipelago_init(3);
+//                leave_ui();
+//            },
+//        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "Back" },
+            onclick: fn(label: Text) { leave_ui(); },
+        }),
+        
+    ))
 }
