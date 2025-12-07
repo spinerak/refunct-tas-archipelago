@@ -92,7 +92,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         if ARCHIPELAGO_STATE.gamemode == 1 {
             // log(f"[AP] Pressed {index.element_type} {index.element_index} in cluster {index.cluster_index}");
             if index.element_type == ElementType::Button {
-                // log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
+                log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
                 Tas::archipelago_send_check(10020000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
                 // log(f"Vanilla mode - sending button press {10020000 + (index.cluster_index + 1) * 100 + index.element_index + 1}");
             }
@@ -270,7 +270,7 @@ fn archipelago_received_item(index: int, item_index: int){
         ARCHIPELAGO_STATE.unlock_vanilla_minigame = true;
         return;
     }
-    if item_index == 9999970 {  // Vanilla Minigame
+    if item_index == 9999970 {  // Seeker Minigame
         ARCHIPELAGO_STATE.unlock_seeker_minigame = true;
         return;
     }

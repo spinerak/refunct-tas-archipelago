@@ -224,6 +224,9 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
     let jump_pad_state = if ARCHIPELAGO_STATE.jumppads > 0 { "YES" } else { "NO" };
     let swim_state = if ARCHIPELAGO_STATE.swim > 0 { "YES" } else { "NO" };
 
+    let vanilla_state = if ARCHIPELAGO_STATE.unlock_vanilla_minigame { "YES" } else { "NO" };
+    let seeker_state = if ARCHIPELAGO_STATE.unlock_seeker_minigame { "YES" } else { "NO" };
+
     List::of(
         ColorfulText { text: "Archipelago - Move Rando", color: COLOR_WHITE },
         ColorfulText { text: "Goals", color: COLOR_WHITE },
@@ -252,7 +255,17 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
         ColorfulText {
             text:  f"Swim:       { swim_state }",
             color: if ARCHIPELAGO_STATE.swim > 0 { AP_COLOR_GREEN } else { AP_COLOR_RED }
-        }
+        },
+        ColorfulText { text: "", color: COLOR_WHITE },
+        ColorfulText { text: "Minigames Unlocked", color: COLOR_WHITE },
+        ColorfulText {
+            text:  f"Vanilla: {vanilla_state}",
+            color: if ARCHIPELAGO_STATE.unlock_vanilla_minigame { AP_COLOR_GREEN } else { AP_COLOR_RED }
+        },
+        ColorfulText {
+            text:  f"Seeker:  {seeker_state}",
+            color: if ARCHIPELAGO_STATE.unlock_seeker_minigame { AP_COLOR_GREEN } else { AP_COLOR_RED }
+        },
     )
 }
 
