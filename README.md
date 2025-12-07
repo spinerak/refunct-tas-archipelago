@@ -3,37 +3,32 @@
 
 How does it work, what are items and locations?
 - You will have to unlock every cluster of platforms (that normally rise by pressing a button).
-- Starting from v0.1.0, you also have to find your abilities to swim, ledge grab, wall kick and jump on jumppads!
+- You also have to find your abilities to swim, ledge grab, wall kick and jump on jumppads!
 - Location checks are making platforms grassy by jumping on 'em (200+ locations).
 - Your goal is to collect enough grass and go to the final platform (adjustable via yaml, shown in-game).
+- There are now minigames that give extra checks!
 
 ### Completely new to Archipelago?
 Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_HELP.md) helps.
 
 ## Here's how to play Refunct in Archipelago.
-The 1️⃣, 2️⃣, 3️⃣, 4️⃣ order is very important, also when you login again later.
 - You need to own the original game Refunct (via Steam for example).
-- Download the `practice-windows.zip` from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest). Unzip the contents into any folder.
+- Download the `practice-windows.zip` or `practice-linux.zip` from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest). Unzip the contents into any folder.
 - Do the usual [Archipelago custom games things](https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds): get your yaml and apworld from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest), generate and host.
 - Open a notepad (etc) and write your creditionals like this: `archipelago.gg:38281,PlayerName`
 - Copy those credentials (CTRL-C).
-- 1️⃣ Open Refunct.
-- 2️⃣ Once it's loaded, double-click refunct-tas.exe (note: it may crash, just try again a couple of times, or check troubleshooting at the very bottom).
-- 3️⃣ Click New Game (back-up your save if you want).
-- 4️⃣ After a short lag, you'll see "Press 'm' to open the menu" top-left. Navigate to Archipelago, paste your credentials (CTRL-V) and press enter to login.
-- After closing the menu (escape), you should now see "Connected to Archipelago" and much more. You're good to go!
-- Red buttons don't do anything in this randomizer.
-
-## AP help
-- Opening the exe does nothing? Perhaps the version in `practice-windows-PID.zip` works? (This version will be the main version soon) 
-- Softlocked or wanna continue a game? (Close Refunct) and follow 1️⃣2️⃣3️⃣4️⃣.
-- Can't login? If on Windows: more information is in the log file, located at `C:\Users\yourname\AppData\Local\Temp\refunct-tas.log`
+- Open Refunct.
+- Once it's loaded, double-click refunct-tas.exe (note: it may crash, just try again a couple of times, or check troubleshooting at the very bottom).
+- After a short lag, you'll see "Press 'm' to open the menu" top-left. Navigate to Archipelago, paste your credentials (CTRL-V) and press enter to login.
+- After closing the menu (escape), you should now see "Archipelago" and the request to start a new game. Open the Refunct menu (escape) and press New Game. Your game will start and you're good to go!
 
 ## Other stuff
-- Buttons and platforms underneath buttons are not checks. (Red) buttons don't do anything.
+- Want to switch to a different gamemode (minigame or main game), press `m`, go to Archipelago and press "Change Gamemode". You'll have to New Game to start it.
+- Softlocked? Press New Game, your progress is saved.
+- Buttons and platforms underneath buttons are not checks in the main game. (Red) buttons don't do anything.
 - Universal Tracker can help you to figure out which platforms are accessible. The mini-map should help!
-- You should be able to quit a game and continue it later, just follow the steps again. Make sure to "New game" before logging into AP.
-- The final cluster in the game won't appear and will stay underwater for now (the final button is weird).
+- You should be able to quit a game and continue it later, just follow the steps again.
+- The final cluster in the game won't appear and will stay underwater in the main game (the final button is weird).
 
 
 # Below text is the text of the original read me for the Refunct TaS Tool
