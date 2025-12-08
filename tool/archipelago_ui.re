@@ -24,6 +24,20 @@ static AP_COLOR_GRAY_BG = Color { red: 0., green: 0., blue: 0., alpha: 0.6 };
 static AP_COLOR_CLEAR   = Color { red: 0., green: 0., blue: 0., alpha: 0.0 };
 
 fn create_archipelago_menu() -> Ui {
+    let map = Tas::original_map();
+    for cluster in map.clusters {
+        for mut cube in cluster.cubes {
+            cube.z = -3000.0;
+        }
+    }
+    Tas::apply_map(map);
+
+    for x in List::of(-2250, -2150, -2050, -1950, -1850, -1750, -1650, -1550, -1450, -1350) {
+        for y in List::of(-900, -800, -700, -600, -500, -400) {
+            Tas::spawn_cube(x.to_float(), y.to_float(), 0.);
+        }
+    }
+
     let elements = List::new();
 
     if !ARCHIPELAGO_STATE.ap_connected {

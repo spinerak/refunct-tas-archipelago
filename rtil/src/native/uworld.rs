@@ -24,7 +24,7 @@ pub static CAMERA_INDEX: OnceLock<ObjectIndex<ObjectWrapperType>> = OnceLock::ne
 #[derive(Debug)]
 #[repr(u8)]
 #[allow(unused)]
-enum ESpawnActorCollisionHandlingMethod {
+pub enum ESpawnActorCollisionHandlingMethod {
     Undefined,
     AlwaysSpawn,
     AdjustIfPossibleButAlwaysSpawn,
@@ -34,7 +34,7 @@ enum ESpawnActorCollisionHandlingMethod {
 #[repr(u8)]
 #[derive(Debug, Copy, Clone)]
 #[allow(unused)]
-enum ESpawnActorNameMode {
+pub enum ESpawnActorNameMode {
     RequiredFatal,
     RequiredErrorAndReturnNull,
     RequiredReturnNull,
@@ -43,24 +43,24 @@ enum ESpawnActorNameMode {
 
 #[derive(Debug)]
 #[repr(C)]
-struct FActorSpawnParameters {
-    name: FName,
-    template: *const AActor,
-    owner: *const AActor,
-    instigator: *const APawn,
-    override_level: *const ULevel,
-    spawn_collision_handling_override: ESpawnActorCollisionHandlingMethod,
+pub struct FActorSpawnParameters {
+    pub name: FName,
+    pub template: *const AActor,
+    pub owner: *const AActor,
+    pub instigator: *const APawn,
+    pub override_level: *const ULevel,
+    pub spawn_collision_handling_override: ESpawnActorCollisionHandlingMethod,
     // bRemoteOwned, bNoFail, bDeferConstruction, bAllowDuringConstructionScript
-    bitfield: u8,
-    name_node: ESpawnActorNameMode,
-    object_flags: c_int,
+    pub bitfield: u8,
+    pub name_node: ESpawnActorNameMode,
+    pub object_flags: c_int,
 }
 #[allow(unused)]
 impl FActorSpawnParameters {
-    const B_REMOTE_OWNED: u8 = 0b0000_0001;
-    const B_NO_FAIL: u8 = 0b0000_0010;
-    const B_DEFER_CONSTRUCTION: u8 = 0b0000_0100;
-    const B_ALLOW_DURING_CONSTRUCTION_SCRIPT: u8 = 0b0000_1000;
+    pub const B_REMOTE_OWNED: u8 = 0b0000_0001;
+    pub const B_NO_FAIL: u8 = 0b0000_0010;
+    pub const B_DEFER_CONSTRUCTION: u8 = 0b0000_0100;
+    pub const B_ALLOW_DURING_CONSTRUCTION_SCRIPT: u8 = 0b0000_1000;
 }
 
 impl APawn {
@@ -106,7 +106,7 @@ pub enum TimeOfDay {
 }
 
 impl UWorld {
-    unsafe fn spawn_actor(
+    pub unsafe fn spawn_actor(
         class: *const UClass, location: *const FVector, rotation: *const FRotator,
         spawn_parameters: *const FActorSpawnParameters,
     ) -> *mut AActor {
@@ -117,7 +117,7 @@ impl UWorld {
         let this = Self::get_global();
         fun(this, class, location, rotation, spawn_parameters)
     }
-    unsafe fn destroy_actor(actor: *const AActor, net_force: bool, should_modify_level: bool) -> bool {
+    pub unsafe fn destroy_actor(actor: *const AActor, net_force: bool, should_modify_level: bool) -> bool {
         let fun: extern_fn!(fn(
             this: *const UWorld, actor: *const AActor, net_force: bool, should_modify_level: bool
         ) -> c_int) = ::std::mem::transmute(UWORLD_DESTROYACTOR.load(Ordering::SeqCst));

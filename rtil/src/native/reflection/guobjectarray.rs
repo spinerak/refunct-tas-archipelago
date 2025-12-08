@@ -43,7 +43,7 @@ impl UeScope {
     fn global_object_array<'a>(&'a self) -> GlobalObjectArrayWrapper<'a> {
         unsafe { GlobalObjectArrayWrapper::get() }
     }
-    fn object_array<'a>(&'a self) -> ObjectArrayWrapper<'a> {
+    pub fn object_array<'a>(&'a self) -> ObjectArrayWrapper<'a> {
         self.global_object_array().object_array()
     }
 

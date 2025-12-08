@@ -2,8 +2,11 @@ use std::cell::Cell;
 use std::fmt::{Formatter, Pointer};
 use std::ops::Deref;
 use std::sync::Mutex;
-use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper};
+use std::ptr;
+use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld};
 use crate::native::reflection::{AActor, ActorWrapper, UeObjectWrapper};
+use crate::native::ue::{FRotator, FVector, FName};
+use crate::native::uworld::{ESpawnActorCollisionHandlingMethod, ESpawnActorNameMode, FActorSpawnParameters};
 
 pub static LEVELS: Mutex<Vec<Level>> = Mutex::new(Vec::new());
 
@@ -136,6 +139,64 @@ impl<'a> PlatformWrapper<'a> {
 pub struct CubeWrapper<'a> {
     base: ActorWrapper<'a>,
 }
+
+impl<'a> CubeWrapper<'a> {
+    pub fn spawn(x: f32, y: f32, z: f32) -> Result<CubeWrapper<'a>, &'static str> {
+        UeScope::with(|scope| unsafe {
+            // Find the BP_PowerCore_C class
+            let cube_class = scope.iter_global_object_array()
+                .map(|item| item.object())
+                .find(|obj| {
+                    obj.class().name() == "BlueprintGeneratedClass"
+                        && obj.name() == "BP_PowerCore_C"
+                })
+                .ok_or("Could not find BP_PowerCore_C class")?;
+
+            let class: ClassWrapper = cube_class.upcast();
+
+            // Reuse the exact same pattern from spawn_amycharacter
+            let location = FVector { x, y, z };
+            let rotation = FRotator { pitch: 0.0, yaw: 0.0, roll: 0.0 };
+            let spawn_parameters = FActorSpawnParameters {
+                name: FName::NAME_None,
+                template: ptr::null(),
+                owner: ptr::null(),
+                instigator: ptr::null(),
+                override_level: ptr::null(),
+                spawn_collision_handling_override: ESpawnActorCollisionHandlingMethod::AlwaysSpawn,
+                bitfield: FActorSpawnParameters::B_NO_FAIL,
+                name_node: ESpawnActorNameMode::RequiredFatal,
+                object_flags: 0x00000000,
+            };
+
+            let actor_ptr = UWorld::spawn_actor(
+                class.as_ptr(),
+                &location,
+                &rotation,
+                &spawn_parameters,
+            );
+
+            if actor_ptr.is_null() {
+                return Err("SpawnActor returned null");
+            }
+
+            let cube = CubeWrapper::new(ActorWrapper::new(actor_ptr));
+
+            // Mark as root to prevent GC
+            let item = scope.object_array().get_item_of_object(&cube);
+            item.mark_as_root_object(true);
+
+            Ok(cube)
+        })
+    }
+
+    pub fn destroy(&self) {
+        unsafe {
+            UWorld::destroy_actor(self.base.as_ptr() as *const AActor, true, true);
+        }
+    }
+}
+
 pub enum CubeWrapperType {}
 impl UeObjectWrapperType for CubeWrapperType {
     type UeObjectWrapper<'a> = CubeWrapper<'a>;

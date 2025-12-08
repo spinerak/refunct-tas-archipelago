@@ -14,7 +14,7 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use websocket::{ClientBuilder, Message, OwnedMessage, WebSocketError};
 use crate::log;
-use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX};
+use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX, CubeWrapper};
 use crate::native::{try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
 use protocol::{Request, Response};
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo, archipelago};
@@ -90,6 +90,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(project)
         .add_function(get_viewport_size)
         .add_function(get_text_size)
+        .add_function(spawn_cube)
         .add_function(spawn_pawn)
         .add_function(destroy_pawn)
         .add_function(move_pawn)
@@ -1216,6 +1217,49 @@ fn get_viewport_size() -> Size {
     let (width, height) = AMyCharacter::get_player().get_viewport_size();
     Size { width, height }
 }
+
+#[rebo::function("Tas::spawn_cube")]
+fn spawn_cube(x: f32, y: f32, z: f32) {
+    // find_cube_collection_function();
+    match CubeWrapper::spawn(x, y, z) {
+        Ok(cube) => {
+            log!("Successfully spawned cube at {:p}", cube.as_ptr());
+
+            UeScope::with(|scope| {
+                let cube_index = scope.object_index(&cube);
+                LEVELS.lock().unwrap()[0].cubes.push(cube_index);
+            });
+        }
+        Err(e) => {
+            log!("Failed to spawn cube: {}", e);
+        }
+    }
+}
+
+pub fn find_cube_collection_function() {
+    log!("Trying to find the cube functions");
+    UeScope::with(|scope| {
+        // Find any cube
+        let cube = scope.iter_global_object_array()
+            .map(|item| item.object())
+            .find(|obj| obj.class().name() == "BP_PowerCore_C")
+            .unwrap();
+
+        // List all functions
+        log!("=== Functions in BP_PowerCore_C ===");
+        for func in cube.class().iter_functions() {
+            log!("Function: {}", func.name());
+            log!("  Num params: {}", func.num_parms());
+            log!("  Params size: {}", func.parms_size());
+
+            // Print parameters
+            for (i, param) in func.iter_params().enumerate() {
+                log!("    Param {}: {} ({})", i, param.name(), param.property_kind());
+            }
+        }
+    });
+}
+
 #[rebo::function("Tas::spawn_pawn")]
 fn spawn_pawn(loc: Location, rot: Rotation) -> u32 {
     let my_character = UWorld::spawn_amycharacter(loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll);
