@@ -145,6 +145,9 @@ struct Settings {
     log_message_duration: int,
     archipelago_display_style: ArchipelagoDisplayStyle,
     archipelago_display_position: Anchor,
+    archipelago_last_server: string,
+    archipelago_last_port: string,
+    archipelago_last_slot: string,
 }
 static mut SETTINGS = Settings::load();
 
@@ -246,6 +249,9 @@ impl Settings {
                 "BottomLeft"   => Anchor::BottomLeft,
                 pos => panic(f"unknown/invalid archipelago display position: {pos}"),
             },
+            archipelago_last_server: get_string("archipelago_last_server", "archipelago.gg"),
+            archipelago_last_port: get_string("archipelago_last_port", ""),
+            archipelago_last_slot: get_string("archipelago_last_slot", ""),
         }
     }
 
@@ -290,6 +296,9 @@ impl Settings {
         map.insert("log_message_duration", f"{SETTINGS.log_message_duration}");
         map.insert("archipelago_display_style", f"{SETTINGS.archipelago_display_style}");
         map.insert("archipelago_display_position", f"{SETTINGS.archipelago_display_position}");
+        map.insert("archipelago_last_server", f"{SETTINGS.archipelago_last_server}");
+        map.insert("archipelago_last_port", f"{SETTINGS.archipelago_last_port}");
+        map.insert("archipelago_last_slot", f"{SETTINGS.archipelago_last_slot}");
         Tas::store_settings(map);
     }
 

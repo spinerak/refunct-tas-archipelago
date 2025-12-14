@@ -26,27 +26,11 @@ fn create_archipelago_menu() -> Ui {
     let elements = List::new();
 
     if !ARCHIPELAGO_STATE.ap_connected {
-        elements.push(UiElement::Input(Input {
-            label: Text { text: "Connect (server:port,slot[,password])" },
-            input: "",
-            onclick: fn(input: string) {
-                if ARCHIPELAGO_STATE.ap_connected {
-                    log("Already connected to Archipelago!");
-                    return;
-                }
-                if input.len_utf8() == 0 {
-                    return;
-                }
-                ARCHIPELAGO_STATE = fresh_archipelago_state();
-                let args = input.split(",");
-                let server_and_port = match args.get(0) { Option::Some(s) => s.trim(), Option::None => return };
-                let slot = match args.get(1) { Option::Some(s) => s.trim(), Option::None => return };
-                let password = args.get(2);
-                Tas::archipelago_connect(server_and_port, "Refunct", slot, password);
-                add_component(ARCHIPELAGO_COMPONENT);
-                leave_ui();
+        elements.push(UiElement::Button(UiButton {
+            label: Text { text: "Connect" },
+            onclick: fn(label: Text) {
+                enter_ui(create_archipelago_connection_details_menu());
             },
-            onchange: fn(input: string) {},
         }));
     }
 
@@ -57,8 +41,131 @@ fn create_archipelago_menu() -> Ui {
                 enter_ui(create_archipelago_gamemodes_menu());
             },
         }));
-        elements.push(UiElement::Chooser(Chooser {
-            label: Text { text: "Display Style" },
+    }
+
+    if ARCHIPELAGO_STATE.ap_connected {
+        elements.push(UiElement::Button(UiButton {
+            label: Text { text: "Connection Details" },
+            onclick: fn(label: Text) {
+                enter_ui(create_archipelago_connection_details_menu());
+            },
+        }));
+    }
+
+    elements.push(UiElement::Button(UiButton {
+        label: Text { text: "Settings" },
+        onclick: fn(label: Text) {
+            enter_ui(create_archipelago_settings_menu());
+        },
+    }));
+
+    elements.push(UiElement::Button(UiButton {
+        label: Text { text: "Back" },
+        onclick: fn(label: Text) { leave_ui(); },
+    }));
+
+    Ui::new("Archipelago:", elements)
+}
+
+struct ArchipelagoConnectionDetails {
+    server: string,
+    port: string,
+    slot: string,
+    password: string,
+}
+
+static mut ARCHIPELAGO_CONNECTION_DETAILS = ArchipelagoConnectionDetails {
+    server: SETTINGS.archipelago_last_server,
+    port: SETTINGS.archipelago_last_port,
+    slot: SETTINGS.archipelago_last_slot,
+    password: "",
+};
+
+fn create_archipelago_connection_details_menu() -> Ui {
+    let elements = List::new();
+
+    elements.push(UiElement::Input(Input {
+        label: Text { text: "Server" },
+        input: f"{ARCHIPELAGO_CONNECTION_DETAILS.server}",
+        onclick: fn(input: string) {},
+        onchange: fn(input: string) { ARCHIPELAGO_CONNECTION_DETAILS.server = input.trim(); },
+    }));
+    elements.push(UiElement::Input(Input {
+        label: Text { text: "Port" },
+        input: f"{ARCHIPELAGO_CONNECTION_DETAILS.port}",
+        onclick: fn(input: string) {},
+        onchange: fn(input: string) { ARCHIPELAGO_CONNECTION_DETAILS.port = input.trim(); },
+    }));
+    elements.push(UiElement::Input(Input {
+        label: Text { text: "Slot" },
+        input: f"{ARCHIPELAGO_CONNECTION_DETAILS.slot}",
+        onclick: fn(input: string) {},
+        onchange: fn(input: string) { ARCHIPELAGO_CONNECTION_DETAILS.slot = input.trim(); },
+    }));
+    elements.push(UiElement::Input(Input {
+        label: Text { text: "Password" },
+        input: f"{ARCHIPELAGO_CONNECTION_DETAILS.password}",
+        onclick: fn(input: string) {},
+        onchange: fn(input: string) { ARCHIPELAGO_CONNECTION_DETAILS.password = input; },
+    }));
+
+    if ARCHIPELAGO_STATE.ap_connected {
+        elements.push(UiElement::Button(UiButton {
+            label: Text { text: "Disconnect" },
+            onclick: fn(label: Text) {
+                Tas::archipelago_disconnect();
+                leave_ui();
+            },
+        }));
+    } else {
+        elements.push(UiElement::Button(UiButton {
+            label: Text { text: "Connect" },
+            onclick: fn(label: Text) {
+                ARCHIPELAGO_STATE = fresh_archipelago_state();
+                let password = ARCHIPELAGO_CONNECTION_DETAILS.password;
+                ARCHIPELAGO_CONNECTION_DETAILS.password = "";
+                Tas::archipelago_connect(
+                    f"{ARCHIPELAGO_CONNECTION_DETAILS.server}:{ARCHIPELAGO_CONNECTION_DETAILS.port}",
+                    "Refunct",
+                    ARCHIPELAGO_CONNECTION_DETAILS.slot,
+                    if password == "" { Option::None } else { Option::Some(password) }
+                );
+                SETTINGS.archipelago_last_server = ARCHIPELAGO_CONNECTION_DETAILS.server;
+                SETTINGS.archipelago_last_port = ARCHIPELAGO_CONNECTION_DETAILS.port;
+                SETTINGS.archipelago_last_slot = ARCHIPELAGO_CONNECTION_DETAILS.slot;
+                SETTINGS.store();
+                add_component(ARCHIPELAGO_COMPONENT);
+                leave_ui(); leave_ui(); // Now we're two levels deep
+            },
+        }));
+    }
+
+    elements.push(UiElement::Button(UiButton {
+        label: Text { text: "Back" },
+        onclick: fn(label: Text) { leave_ui(); },
+    }));
+
+    Ui::new("Connection Details", elements)
+}
+
+fn create_archipelago_settings_menu() -> Ui {
+    Ui::new("Settings", List::of(
+        UiElement::FloatInput(FloatInput {
+            label: Text { text: "UI Scale (0.0 - 1.0)" },
+            input: f"{SETTINGS.ui_scale}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_float() {
+                    Result::Ok(size) => if 0.0 <= size && size <= 1.0 {
+                        SETTINGS.ui_scale = size;
+                        SETTINGS.store();
+                    },
+                    Result::Err(e) => {},
+                }
+            },
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "AP Display Style" },
             options: List::of(
                 Text { text: "Off" },
                 Text { text: "Classic (shown on main menu)" },
@@ -78,9 +185,9 @@ fn create_archipelago_menu() -> Ui {
                 }
                 SETTINGS.store();
             }
-        }));
-        elements.push(UiElement::Chooser(Chooser {
-            label: Text { text: "Position" },
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "AP Display Position" },
             options: List::of(
                 Text { text: "Top Left" },
                 Text { text: "Top Center" },
@@ -100,7 +207,7 @@ fn create_archipelago_menu() -> Ui {
                 Anchor::BottomCenter => 5,
                 Anchor::BottomLeft => 6,
                 Anchor::CenterLeft => 7,
-                pos => panic(f"unknown archipelago display position: {pos}"),
+                pos => panic(f"unknown archipelago display position: {pos}")
             },
             onchange: fn(index: int) {
                 match index {
@@ -112,31 +219,108 @@ fn create_archipelago_menu() -> Ui {
                     5 => { SETTINGS.archipelago_display_position = Anchor::BottomCenter; },
                     6 => { SETTINGS.archipelago_display_position = Anchor::BottomLeft; },
                     7 => { SETTINGS.archipelago_display_position = Anchor::CenterLeft; },
-                    pos => panic(f"unknown archipelago display position: {pos}"),
+                    _ => panic(f"unknown archipelago display index: {index}"),
                 }
                 SETTINGS.store();
             },
-        }));
-        elements.push(UiElement::Button(UiButton {
-            label: Text { text: "Disconnect" },
-            onclick: fn(label: Text) {
-                remove_component(ARCHIPELAGO_COMPONENT);
-                ARCHIPELAGO_STATE = fresh_archipelago_state();
-                leave_ui();
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Minimap" },
+            options: List::of(Text { text: "On" }, Text { text: "Off" }),
+            selected: if SETTINGS.minimap_enabled { 0 } else { 1 },
+            onchange: fn(index: int) {
+                if index == 0 {
+                    add_component(MINIMAP_COMPONENT);
+                    SETTINGS.minimap_enabled = true;
+                    SETTINGS.store();
+                } else {
+                    remove_component(MINIMAP_COMPONENT);
+                    SETTINGS.minimap_enabled = false;
+                    SETTINGS.store();
+                }
             },
-        }));
-    }
-
-    elements.push(UiElement::Button(UiButton {
-        label: Text { text: "Back" },
-        onclick: fn(label: Text) { leave_ui(); },
-    }));
-
-    Ui::new("Archipelago:", elements)
+        }),
+        UiElement::FloatInput(FloatInput {
+            label: Text { text: "Minimap Size (0.0-1.0) " },
+            input: f"{MINIMAP_STATE.size}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_float() {
+                    Result::Ok(size) => if 0.0 <= size && size <= 1.0 {
+                        MINIMAP_STATE.calculate_minimap_size(size);
+                        SETTINGS.minimap_size = size;
+                        SETTINGS.store();
+                    },
+                    Result::Err(e) => {},
+                }
+            },
+        }),
+        UiElement::FloatInput(FloatInput {
+            label: Text { text: "Minimap Alpha (0.0 - 1.0)" },
+            input: f"{MINIMAP_STATE.alpha}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_float() {
+                    Result::Ok(alpha) => if 0.0 <= alpha && alpha <= 1.0 {
+                        MINIMAP_STATE.alpha = alpha;
+                        Tas::set_minimap_alpha(alpha);
+                        SETTINGS.minimap_alpha = alpha;
+                        SETTINGS.store();
+                    },
+                    Result::Err(e) => {},
+                }
+            },
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Minimap Position" },
+            options: List::of(
+                Text { text: "Top Left" },
+                Text { text: "Top Center" },
+                Text { text: "Top Right" },
+                Text { text: "Center Right" },
+                Text { text: "Bottom Right" },
+                Text { text: "Bottom Center" },
+                Text { text: "Bottom Left" },
+                Text { text: "Center Left" },
+                Text { text: "Center" },
+            ),
+            selected: match SETTINGS.minimap_position {
+                MinimapPosition::TopLeft => 0,
+                MinimapPosition::TopCenter => 1,
+                MinimapPosition::TopRight => 2,
+                MinimapPosition::CenterRight => 3,
+                MinimapPosition::BottomRight => 4,
+                MinimapPosition::BottomCenter => 5,
+                MinimapPosition::BottomLeft => 6,
+                MinimapPosition::CenterLeft => 7,
+                MinimapPosition::Center => 8,
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.minimap_position = MinimapPosition::TopLeft; },
+                    1 => { SETTINGS.minimap_position = MinimapPosition::TopCenter; },
+                    2 => { SETTINGS.minimap_position = MinimapPosition::TopRight; },
+                    3 => { SETTINGS.minimap_position = MinimapPosition::CenterRight; },
+                    4 => { SETTINGS.minimap_position = MinimapPosition::BottomRight; },
+                    5 => { SETTINGS.minimap_position = MinimapPosition::BottomCenter; },
+                    6 => { SETTINGS.minimap_position = MinimapPosition::BottomLeft; },
+                    7 => { SETTINGS.minimap_position = MinimapPosition::CenterLeft; },
+                    8 => { SETTINGS.minimap_position = MinimapPosition::Center; },
+                    _ => panic(f"unknown index {index}"),
+                }
+                SETTINGS.store();
+                MINIMAP_STATE.calculate_minimap_size(MINIMAP_STATE.size);
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "Back" },
+            onclick: fn(label: Text) { leave_ui(); },
+        })
+    ))
 }
 
 fn create_archipelago_gamemodes_menu() -> Ui {
-    Ui::new("Archipelago:", List::of(
+    Ui::new("Select Game Mode:", List::of(
         UiElement::Button(UiButton {
             label: Text { text: "Move rando (main)" },
             onclick: fn(label: Text) {
