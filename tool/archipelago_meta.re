@@ -189,4 +189,103 @@ fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
         message = f"{message}{text}";
     }
     log(message);
+    ap_log(List::of(ColorfulText { text: message, color: COLOR_WHITE }));
 }
+
+struct ArchipelagoLogMessage {
+    texts: List<ColorfulText>,
+    timestamp: int
+}
+
+struct ArchipelagoLog {
+    messages: List<ArchipelagoLogMessage>
+}
+
+static mut AP_LOG = ArchipelagoLog { messages: List::new() };
+
+fn ap_log(texts: List<ColorfulText>) {
+    // Filter any newlines
+    let filtered_texts = List::new();
+    for text in texts {
+        filtered_texts.push(ColorfulText {
+            text: text.text.replace("\n", ""),
+            color: text.color
+        });
+    }
+
+    AP_LOG.messages.push(ArchipelagoLogMessage {
+        texts: filtered_texts,
+        timestamp: current_time_millis(),
+    });
+}
+
+static LOG_COUNT = 5;
+static LOG_WIDTH = 750.;
+
+static mut AP_LOG_COMPONENT = Component {
+    id: ARCHIPELAGO_LOG_COMPONENT_ID,
+    conflicts_with: List::of(ARCHIPELAGO_LOG_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID),
+    tick_mode: TickMode::DontCare,
+    requested_delta_time: Option::None,
+    on_tick: fn() {},
+    on_yield: fn() {},
+    draw_hud_text: fn(text: string) -> string { text },
+    draw_hud_always: fn() {
+        let viewport = Tas::get_viewport_size();
+        let w = viewport.width.to_float();
+        let h = viewport.height.to_float();
+
+        // ensure logs don't run over the width
+        let mut i = int::max(0, AP_LOG.messages.len() - LOG_COUNT);
+        let mut formatted_texts = List::new();
+        while i < AP_LOG.messages.len() {
+            let log = AP_LOG.messages.get(i).unwrap();
+            for text in log.texts {
+                let words = text.text.split(" ");
+                let mut line_string = "";
+                let mut j = 0;
+                while j < words.len() {
+                    let word = words.get(j).unwrap();
+                    line_string = f"{line_string}{word}";
+                    let dim = Tas::get_text_size(line_string, SETTINGS.ui_scale);
+                    if dim.width > LOG_WIDTH {
+                        line_string = "  {word}";
+                        formatted_texts.push(ColorfulText { text: "\n  ", color: COLOR_WHITE });
+                    }
+
+                    if j != words.len() - 1 {
+                        line_string = f"{line_string} ";
+                        formatted_texts.push(ColorfulText { text: f"{word} ", color: text.color });
+                    } else {
+                        formatted_texts.push(ColorfulText { text: word, color: text.color });
+                    }
+
+                    j += 1;
+                }
+            }
+            if i != AP_LOG.messages.len() - 1 {
+                formatted_texts.push(ColorfulText { text: "\n", color: COLOR_WHITE });
+            }
+            i += 1;
+        }
+
+        ap_draw_colorful_text(formatted_texts, AP_COLOR_GRAY_BG, 0., h, Anchor::BottomLeft, 5.0);
+    },
+    on_new_game: fn() {},
+    on_level_change: fn(old: int, new: int) {},
+    on_buttons_change: fn(old: int, new: int) {},
+    on_cubes_change: fn(old: int, new: int) {},
+    on_platforms_change: fn(old: int, new: int) {},
+    on_reset: fn(old: int, new: int) {},
+    on_element_pressed: fn(index: ElementIndex) {},
+    on_element_released: fn(index: ElementIndex) {},
+    on_key_down: fn(key: KeyCode, is_repeat: bool) {},
+    on_key_down_always: fn(key: KeyCode, is_repeat: bool) {},
+    on_key_up: fn(key: KeyCode) {},
+    on_key_up_always: fn(key: KeyCode) {},
+    on_mouse_move: fn(x: int, y: int) {},
+    on_component_enter: fn() {},
+    on_component_exit: fn() { Tas::archipelago_disconnect(); },
+    on_resolution_change: fn() {},
+    on_menu_open: fn() {},
+};
