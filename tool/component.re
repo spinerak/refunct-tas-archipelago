@@ -16,6 +16,7 @@ static MOVEMENT_COMPONENT_ID = 10;
 static MINIMAP_COMPONENT_ID = 11;
 static MAP_EDITOR_COMPONENT_ID = 12;
 static ARCHIPELAGO_COMPONENT_ID = 13;
+static ARCHIPELAGO_LOG_COMPONENT_ID = 14;
 
 struct Component {
     id: int,

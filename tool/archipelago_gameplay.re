@@ -74,7 +74,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     conflicts_with: List::of(ARCHIPELAGO_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID),
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
-    on_tick: update_players,
+    on_tick: fn() {},
     on_yield: fn() {},
     draw_hud_text: archipelago_hud_text,
     draw_hud_always: archipelago_hud_color_coded,
@@ -163,6 +163,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 };
 
 fn archipelago_disconnected() {
+    remove_component(AP_LOG_COMPONENT);
     remove_component(ARCHIPELAGO_COMPONENT);
     ARCHIPELAGO_STATE.ap_connected = false;
 };

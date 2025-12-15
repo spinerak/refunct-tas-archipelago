@@ -114,6 +114,7 @@ fn create_archipelago_connection_details_menu() -> Ui {
             label: Text { text: "Disconnect" },
             onclick: fn(label: Text) {
                 Tas::archipelago_disconnect();
+                remove_component(AP_LOG_COMPONENT);
                 remove_component(ARCHIPELAGO_COMPONENT);
                 ARCHIPELAGO_STATE = fresh_archipelago_state();
                 leave_ui(); leave_ui();
@@ -136,6 +137,7 @@ fn create_archipelago_connection_details_menu() -> Ui {
                 SETTINGS.archipelago_last_port = ARCHIPELAGO_CONNECTION_DETAILS.port;
                 SETTINGS.archipelago_last_slot = ARCHIPELAGO_CONNECTION_DETAILS.slot;
                 SETTINGS.store();
+                add_component(AP_LOG_COMPONENT);
                 add_component(ARCHIPELAGO_COMPONENT);
                 leave_ui(); leave_ui(); // Now we're two levels deep
             },
