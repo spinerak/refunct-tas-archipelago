@@ -5,7 +5,7 @@ use std::io::{ErrorKind, Write};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
-use archipelago_rs::protocol::ServerMessage;
+use archipelago_rs::protocol::{ClientMessage, ServerMessage, GetDataPackage, PrintJSON, JSONColor, JSONMessagePart};
 use crossbeam_channel::{Sender, TryRecvError};
 use image::Rgba;
 use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span, Stdlib, Value, VmContext};
@@ -236,6 +236,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_external_type(IcedText)
         .add_external_type(IcedRow)
         .add_external_type(IcedColumn)
+        .add_external_type(ReboJSONMessage)
+        .add_external_type(ReboJSONMessagePart)
         .add_required_rebo_function(element_pressed)
         .add_required_rebo_function(element_released)
         .add_required_rebo_function(on_key_down)
@@ -255,6 +257,11 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_got_grass)
         .add_required_rebo_function(archipelago_checked_location)
         .add_required_rebo_function(archipelago_received_slot_data)
+        .add_required_rebo_function(archipelago_register_slot)
+        .add_required_rebo_function(archipelago_register_player)
+        .add_required_rebo_function(archipelago_register_game_item)
+        .add_required_rebo_function(archipelago_register_game_location)
+        .add_required_rebo_function(archipelago_print_json_message)
         .add_required_rebo_function(archipelago_init)
         .add_required_rebo_function(on_level_state_change)
         .add_required_rebo_function(on_resolution_change)
@@ -290,6 +297,20 @@ pub struct Segment {
     pub time: f64,
     pub pb_time: f64,
     pub best_time: f64,
+}
+
+#[derive(rebo::ExternalType)]
+pub struct ReboJSONMessagePart {
+    pub message_type: String, // the JSONMessage type field is optional, but we'll enforce it
+    pub text: Option<String>,
+    pub color: Option<String>,
+    pub flags: Option<usize>,
+    pub player: Option<usize>,
+}
+
+#[derive(rebo::ExternalType)]
+pub struct ReboJSONMessage {
+    pub parts: Vec<ReboJSONMessagePart>,
 }
 
 /// Check internal state and channels to see if we should stop.
@@ -468,6 +489,25 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                             value.clone().to_string()
                         )?;
                     }
+
+                    for (key, value) in info.slot_info {
+                        archipelago_register_slot(vm,
+                            key as usize,
+                            value.name.clone(),
+                            value.game.clone(),
+                            value.r#type as usize,
+                            value.group_members.into_iter().map(|x| x as usize).collect()
+                        );
+                    }
+
+                    for player in info.players {
+                        archipelago_register_player(vm,
+                            player.team as usize,
+                            player.slot as usize,
+                            player.alias.clone(),
+                            player.name.clone()
+                        );
+                    }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::ReceivedItems(received))) => {
                     log!("ReceivedItems message");
@@ -516,11 +556,115 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     log!("PrintJSON message");
                     let msg = format!("Archipelago ServerMessage::PrintJSON: {:?}", json);
                     log!("{}", msg);
+
+                    let message_parts = match json {
+                        PrintJSON::ItemSend { data, .. } => data,
+                        PrintJSON::ItemCheat { data, .. } => data,
+                        PrintJSON::Hint { data, .. } => data,
+                        PrintJSON::Join { data, .. } => data,
+                        PrintJSON::Part { data, .. } => data,
+                        PrintJSON::Chat { data, .. } => data,
+                        PrintJSON::ServerChat { data, .. } => data,
+                        PrintJSON::Tutorial { data, .. } => data,
+                        PrintJSON::TagsChanged { data, .. } => data,
+                        PrintJSON::CommandResult { data, .. } => data,
+                        PrintJSON::AdminCommandResult { data, .. } => data,
+                        PrintJSON::Goal { data, .. } => data,
+                        PrintJSON::Release { data, .. } => data,
+                        PrintJSON::Collect { data, .. } => data,
+                        PrintJSON::Countdown { data, .. } => data,
+                        PrintJSON::Text { data, .. } => data,
+                    };
+
+                    let rebo_message_parts: Vec<ReboJSONMessagePart> = message_parts.iter().map(|part| match part {
+                        JSONMessagePart::PlayerId { text, .. } => ReboJSONMessagePart {
+                            message_type: String::from("player_id"),
+                            text: Some(String::from(text)),
+                            color: None, flags: None, player: None,
+                        },
+                        JSONMessagePart::PlayerName { text, .. } => ReboJSONMessagePart {
+                            message_type: String::from("player_name"),
+                            text: Some(String::from(text)),
+                            color: None, flags: None, player: None,
+                        },
+                        JSONMessagePart::ItemId { text, flags, player, .. } => ReboJSONMessagePart {
+                            message_type: String::from("item_id"),
+                            text: Some(String::from(text)),
+                            flags: Some(*flags as usize),
+                            player: Some(*player as usize),
+                            color: None,
+                        },
+                        JSONMessagePart::ItemName { text, flags, player, .. } => ReboJSONMessagePart {
+                            message_type: String::from("item_name"),
+                            text: Some(String::from(text)),
+                            flags: Some(*flags as usize),
+                            player: Some(*player as usize),
+                            color: None,
+                        },
+                        JSONMessagePart::LocationId { text, player, .. } => ReboJSONMessagePart {
+                            message_type: String::from("location_id"),
+                            text: Some(String::from(text)),
+                            player: Some(*player as usize),
+                            color: None, flags: None,
+                        },
+                        JSONMessagePart::LocationName { text, player, .. } => ReboJSONMessagePart {
+                            message_type: String::from("location_name"),
+                            text: Some(String::from(text)),
+                            player: Some(*player as usize),
+                            color: None, flags: None,
+                        },
+                        JSONMessagePart::EntranceName { text, .. } => ReboJSONMessagePart {
+                            message_type: String::from("entrance_name"),
+                            text: Some(String::from(text)),
+                            color: None, flags: None, player: None,
+                        },
+                        JSONMessagePart::Color { text, color, .. } => ReboJSONMessagePart {
+                            message_type: String::from("color"),
+                            text: Some(String::from(text)),
+                            color: Some(String::from(match color {
+                                JSONColor::Bold => "bold",
+                                JSONColor::Underline => "underline",
+                                JSONColor::Black => "black",
+                                JSONColor::Red => "red",
+                                JSONColor::Green => "green",
+                                JSONColor::Yellow => "yellow",
+                                JSONColor::Blue => "blue",
+                                JSONColor::Magenta => "magenta",
+                                JSONColor::Cyan => "cyan",
+                                JSONColor::White => "white",
+                                JSONColor::BlackBg => "black_bg",
+                                JSONColor::RedBg => "red_bg",
+                                JSONColor::GreenBg => "green_bg",
+                                JSONColor::YellowBg => "yellow_bg",
+                                JSONColor::BlueBg => "blue_bg",
+                                JSONColor::MagentaBg => "magenta_bg",
+                                JSONColor::CyanBg => "cyan_bg",
+                                JSONColor::WhiteBg => "white_bg",
+                            })),
+                            flags: None, player: None,
+                        },
+                        JSONMessagePart::Text { text, .. } => ReboJSONMessagePart {
+                            message_type: String::from("text"),
+                            text: Some(String::from(text)),
+                            color: None, flags: None, player: None,
+                        },
+                    }).collect();
+
+                    archipelago_print_json_message(vm, ReboJSONMessage {parts: rebo_message_parts});
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::DataPackage(pkg))) => {
                     log!("DataPackage message");
                     let msg = format!("Archipelago ServerMessage::DataPackage: {:?}", pkg);
                     log!("{}", msg);
+
+                    for (game_name, game_data) in pkg.data.games {
+                        for (item_name, item_id) in game_data.item_name_to_id {
+                            archipelago_register_game_item(vm, game_name.clone(), item_name.clone(), item_id as usize);
+                        }
+                        for (location_name, location_id) in game_data.location_name_to_id {
+                            archipelago_register_game_location(vm, game_name.clone(), location_name.clone(), location_id as usize);
+                        }
+                    }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::Bounced(info))) => {
                     log!("Bounced message");
@@ -584,6 +728,11 @@ extern "rebo" {
     fn archipelago_checked_location(id: usize);
     fn archipelago_received_slot_data(name_of_options: String, value_of_options: String);
     fn archipelago_init(gamemode: usize);
+    fn archipelago_register_slot(index: usize, name: String, game: String, slot_type: usize, group_members: Vec<usize>);
+    fn archipelago_register_player(team: usize, slot: usize, alias: String, name: String);
+    fn archipelago_register_game_item(game_name: String, item_name: String, item_id: usize);
+    fn archipelago_register_game_location(game_name: String, location_name: String, location_id: usize);
+    fn archipelago_print_json_message(json_message: ReboJSONMessage);
 }
 
 fn config_path() -> PathBuf {
@@ -1173,11 +1322,19 @@ fn new_game_pressed() {
 
 #[rebo::function(raw("Tas::archipelago_connect"))]
 fn archipelago_connect(server_and_port: String, game: String, slot: String, password: Option<String>) {
-    STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(ReboToArchipelago::Connect {
+    let state = STATE.lock().unwrap();
+    let tx = &state.as_ref().unwrap().rebo_archipelago_tx;
+
+    tx.send(ReboToArchipelago::Connect {
         server_and_port, game, slot, password,
         items_handling: Some(7),
         tags: vec![],
     }).unwrap();
+
+    // Request item/location names from the server
+    tx.send(ReboToArchipelago::ClientMessage(
+        ClientMessage::GetDataPackage(GetDataPackage { games: None, })
+    )).unwrap();
 }
 #[rebo::function(raw("Tas::archipelago_disconnect"))]
 fn archipelago_disconnect() {
