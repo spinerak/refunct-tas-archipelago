@@ -112,7 +112,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         if ARCHIPELAGO_STATE.gamemode == 1 {
             // log(f"[AP] Pressed {index.element_type} {index.element_index} in cluster {index.cluster_index}");
             if index.element_type == ElementType::Button {
-                log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
+                // log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
                 Tas::archipelago_send_check(10020000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
                 // log(f"Vanilla mode - sending button press {10020000 + (index.cluster_index + 1) * 100 + index.element_index + 1}");
             }
@@ -122,7 +122,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             if index.element_type == ElementType::Platform {
                 let loc_id = 10010000 + (index.cluster_index + 1) * 100 + index.element_index + 1;
                 if !platforms_with_buttons.contains(loc_id) && !ARCHIPELAGO_STATE.seeker_pressed_platforms.contains(loc_id) && !ARCHIPELAGO_STATE.seeker_extra_pressed.contains(loc_id) {
-                    log(f"$Seeker Platform {index.cluster_index + 1}-{index.element_index + 1}");
+                    // log(f"$Seeker Platform {index.cluster_index + 1}-{index.element_index + 1}");
                     ARCHIPELAGO_STATE.seeker_extra_pressed.push(loc_id);
                     Tas::archipelago_send_check(10030000 + ARCHIPELAGO_STATE.seeker_extra_pressed.len());
                 }
@@ -176,22 +176,22 @@ fn archipelago_process_item(item_index: int, ignore_activate_and_deactivate: boo
 
     // log(f"Processing received item index {item_index}");
     if item_index == 9999990 {  // Ledge Grab
-        log("Received Ledge Grab!");
+        // log("Received Ledge Grab!");
         ARCHIPELAGO_STATE.ledge_grab += 1;
         Tas::archipelago_set_wall_jump_and_ledge_grab(-1, 1, true);
     }
     if item_index == 9999991 {  // Wall Jump
-        log("Received Wall Jump!");
+        // log("Received Wall Jump!");
         ARCHIPELAGO_STATE.wall_jump += 1;
         Tas::archipelago_set_wall_jump_and_ledge_grab(ARCHIPELAGO_STATE.wall_jump, -1, true);
     }
     if item_index == 9999992 {  // Swim
-        log("Received Swim!");
+        // log("Received Swim!");
         ARCHIPELAGO_STATE.swim += 1;
         Tas::set_kill_z(-6000.);
     }
     if item_index == 9999993 {  // Jumppads
-        log("Received Jumppads!");
+        // log("Received Jumppads!");
         ARCHIPELAGO_STATE.jumppads += 1;
         Tas::archipelago_set_jump_pads(1);
     }
@@ -209,7 +209,7 @@ fn archipelago_process_item(item_index: int, ignore_activate_and_deactivate: boo
             }
 
             let last_unlocked = ARCHIPELAGO_STATE.last_level_unlocked;
-            log(f"Received Trigger Cluster {clusterindex}");
+            // log(f"Received Trigger Cluster {clusterindex}");
             Tas::set_level(clusterindex - 2);
             if last_unlocked == 7 {
                 Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
@@ -278,7 +278,7 @@ fn archipelago_process_item(item_index: int, ignore_activate_and_deactivate: boo
 fn archipelago_received_item(index: int, item_index: int){
     // log(f"Received item index {item_index} (cluster index {index})");
     if index <= ARCHIPELAGO_STATE.highest_index_received {
-        log(f"Ignoring duplicate or out-of-order item index {index} (highest received: {ARCHIPELAGO_STATE.highest_index_received})");
+        // log(f"Ignoring duplicate or out-of-order item index {index} (highest received: {ARCHIPELAGO_STATE.highest_index_received})");
         return;
     }else{
         if item_index < 10000000 {
@@ -305,12 +305,12 @@ fn archipelago_received_item(index: int, item_index: int){
 
 fn archipelago_got_grass(){
     ARCHIPELAGO_STATE.grass += 1;
-    log("Got grass!");
+    // log("Got grass!");
 }
 
 fn archipelago_init(gamemode: int){
     ARCHIPELAGO_STATE.ap_connected = true;
-    log("Archipelago started, waiting for new game");
+    // log("Archipelago started, waiting for new game");
     ARCHIPELAGO_STATE.started = 0;
     ARCHIPELAGO_STATE.gamemode = gamemode;
     // probably want to set speed to 0 here
@@ -318,19 +318,19 @@ fn archipelago_init(gamemode: int){
 
 fn archipelago_start(){
     if ARCHIPELAGO_STATE.gamemode == 0 {
-        log("Starting Move Rando gamemode");
+        // log("Starting Move Rando gamemode");
         archipelago_main_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 1 {
-        log("Starting Vanilla gamemode");
+        // log("Starting Vanilla gamemode");
         archipelago_vanilla_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 2 {
-        log("Starting Original Randomizer gamemode");
+        // log("Starting Original Randomizer gamemode");
         // original randomizer start
     }
     if ARCHIPELAGO_STATE.gamemode == 3 {
-        log("Starting Seeker gamemode");
+        // log("Starting Seeker gamemode");
         archipelago_seeker_start();
     }
 }
@@ -436,7 +436,7 @@ fn archipelago_checked_location(id: int){
         }
         if all_pressed {
             ARCHIPELAGO_STATE.done_vanilla_minigame = true;
-            log("Completed Vanilla Minigame!");
+            // log("Completed Vanilla Minigame!");
         }
     }
     let seeker_locations = List::of(10030001, 10030002, 10030003, 10030004, 10030005, 10030006, 10030007, 10030008, 10030009, 10030010);
@@ -450,7 +450,7 @@ fn archipelago_checked_location(id: int){
         }
         if all_pressed {
             ARCHIPELAGO_STATE.done_seeker_minigame = true;
-            log("Completed Seeker Minigame!");
+            // log("Completed Seeker Minigame!");
         }
     }
 }

@@ -49,7 +49,7 @@ fn archipelago_register_slot(index: int, name: string, game: string, type: int, 
         type: type,
         group_members: group_members
     });
-    log(f"Registered slot {index}: {ARCHIPELAGO_ROOM_INFO.slots.get(index).unwrap()}");
+    //log(f"Registered slot {index}: {ARCHIPELAGO_ROOM_INFO.slots.get(index).unwrap()}");
 }
 
 fn archipelago_register_player(team: int, slot: int, alias: string, name: string) {
@@ -59,7 +59,7 @@ fn archipelago_register_player(team: int, slot: int, alias: string, name: string
         alias: alias,
         name: name,
     });
-    log(f"Registered player {slot}: {ARCHIPELAGO_ROOM_INFO.players.get(slot).unwrap()}");
+    // log(f"Registered player {slot}: {ARCHIPELAGO_ROOM_INFO.players.get(slot).unwrap()}");
 }
 
 fn archipelago_get_or_create_game_info(game_name: string) -> ArchipelagoGame {
@@ -74,7 +74,7 @@ fn archipelago_get_or_create_game_info(game_name: string) -> ArchipelagoGame {
                 location_id_to_name: Map::new()
             };
             ARCHIPELAGO_ROOM_INFO.games.insert(game_name, game);
-            log(f"Registered game {game_name}");
+            // log(f"Registered game {game_name}");
             game
         }
     }
@@ -188,7 +188,6 @@ fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
         };
         message = f"{message}{text}";
     }
-    log(message);
     ap_log(List::of(ColorfulText { text: message, color: COLOR_WHITE }));
 }
 
@@ -219,8 +218,17 @@ fn ap_log(texts: List<ColorfulText>) {
     });
 }
 
-static LOG_COUNT = 5;
-static LOG_WIDTH = 750.;
+enum ArchipelagoLogDisplay {
+    Off,
+    Temporary,
+    On
+}
+
+// Settings to be added to the menu
+static LOG_DISPLAY_COUNT = 6;
+static LOG_DISPLAY_WIDTH = 0.4;
+static LOG_DISPLAY_SECONDS = 8;
+static LOG_DISPLAY = ArchipelagoLogDisplay::Temporary;
 
 static mut AP_LOG_COMPONENT = Component {
     id: ARCHIPELAGO_LOG_COMPONENT_ID,
@@ -231,34 +239,47 @@ static mut AP_LOG_COMPONENT = Component {
     on_yield: fn() {},
     draw_hud_text: fn(text: string) -> string { text },
     draw_hud_always: fn() {
+        if LOG_DISPLAY == ArchipelagoLogDisplay::Off { return; }
+
         let viewport = Tas::get_viewport_size();
         let w = viewport.width.to_float();
+        let log_display_width = LOG_DISPLAY_WIDTH*w;
         let h = viewport.height.to_float();
 
         // ensure logs don't run over the width
-        let mut i = int::max(0, AP_LOG.messages.len() - LOG_COUNT);
+        let mut i = int::max(0, AP_LOG.messages.len() - LOG_DISPLAY_COUNT);
         let mut formatted_texts = List::new();
+        let now = current_time_millis();
         while i < AP_LOG.messages.len() {
             let log = AP_LOG.messages.get(i).unwrap();
+            if LOG_DISPLAY == ArchipelagoLogDisplay::Temporary && (now - log.timestamp) > LOG_DISPLAY_SECONDS*1000 {
+                i += 1;
+                continue;
+            }
+
             for text in log.texts {
                 let words = text.text.split(" ");
                 let mut line_string = "";
                 let mut j = 0;
                 while j < words.len() {
-                    let word = words.get(j).unwrap();
+                    let mut word = words.get(j).unwrap();
                     line_string = f"{line_string}{word}";
                     let dim = Tas::get_text_size(line_string, SETTINGS.ui_scale);
-                    if dim.width > LOG_WIDTH {
+                    if dim.width > log_display_width {
                         line_string = "  {word}";
                         formatted_texts.push(ColorfulText { text: "\n  ", color: COLOR_WHITE });
                     }
 
                     if j != words.len() - 1 {
+                        // Don't forget the space!
                         line_string = f"{line_string} ";
-                        formatted_texts.push(ColorfulText { text: f"{word} ", color: text.color });
-                    } else {
-                        formatted_texts.push(ColorfulText { text: word, color: text.color });
+                        word = f"{word} ";
                     }
+
+                    formatted_texts.push(ColorfulText {
+                        text: word,
+                        color: get_faded_log_color(text.color, now, log.timestamp)
+                    });
 
                     j += 1;
                 }
@@ -269,7 +290,7 @@ static mut AP_LOG_COMPONENT = Component {
             i += 1;
         }
 
-        ap_draw_colorful_text(formatted_texts, AP_COLOR_GRAY_BG, 0., h, Anchor::BottomLeft, 5.0);
+        ap_draw_colorful_text(formatted_texts, AP_COLOR_CLEAR, 0., h, Anchor::BottomLeft, 5.0);
     },
     on_new_game: fn() {},
     on_level_change: fn(old: int, new: int) {},
@@ -289,3 +310,18 @@ static mut AP_LOG_COMPONENT = Component {
     on_resolution_change: fn() {},
     on_menu_open: fn() {},
 };
+
+fn get_faded_log_color(color: Color, now: int, log_timestamp: int) -> Color {
+    let delta = now - log_timestamp;
+    let display_ms = LOG_DISPLAY_SECONDS*1000;
+    let FADE_MS = 1500;
+
+    if LOG_DISPLAY == ArchipelagoLogDisplay::Temporary && display_ms - FADE_MS <= delta && delta <= display_ms {
+        let mut faded_color = color.clone();
+        let t = (delta - (display_ms - FADE_MS));
+        faded_color.alpha = 1.0 -(t.to_float() / FADE_MS.to_float());
+        faded_color
+    } else {
+        color
+    }
+}
