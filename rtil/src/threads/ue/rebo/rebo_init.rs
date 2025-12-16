@@ -57,6 +57,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(get_delta)
         .add_function(set_delta)
         .add_function(get_location)
+        .add_function(get_location_and_log)
         .add_function(set_location)
         .add_function(get_rotation)
         .add_function(set_rotation)
@@ -747,6 +748,11 @@ struct Location {
 fn get_location() -> Location {
     let (x, y, z) = AMyCharacter::get_player().location();
     Location { x, y, z }
+}
+#[rebo::function("Tas::get_location_and_log")]
+fn get_location_and_log() {
+    let (x, y, z) = AMyCharacter::get_player().location();
+    log!("LOG get_location: x={}, y={}, z={}", x, y, z);
 }
 #[rebo::function("Tas::set_location")]
 fn set_location(loc: Location) {

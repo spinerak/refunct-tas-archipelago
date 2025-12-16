@@ -124,6 +124,9 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
         Tas::set_input_mode_ui_only();
         Tas::flush_pressed_keys();
     }
+    if key.to_small() == KEY_P.to_small() {
+        Tas::get_location_and_log();
+    }
     if key.to_small() == KEY_S.to_small() {
         Tas::set_input_mode_game_only();
     }

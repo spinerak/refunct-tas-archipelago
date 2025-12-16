@@ -53,6 +53,7 @@ static MAP_EDITOR_COMPONENT = Component {
                 Result::Ok(element) => element,
                 _ => return,
             };
+            log(f"{index} {index.cluster_index} index {index.element_index} of type {index.element_type}");
             enter_ui(create_map_editor_element_ui(element, index, 0));
         }
     },

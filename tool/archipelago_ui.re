@@ -64,6 +64,12 @@ fn create_archipelago_menu() -> Ui {
         onclick: fn(label: Text) { leave_ui(); },
     }));
 
+    // elements.push(
+    //     UiElement::Button(UiButton {
+    //     label: Text { text: "Map Editor" },
+    //     onclick: fn(label: Text) { enter_ui(create_map_editor_menu()); },
+    // }));
+
     Ui::new("Archipelago:", elements)
 }
 
