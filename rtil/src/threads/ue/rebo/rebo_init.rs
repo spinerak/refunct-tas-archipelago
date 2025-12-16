@@ -1280,6 +1280,36 @@ fn archipelago_activate_all_buttons(index: i32) {
         }
     });
 }
+// #[rebo::function("Tas::archipelago_yeet_all_buttons")]
+// fn archipelago_yeet_all_buttons() {
+//     // Press and release all buttons in the game immediately
+//     log!("Gonna yeet all buttons");
+
+//     fn set_element(scope: &UeScope, levels: &[Level], index: ElementIndex) {
+//         let actor = get_indexed_actor(scope, levels, index);
+//         let target_location = FVector { x: 10000. + index.element_index as f32 * 10., y: 10000., z: 10000. };
+//         let target_rotation = FRotator { pitch: 0., yaw: 0., roll: 0. };
+//         USceneComponent::set_world_location_and_rotation(target_location, target_rotation, &actor);
+//     }
+
+//     UeScope::with(|scope| {
+//         let levels = LEVELS.lock().unwrap();
+        
+//         for (cluster_index, (level, cluster)) in levels.iter().zip(&ORIGINAL_MAP.clusters).enumerate() {
+//             let level_wrapper = scope.get(level.level);
+//             let (rx, ry, _) = level_wrapper.source_location();
+//             level_wrapper.set_source_location(rx, ry, cluster.z);
+//             level_wrapper.set_speed(cluster.rise_speed);
+//             level.buttons.iter().zip(&cluster.buttons).enumerate().map(|i| (i.0, ElementType::Button))
+//                 .for_each(|(element_index, element_type)| {
+//                     let index = ElementIndex { cluster_index, element_type, element_index };
+//                     set_element(scope, &levels, index);
+//                 });
+//         }
+//     });
+
+//     log!("Done yeeting buttons");
+// }
 #[rebo::function("Tas::trigger_element")]
 fn trigger_element(index: ElementIndex) {
     fn add_remove_based_character(actor: &ActorWrapper<'_>) {

@@ -402,6 +402,7 @@ fn get_status_text_lines() -> List<ColorfulText> {
             1 => List::of(
                 ColorfulText { text: "Archipelago - Vanilla\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Press the buttons!", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_vanilla_minigame}", color: COLOR_WHITE },
             ),
             // 2 => List::of(
             //     ColorfulText { text: "Archipelago - Original Rando\n", color: COLOR_WHITE },
@@ -410,6 +411,7 @@ fn get_status_text_lines() -> List<ColorfulText> {
             3 => List::of(
                 ColorfulText { text: "Archipelago - Seeker\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Find the empty platforms!", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_seeker_minigame}", color: COLOR_WHITE },
             ),
             _ => List::of(
                 ColorfulText { text: "Archipelago\n", color: COLOR_WHITE },
@@ -426,6 +428,13 @@ fn get_status_text_lines() -> List<ColorfulText> {
             text:  f"\nMOD: {ARCHIPELAGO_STATE.mod_version}, APWORLD: {ARCHIPELAGO_STATE.apworld_version}",
             color: AP_COLOR_RED
         });
+    }else{
+        if ARCHIPELAGO_STATE.started == 0 {
+            lines.push(ColorfulText {
+                text:  f"\n\nVersion {ARCHIPELAGO_STATE.apworld_version}",
+                color: COLOR_WHITE
+            });
+        }
     }
     lines
 }

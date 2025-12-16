@@ -21,6 +21,8 @@ struct ArchipelagoState {
     unlock_vanilla_minigame: bool,
     unlock_seeker_minigame: bool,
     done_vanilla_minigame: bool,
+    progress_vanilla_minigame: string,
+    progress_seeker_minigame: string,
     done_seeker_minigame: bool,
     seeker_pressed_platforms: List<int>,
     seeker_extra_pressed: List<int>,
@@ -54,6 +56,8 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         unlock_vanilla_minigame: false,
         unlock_seeker_minigame: false,
         done_vanilla_minigame: false,
+        progress_vanilla_minigame: "0/37",
+        progress_seeker_minigame: "0/10",
         done_seeker_minigame: false,
         seeker_pressed_platforms: List::new(),
         seeker_extra_pressed: List::new(),
@@ -112,7 +116,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         if ARCHIPELAGO_STATE.gamemode == 1 {
             // log(f"[AP] Pressed {index.element_type} {index.element_index} in cluster {index.cluster_index}");
             if index.element_type == ElementType::Button {
-                log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
+                // log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
                 Tas::archipelago_send_check(10020000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
                 // log(f"Vanilla mode - sending button press {10020000 + (index.cluster_index + 1) * 100 + index.element_index + 1}");
             }
@@ -122,7 +126,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             if index.element_type == ElementType::Platform {
                 let loc_id = 10010000 + (index.cluster_index + 1) * 100 + index.element_index + 1;
                 if !platforms_with_buttons.contains(loc_id) && !ARCHIPELAGO_STATE.seeker_pressed_platforms.contains(loc_id) && !ARCHIPELAGO_STATE.seeker_extra_pressed.contains(loc_id) {
-                    log(f"$Seeker Platform {index.cluster_index + 1}-{index.element_index + 1}");
+                    // log(f"$Seeker Platform {index.cluster_index + 1}-{index.element_index + 1}");
                     ARCHIPELAGO_STATE.seeker_extra_pressed.push(loc_id);
                     Tas::archipelago_send_check(10030000 + ARCHIPELAGO_STATE.seeker_extra_pressed.len());
                 }
@@ -304,12 +308,12 @@ fn archipelago_received_item(index: int, item_index: int){
 
 fn archipelago_got_grass(){
     ARCHIPELAGO_STATE.grass += 1;
-    log("Got grass!");
+    // log("Got grass!");
 }
 
 fn archipelago_init(gamemode: int){
     ARCHIPELAGO_STATE.ap_connected = true;
-    log("Archipelago started, waiting for new game");
+    // log("Archipelago started, waiting for new game");
     ARCHIPELAGO_STATE.started = 0;
     ARCHIPELAGO_STATE.gamemode = gamemode;
     // probably want to set speed to 0 here
@@ -426,31 +430,31 @@ fn archipelago_checked_location(id: int){
     }
     let vanilla_locations = List::of(10020101, 10020201, 10020301, 10020401, 10020501, 10020601, 10020701, 10020702, 10020801, 10020901, 10021001, 10021002, 10021101, 10021201, 10021301, 10021401, 10021501, 10021601, 10021701, 10021801, 10021802, 10021901, 10022001, 10022101, 10022201, 10022301, 10022401, 10022501, 10022601, 10022602, 10022603, 10022701, 10022801, 10022802, 10022901, 10023001, 10023101);
     if vanilla_locations.contains(id) {
-        let mut all_pressed = true;
+        let mut number_pressed = 0;
         for lid in vanilla_locations {
-            if !ARCHIPELAGO_STATE.checked_locations.contains(lid) {
-                all_pressed = false;
-                break;
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
             }
         }
-        if all_pressed {
+        if number_pressed == vanilla_locations.len() {
             ARCHIPELAGO_STATE.done_vanilla_minigame = true;
             log("Completed Vanilla Minigame!");
         }
+        ARCHIPELAGO_STATE.progress_vanilla_minigame = f"{number_pressed}/{vanilla_locations.len()}";
     }
     let seeker_locations = List::of(10030001, 10030002, 10030003, 10030004, 10030005, 10030006, 10030007, 10030008, 10030009, 10030010);
     if seeker_locations.contains(id) {
-        let mut all_pressed = true;
+        let mut number_pressed = 0;
         for lid in seeker_locations {
-            if !ARCHIPELAGO_STATE.checked_locations.contains(lid) {
-                all_pressed = false;
-                break;
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
             }
         }
-        if all_pressed {
+        if number_pressed == seeker_locations.len() {
             ARCHIPELAGO_STATE.done_seeker_minigame = true;
             log("Completed Seeker Minigame!");
         }
+        ARCHIPELAGO_STATE.progress_seeker_minigame = f"{number_pressed}/{seeker_locations.len()}";
     }
 }
 
