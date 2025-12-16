@@ -15,10 +15,10 @@ struct ArchipelagoSlot {
 
 struct ArchipelagoGame {
     name: string,
-    item_name_to_id: Map<string, int>,
-    item_id_to_name: Map<int, string>,
-    location_name_to_id: Map<string, int>,
-    location_id_to_name: Map<int, string>
+    item_name_to_id: Map<string, string>,
+    item_id_to_name: Map<string, string>,
+    location_name_to_id: Map<string, string>,
+    location_id_to_name: Map<string, string>
 }
 
 struct ArchipelagoRoomInfo {
@@ -80,19 +80,25 @@ fn archipelago_get_or_create_game_info(game_name: string) -> ArchipelagoGame {
     }
 };
 
-fn archipelago_register_game_item(game_name: string, item_name: string, item_id: int) {
+fn archipelago_register_game_item(game_name: string, item_name: string, item_id: string) {
     let game_info = archipelago_get_or_create_game_info(game_name);
     let item_name_to_id = game_info.item_name_to_id.insert(item_name, item_id);
     let item_id_to_name = game_info.item_id_to_name.insert(item_id, item_name);
 }
 
-fn archipelago_register_game_location(game_name: string, location_name: string, location_id: int) {
+fn archipelago_register_game_location(game_name: string, location_name: string, location_id: string) {
     let game_info = archipelago_get_or_create_game_info(game_name);
     let location_name_to_id = game_info.location_name_to_id.insert(location_name, location_id);
     let location_id_to_name = game_info.location_id_to_name.insert(location_id, location_name);
+    if location_name == "33 score" {
+        ap_log(List::of(ColorfulText {
+            text: f"Registered location {location_id}: {location_name} in {game_name}",
+            color: AP_COLOR_CYAN
+        }));
+    }
 }
 
-fn get_item_name_for_player_by_id(player_id: int, item_id: int) -> string {
+fn get_item_name_for_player_by_id(player_id: int, item_id: string) -> string {
     let slot_id = match ARCHIPELAGO_ROOM_INFO.players.get(player_id) {
         Option::Some(player) => player.slot,
         Option::None => return UNKNOWN_ITEM,
@@ -114,7 +120,7 @@ fn get_item_name_for_player_by_id(player_id: int, item_id: int) -> string {
     }
 }
 
-fn get_location_name_for_player_by_id(player_id: int, location_id: int) -> string {
+fn get_location_name_for_player_by_id(player_id: int, location_id: string) -> string {
     let slot_id = match ARCHIPELAGO_ROOM_INFO.players.get(player_id) {
         Option::Some(player) => player.slot,
         Option::None => return UNKNOWN_LOCATION,
@@ -140,55 +146,61 @@ fn get_location_name_for_player_by_id(player_id: int, location_id: int) -> strin
 // - Add message filtering and corresponding menu option
 //   - List::of(All, OnlyYou, OnlyProgressive, OnlyYouAndProgressive)?
 // - Add prettier logging and a menu option to keep logs for a certain amount of time
-//   - Options: Forever, Duration, Off; Duration is controlled by a float setting (10s default?)
-//   - Another option to control maximum number of messages shown?
-//   - Should the logs have a separate UI scale option? Probably not.
 //   - Logs should appear permanently when the player opens the AP menu (maybe?)
 //     - Annoyingly, you can leave the menu open. We should maybe fix this?
-// - Delete lots of the old logging (no longer needed)
 
 fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
-    let mut message = "";
+    let mut message = List::new();
     for part in json_message.data {
-        let text = match part._type {
-            "player_id" => {
-                let message_text = part.text.unwrap();
-                match message_text.parse_int() {
-                    Result::Ok(player_id) => match ARCHIPELAGO_ROOM_INFO.players.get(player_id) {
-                        Option::Some(player) => player.name,
-                        Option::None => UNKNOWN_PLAYER,
-                    },
-                    Result::Err(e) => UNKNOWN_PLAYER
-                }
+        let raw_colorful_text = archipelago_interpret_json_message_part(part);
+        message.push(raw_colorful_text);
+    }
+    ap_log(message);
+}
+
+fn archipelago_interpret_json_message_part(part: ReboJSONMessagePart) -> ColorfulText {
+    match part._type {
+        "player_id" => ColorfulText {
+            text: match part.text {
+                // TODO: cleanup parse_int here
+                Option::Some(player_id) => match ARCHIPELAGO_ROOM_INFO.players.get(player_id.parse_int().unwrap()) {
+                    Option::Some(player) => player.name,
+                    Option::None => UNKNOWN_PLAYER,
+                },
+                Option::None => UNKNOWN_PLAYER,
             },
-            "item_id" => {
-                let message_text = part.text.unwrap();
-                match message_text.parse_int() {
-                    Result::Ok(item_id) => match part.player {
-                        Option::Some(player_id) => get_item_name_for_player_by_id(player_id, item_id),
-                        Option::None => UNKNOWN_ITEM
-                    },
-                    Result::Err(e) => UNKNOWN_ITEM
-                }
+            // TODO: change color if player is us! Or really, do more processing
+            color: Color { red: 0.980, green: 0.980, blue: 0.824, alpha: 1.000 }
+        },
+        "item_id" => ColorfulText {
+            text: match part.text {
+                Option::Some(item_id) => match part.player {
+                    Option::Some(player_id) => get_item_name_for_player_by_id(player_id, item_id),
+                    Option::None => UNKNOWN_ITEM
+                },
+                Option::None => UNKNOWN_ITEM,
             },
-            "location_id" => {
-                let message_text = part.text.unwrap();
-                match message_text.parse_int() {
-                    Result::Ok(location_id) => match part.player {
-                        Option::Some(player_id) => get_location_name_for_player_by_id(player_id, location_id),
-                        Option::None => UNKNOWN_LOCATION
-                    },
-                    Result::Err(e) => UNKNOWN_LOCATION
-                }
+            // TODO: modify color depending on the type of item
+            color: Color { red: 0.000, green: 0.851, blue: 0.851, alpha: 1.000 }
+        },
+        "location_id" => ColorfulText {
+            text: match part.text {
+                Option::Some(location_id) => match part.player {
+                    Option::Some(player_id) => get_location_name_for_player_by_id(player_id, location_id),
+                    Option::None => UNKNOWN_LOCATION
+                },
+                Option::None => UNKNOWN_LOCATION,
             },
-            _ =>  match part.text {
+            color: Color {red: 0.0, green: 1.0, blue: 0.5, alpha: 1.0}
+        },
+        _ => ColorfulText {
+            text: match part.text {
                 Option::Some(text) => text,
                 Option::None => "",
-            }
-        };
-        message = f"{message}{text}";
+            },
+            color: COLOR_WHITE
+        }
     }
-    ap_log(List::of(ColorfulText { text: message, color: COLOR_WHITE }));
 }
 
 struct ArchipelagoLogMessage {
@@ -225,10 +237,10 @@ enum ArchipelagoLogDisplay {
 }
 
 // Settings to be added to the menu
-static LOG_DISPLAY_COUNT = 6;
+static LOG_DISPLAY_COUNT = 8;
 static LOG_DISPLAY_WIDTH = 0.4;
 static LOG_DISPLAY_SECONDS = 8;
-static LOG_DISPLAY = ArchipelagoLogDisplay::Temporary;
+static LOG_DISPLAY = ArchipelagoLogDisplay::On;
 
 static mut AP_LOG_COMPONENT = Component {
     id: ARCHIPELAGO_LOG_COMPONENT_ID,

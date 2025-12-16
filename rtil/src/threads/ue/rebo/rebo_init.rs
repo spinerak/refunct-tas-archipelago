@@ -300,30 +300,30 @@ pub struct Segment {
     pub best_time: f64,
 }
 
-#[derive(rebo::ExternalType)]
+#[derive(rebo::ExternalType, Debug, Serialize, Deserialize)]
 pub struct ReboJSONMessagePart {
     pub _type: String, // the JSONMessagePart type field is optional, but we'll enforce it
     pub text: Option<String>,
     pub color: Option<String>,
     pub flags: Option<usize>,
-    pub player: Option<usize>,
+    pub player: Option<isize>,
 }
 
-#[derive(rebo::ExternalType)]
+#[derive(rebo::ExternalType, Debug, Serialize, Deserialize)]
 pub struct ReboNetworkItem {
-    pub item: usize,
-    pub location: usize,
-    pub player: usize,
-    pub flags: usize,
+    pub item: isize,
+    pub location: isize,
+    pub player: isize,
+    pub flags: isize,
 }
 
-#[derive(rebo::ExternalType)]
+#[derive(rebo::ExternalType, Debug, Serialize, Deserialize)]
 pub struct ReboPrintJSONMessage {
     pub _type: String, // the JSONMessage type field is optional, but we'll enforce it
     pub data: Vec<ReboJSONMessagePart>,
 
     // For certain message types, we'll also include this information, so that we can filter correctly
-    pub receiving: Option<usize>,
+    pub receiving: Option<isize>,
     pub item: Option<ReboNetworkItem>,
 }
 
@@ -506,18 +506,18 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
 
                     for (key, value) in info.slot_info {
                         archipelago_register_slot(vm,
-                            key as usize,
+                            key as isize,
                             value.name.clone(),
                             value.game.clone(),
                             value.r#type as usize,
-                            value.group_members.into_iter().map(|x| x as usize).collect()
+                            value.group_members.into_iter().map(|x| x as isize).collect()
                         )?;
                     }
 
                     for player in info.players {
                         archipelago_register_player(vm,
-                            player.team as usize,
-                            player.slot as usize,
+                            player.team as isize,
+                            player.slot as isize,
                             player.alias.clone(),
                             player.name.clone()
                         )?;
@@ -575,10 +575,10 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
 
                     for (game_name, game_data) in pkg.data.games {
                         for (item_name, item_id) in game_data.item_name_to_id {
-                            archipelago_register_game_item(vm, game_name.clone(), item_name.clone(), item_id as usize)?;
+                            archipelago_register_game_item(vm, game_name.clone(), item_name.clone(), item_id.to_string())?;
                         }
                         for (location_name, location_id) in game_data.location_name_to_id {
-                            archipelago_register_game_location(vm, game_name.clone(), location_name.clone(), location_id as usize)?;
+                            archipelago_register_game_location(vm, game_name.clone(), location_name.clone(), location_id.to_string())?;
                         }
                     }
                 },
@@ -647,7 +647,7 @@ impl ReboPrintJSONMessage {
             PrintJSON::ItemSend { receiving, item, .. }
             | PrintJSON::ItemCheat { receiving, item, .. }
             | PrintJSON::Hint { receiving, item, .. } => {
-                (Some(*receiving as usize), Some(ReboNetworkItem::from(item)))
+                (Some(*receiving as isize), Some(ReboNetworkItem::from(item)))
             },
             _ => (None, None),
         };
@@ -678,26 +678,26 @@ impl ReboJSONMessagePart {
                 _type: String::from("item_id"),
                 text: Some(String::from(text)),
                 flags: Some(*flags as usize),
-                player: Some(*player as usize),
+                player: Some(*player as isize),
                 color: None,
             },
             JSONMessagePart::ItemName { text, flags, player, .. } => ReboJSONMessagePart {
                 _type: String::from("item_name"),
                 text: Some(String::from(text)),
                 flags: Some(*flags as usize),
-                player: Some(*player as usize),
+                player: Some(*player as isize),
                 color: None,
             },
             JSONMessagePart::LocationId { text, player, .. } => ReboJSONMessagePart {
                 _type: String::from("location_id"),
                 text: Some(String::from(text)),
-                player: Some(*player as usize),
+                player: Some(*player as isize),
                 color: None, flags: None,
             },
             JSONMessagePart::LocationName { text, player, .. } => ReboJSONMessagePart {
                 _type: String::from("location_name"),
                 text: Some(String::from(text)),
-                player: Some(*player as usize),
+                player: Some(*player as isize),
                 color: None, flags: None,
             },
             JSONMessagePart::EntranceName { text, .. } => ReboJSONMessagePart {
@@ -723,10 +723,10 @@ impl ReboJSONMessagePart {
 impl ReboNetworkItem {
     pub fn from(item: &NetworkItem) -> ReboNetworkItem {
         ReboNetworkItem {
-            item: item.item as usize,
-            location: item.location as usize,
-            player: item.player as usize,
-            flags: item.flags as usize,
+            item: item.item as isize,
+            location: item.location as isize,
+            player: item.player as isize,
+            flags: item.flags as isize,
         }
     }
 }
@@ -779,10 +779,10 @@ extern "rebo" {
     fn archipelago_checked_location(id: usize);
     fn archipelago_received_slot_data(name_of_options: String, value_of_options: String);
     fn archipelago_init(gamemode: usize);
-    fn archipelago_register_slot(index: usize, name: String, game: String, slot_type: usize, group_members: Vec<usize>);
-    fn archipelago_register_player(team: usize, slot: usize, alias: String, name: String);
-    fn archipelago_register_game_item(game_name: String, item_name: String, item_id: usize);
-    fn archipelago_register_game_location(game_name: String, location_name: String, location_id: usize);
+    fn archipelago_register_slot(index: isize, name: String, game: String, slot_type: usize, group_members: Vec<isize>);
+    fn archipelago_register_player(team: isize, slot: isize, alias: String, name: String);
+    fn archipelago_register_game_item(game_name: String, item_name: String, item_id: String);
+    fn archipelago_register_game_location(game_name: String, location_name: String, location_id: String);
     fn archipelago_print_json_message(json_message: ReboPrintJSONMessage);
 }
 
