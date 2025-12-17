@@ -436,7 +436,7 @@ fn archipelago_checked_location(id: int){
         }
         if all_pressed {
             ARCHIPELAGO_STATE.done_vanilla_minigame = true;
-            // log("Completed Vanilla Minigame!");
+            ap_log(List::of(ColorfulText { text:"Completed Vanilla Minigame!", color: AP_COLOR_GREEN }));
         }
     }
     let seeker_locations = List::of(10030001, 10030002, 10030003, 10030004, 10030005, 10030006, 10030007, 10030008, 10030009, 10030010);
@@ -450,7 +450,7 @@ fn archipelago_checked_location(id: int){
         }
         if all_pressed {
             ARCHIPELAGO_STATE.done_seeker_minigame = true;
-            // log("Completed Seeker Minigame!");
+            ap_log(List::of(ColorfulText { text:"Completed Seeker Minigame!", color: AP_COLOR_GREEN }));
         }
     }
 }

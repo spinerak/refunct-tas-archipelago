@@ -301,6 +301,16 @@ pub struct Segment {
 }
 
 #[derive(rebo::ExternalType, Debug, Serialize, Deserialize)]
+pub struct ReboPrintJSONMessage {
+    pub _type: String, // the JSONMessage type field is optional, but we'll enforce it
+    pub data: Vec<ReboJSONMessagePart>,
+
+    // For certain message types, we'll also include this information, so that we can filter correctly
+    pub receiving: Option<isize>,
+    pub item: Option<ReboNetworkItem>,
+}
+
+#[derive(rebo::ExternalType, Debug, Serialize, Deserialize)]
 pub struct ReboJSONMessagePart {
     pub _type: String, // the JSONMessagePart type field is optional, but we'll enforce it
     pub text: Option<String>,
@@ -317,14 +327,139 @@ pub struct ReboNetworkItem {
     pub flags: isize,
 }
 
-#[derive(rebo::ExternalType, Debug, Serialize, Deserialize)]
-pub struct ReboPrintJSONMessage {
-    pub _type: String, // the JSONMessage type field is optional, but we'll enforce it
-    pub data: Vec<ReboJSONMessagePart>,
+impl ReboPrintJSONMessage {
+    pub fn from(print_json: &PrintJSON) -> ReboPrintJSONMessage {
+        let _type: String;
+        let _data: &Vec<JSONMessagePart>;
 
-    // For certain message types, we'll also include this information, so that we can filter correctly
-    pub receiving: Option<isize>,
-    pub item: Option<ReboNetworkItem>,
+        let (_type, _data) = match print_json {
+            PrintJSON::ItemSend { data, .. } => (String::from("ItemSend"), data),
+            PrintJSON::ItemCheat { data, .. } => (String::from("ItemCheat"), data),
+            PrintJSON::Hint { data, .. } => (String::from("Hint"), data),
+            PrintJSON::Join { data, .. } => (String::from("Join"), data),
+            PrintJSON::Part { data, .. } => (String::from("Part"), data),
+            PrintJSON::Chat { data, .. } => (String::from("Chat"), data),
+            PrintJSON::ServerChat { data, .. } => (String::from("ServerChat"), data),
+            PrintJSON::Tutorial { data, .. } => (String::from("Tutorial"), data),
+            PrintJSON::TagsChanged { data, .. } => (String::from("TagsChanged"), data),
+            PrintJSON::CommandResult { data, .. } => (String::from("CommandResult"), data),
+            PrintJSON::AdminCommandResult { data, .. } => (String::from("AdminCommandResult"), data),
+            PrintJSON::Goal { data, .. } => (String::from("Goal"), data),
+            PrintJSON::Release { data, .. } => (String::from("Release"), data),
+            PrintJSON::Collect { data, .. } => (String::from("Collect"), data),
+            PrintJSON::Countdown { data, .. } => (String::from("Countdown"), data),
+            PrintJSON::Text { data, .. } => (String::from("Text"), data),
+        };
+
+        let (_receiving, _item) = match print_json {
+            PrintJSON::ItemSend { receiving, item, .. }
+            | PrintJSON::ItemCheat { receiving, item, .. }
+            | PrintJSON::Hint { receiving, item, .. } => {
+                (Some(*receiving as isize), Some(ReboNetworkItem::from(item)))
+            },
+            _ => (None, None),
+        };
+
+        ReboPrintJSONMessage {
+            _type: _type,
+            data: _data.iter().map(ReboJSONMessagePart::from).collect(),
+            receiving: _receiving,
+            item: _item,
+        }
+    }
+}
+
+impl ReboJSONMessagePart {
+    pub fn from(json_message_part: &JSONMessagePart) -> ReboJSONMessagePart {
+        match json_message_part {
+            JSONMessagePart::PlayerId { text, .. } => ReboJSONMessagePart {
+                _type: String::from("player_id"),
+                text: Some(String::from(text)),
+                color: None, flags: None, player: None,
+            },
+            JSONMessagePart::PlayerName { text, .. } => ReboJSONMessagePart {
+                _type: String::from("player_name"),
+                text: Some(String::from(text)),
+                color: None, flags: None, player: None,
+            },
+            JSONMessagePart::ItemId { text, flags, player, .. } => ReboJSONMessagePart {
+                _type: String::from("item_id"),
+                text: Some(String::from(text)),
+                flags: Some(*flags as usize),
+                player: Some(*player as isize),
+                color: None,
+            },
+            JSONMessagePart::ItemName { text, flags, player, .. } => ReboJSONMessagePart {
+                _type: String::from("item_name"),
+                text: Some(String::from(text)),
+                flags: Some(*flags as usize),
+                player: Some(*player as isize),
+                color: None,
+            },
+            JSONMessagePart::LocationId { text, player, .. } => ReboJSONMessagePart {
+                _type: String::from("location_id"),
+                text: Some(String::from(text)),
+                player: Some(*player as isize),
+                color: None, flags: None,
+            },
+            JSONMessagePart::LocationName { text, player, .. } => ReboJSONMessagePart {
+                _type: String::from("location_name"),
+                text: Some(String::from(text)),
+                player: Some(*player as isize),
+                color: None, flags: None,
+            },
+            JSONMessagePart::EntranceName { text, .. } => ReboJSONMessagePart {
+                _type: String::from("entrance_name"),
+                text: Some(String::from(text)),
+                color: None, flags: None, player: None,
+            },
+            JSONMessagePart::Color { text, color, .. } => ReboJSONMessagePart {
+                _type: String::from("color"),
+                text: Some(String::from(text)),
+                color: Some(json_color_to_string(color)),
+                flags: None, player: None,
+            },
+            JSONMessagePart::Text { text, .. } => ReboJSONMessagePart {
+                _type: String::from("text"),
+                text: Some(String::from(text)),
+                color: None, flags: None, player: None,
+            },
+        }
+    }
+}
+
+impl ReboNetworkItem {
+    pub fn from(item: &NetworkItem) -> ReboNetworkItem {
+        ReboNetworkItem {
+            item: item.item as isize,
+            location: item.location as isize,
+            player: item.player as isize,
+            flags: item.flags as isize,
+        }
+    }
+}
+
+fn json_color_to_string(json_color: &JSONColor) -> String {
+    match json_color {
+        JSONColor::Bold => "bold",
+        JSONColor::Underline => "underline",
+        JSONColor::Black => "black",
+        JSONColor::Red => "red",
+        JSONColor::Green => "green",
+        JSONColor::Yellow => "yellow",
+        JSONColor::Blue => "blue",
+        JSONColor::Magenta => "magenta",
+        JSONColor::Cyan => "cyan",
+        JSONColor::White => "white",
+        JSONColor::BlackBg => "black_bg",
+        JSONColor::RedBg => "red_bg",
+        JSONColor::GreenBg => "green_bg",
+        JSONColor::YellowBg => "yellow_bg",
+        JSONColor::BlueBg => "blue_bg",
+        JSONColor::MagentaBg => "magenta_bg",
+        JSONColor::CyanBg => "cyan_bg",
+        JSONColor::WhiteBg => "white_bg",
+    }.to_string()
 }
 
 /// Check internal state and channels to see if we should stop.
@@ -621,141 +756,6 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
             None => (),
         }
     }
-}
-
-impl ReboPrintJSONMessage {
-    pub fn from(print_json: &PrintJSON) -> ReboPrintJSONMessage {
-        let _type: String;
-        let _data: &Vec<JSONMessagePart>;
-
-        let (_type, _data) = match print_json {
-            PrintJSON::ItemSend { data, .. } => (String::from("ItemSend"), data),
-            PrintJSON::ItemCheat { data, .. } => (String::from("ItemCheat"), data),
-            PrintJSON::Hint { data, .. } => (String::from("Hint"), data),
-            PrintJSON::Join { data, .. } => (String::from("Join"), data),
-            PrintJSON::Part { data, .. } => (String::from("Part"), data),
-            PrintJSON::Chat { data, .. } => (String::from("Chat"), data),
-            PrintJSON::ServerChat { data, .. } => (String::from("ServerChat"), data),
-            PrintJSON::Tutorial { data, .. } => (String::from("Tutorial"), data),
-            PrintJSON::TagsChanged { data, .. } => (String::from("TagsChanged"), data),
-            PrintJSON::CommandResult { data, .. } => (String::from("CommandResult"), data),
-            PrintJSON::AdminCommandResult { data, .. } => (String::from("AdminCommandResult"), data),
-            PrintJSON::Goal { data, .. } => (String::from("Goal"), data),
-            PrintJSON::Release { data, .. } => (String::from("Release"), data),
-            PrintJSON::Collect { data, .. } => (String::from("Collect"), data),
-            PrintJSON::Countdown { data, .. } => (String::from("Countdown"), data),
-            PrintJSON::Text { data, .. } => (String::from("Text"), data),
-        };
-
-        let (_receiving, _item) = match print_json {
-            PrintJSON::ItemSend { receiving, item, .. }
-            | PrintJSON::ItemCheat { receiving, item, .. }
-            | PrintJSON::Hint { receiving, item, .. } => {
-                (Some(*receiving as isize), Some(ReboNetworkItem::from(item)))
-            },
-            _ => (None, None),
-        };
-
-        ReboPrintJSONMessage {
-            _type: _type,
-            data: _data.iter().map(ReboJSONMessagePart::from).collect(),
-            receiving: _receiving,
-            item: _item,
-        }
-    }
-}
-
-impl ReboJSONMessagePart {
-    pub fn from(json_message_part: &JSONMessagePart) -> ReboJSONMessagePart {
-        match json_message_part {
-            JSONMessagePart::PlayerId { text, .. } => ReboJSONMessagePart {
-                _type: String::from("player_id"),
-                text: Some(String::from(text)),
-                color: None, flags: None, player: None,
-            },
-            JSONMessagePart::PlayerName { text, .. } => ReboJSONMessagePart {
-                _type: String::from("player_name"),
-                text: Some(String::from(text)),
-                color: None, flags: None, player: None,
-            },
-            JSONMessagePart::ItemId { text, flags, player, .. } => ReboJSONMessagePart {
-                _type: String::from("item_id"),
-                text: Some(String::from(text)),
-                flags: Some(*flags as usize),
-                player: Some(*player as isize),
-                color: None,
-            },
-            JSONMessagePart::ItemName { text, flags, player, .. } => ReboJSONMessagePart {
-                _type: String::from("item_name"),
-                text: Some(String::from(text)),
-                flags: Some(*flags as usize),
-                player: Some(*player as isize),
-                color: None,
-            },
-            JSONMessagePart::LocationId { text, player, .. } => ReboJSONMessagePart {
-                _type: String::from("location_id"),
-                text: Some(String::from(text)),
-                player: Some(*player as isize),
-                color: None, flags: None,
-            },
-            JSONMessagePart::LocationName { text, player, .. } => ReboJSONMessagePart {
-                _type: String::from("location_name"),
-                text: Some(String::from(text)),
-                player: Some(*player as isize),
-                color: None, flags: None,
-            },
-            JSONMessagePart::EntranceName { text, .. } => ReboJSONMessagePart {
-                _type: String::from("entrance_name"),
-                text: Some(String::from(text)),
-                color: None, flags: None, player: None,
-            },
-            JSONMessagePart::Color { text, color, .. } => ReboJSONMessagePart {
-                _type: String::from("color"),
-                text: Some(String::from(text)),
-                color: Some(json_color_to_string(color)),
-                flags: None, player: None,
-            },
-            JSONMessagePart::Text { text, .. } => ReboJSONMessagePart {
-                _type: String::from("text"),
-                text: Some(String::from(text)),
-                color: None, flags: None, player: None,
-            },
-        }
-    }
-}
-
-impl ReboNetworkItem {
-    pub fn from(item: &NetworkItem) -> ReboNetworkItem {
-        ReboNetworkItem {
-            item: item.item as isize,
-            location: item.location as isize,
-            player: item.player as isize,
-            flags: item.flags as isize,
-        }
-    }
-}
-
-fn json_color_to_string(json_color: &JSONColor) -> String {
-    match json_color {
-        JSONColor::Bold => "bold",
-        JSONColor::Underline => "underline",
-        JSONColor::Black => "black",
-        JSONColor::Red => "red",
-        JSONColor::Green => "green",
-        JSONColor::Yellow => "yellow",
-        JSONColor::Blue => "blue",
-        JSONColor::Magenta => "magenta",
-        JSONColor::Cyan => "cyan",
-        JSONColor::White => "white",
-        JSONColor::BlackBg => "black_bg",
-        JSONColor::RedBg => "red_bg",
-        JSONColor::GreenBg => "green_bg",
-        JSONColor::YellowBg => "yellow_bg",
-        JSONColor::BlueBg => "blue_bg",
-        JSONColor::MagentaBg => "magenta_bg",
-        JSONColor::CyanBg => "cyan_bg",
-        JSONColor::WhiteBg => "white_bg",
-    }.to_string()
 }
 
 #[rebo::required_rebo_functions]
