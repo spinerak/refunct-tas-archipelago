@@ -276,11 +276,7 @@ enum ArchipelagoLogDisplay {
 }
 
 // Settings to be added to the menu
-static LOG_DISPLAY_COUNT = 8;
-static LOG_DISPLAY_WIDTH = 0.4;
-static LOG_DISPLAY_MS = 8000;
 static LOG_FADEOUT_MS = 750;
-static LOG_DISPLAY = ArchipelagoLogDisplay::Temporary;
 
 static mut AP_LOG_COMPONENT = Component {
     id: ARCHIPELAGO_LOG_COMPONENT_ID,
@@ -291,20 +287,21 @@ static mut AP_LOG_COMPONENT = Component {
     on_yield: fn() {},
     draw_hud_text: fn(text: string) -> string { text },
     draw_hud_always: fn() {
-        if LOG_DISPLAY == ArchipelagoLogDisplay::Off { return; }
+        if SETTINGS.archipelago_log_display == ArchipelagoLogDisplay::Off { return; }
 
         let viewport = Tas::get_viewport_size();
         let w = viewport.width.to_float();
-        let log_display_width = LOG_DISPLAY_WIDTH*w;
+        let log_display_width = w * SETTINGS.archipelago_log_display_width;
         let h = viewport.height.to_float();
 
         // ensure logs don't run over the width
-        let mut i = int::max(0, AP_LOG.messages.len() - LOG_DISPLAY_COUNT);
+        let mut i = int::max(0, AP_LOG.messages.len() - SETTINGS.archipelago_log_max_count);
         let mut formatted_texts = List::new();
         let now = current_time_millis();
         while i < AP_LOG.messages.len() {
             let log = AP_LOG.messages.get(i).unwrap();
-            if LOG_DISPLAY == ArchipelagoLogDisplay::Temporary && (now - log.timestamp) > (LOG_DISPLAY_MS + LOG_FADEOUT_MS) {
+            if SETTINGS.archipelago_log_display == ArchipelagoLogDisplay::Temporary
+            && (now - log.timestamp) > (SETTINGS.archipelago_log_display_time_sec * 1000 + LOG_FADEOUT_MS) {
                 i += 1;
                 continue;
             }
@@ -365,12 +362,13 @@ static mut AP_LOG_COMPONENT = Component {
 
 fn get_faded_log_color(color: Color, now: int, log_timestamp: int) -> Color {
     let delta = now - log_timestamp;
+    let display_ms = SETTINGS.archipelago_log_display_time_sec * 1000;
 
-    if LOG_DISPLAY == ArchipelagoLogDisplay::Temporary
-    && LOG_DISPLAY_MS <= delta && delta <= LOG_DISPLAY_MS + LOG_FADEOUT_MS
+    if SETTINGS.archipelago_log_display == ArchipelagoLogDisplay::Temporary
+    && display_ms <= delta && delta <= display_ms + LOG_FADEOUT_MS
     {
         let mut faded_color = color.clone();
-        let t = delta - LOG_DISPLAY_MS;
+        let t = delta - display_ms;
         faded_color.alpha = 1.0 - (t.to_float() / LOG_FADEOUT_MS.to_float());
         faded_color
     } else {

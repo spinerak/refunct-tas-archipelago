@@ -229,6 +229,7 @@ fn create_archipelago_settings_menu() -> Ui {
                 SETTINGS.store();
             },
         }),
+        UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
         UiElement::Chooser(Chooser {
             label: Text { text: "Minimap" },
             options: List::of(Text { text: "On" }, Text { text: "Off" }),
@@ -317,6 +318,72 @@ fn create_archipelago_settings_menu() -> Ui {
                 MINIMAP_STATE.calculate_minimap_size(MINIMAP_STATE.size);
             },
         }),
+        UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Show Logs" },
+            options: List::of(
+                Text { text: "Temporarily" },
+                Text { text: "Forever" },
+                Text { text: "Never" },
+            ),
+            selected: match SETTINGS.archipelago_log_display {
+                ArchipelagoLogDisplay::Temporary => 0,
+                ArchipelagoLogDisplay::On => 1,
+                ArchipelagoLogDisplay::Off => 2,
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.archipelago_log_display = ArchipelagoLogDisplay::Temporary; },
+                    1 => { SETTINGS.archipelago_log_display = ArchipelagoLogDisplay::On; },
+                    2 => { SETTINGS.archipelago_log_display = ArchipelagoLogDisplay::Off; },
+                    _ => panic(f"unknown index {index}"),
+                };
+                SETTINGS.store();
+            },
+        }),
+        UiElement::FloatInput(FloatInput {
+            label: Text { text: "Show Logs For (sec)" },
+            input: f"{SETTINGS.archipelago_log_display_time_sec}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_int() {
+                    Result::Ok(t) => if 0 <= t {
+                        SETTINGS.archipelago_log_display_time_sec = t;
+                        SETTINGS.store();
+                    },
+                    Result::Err(e) => {},
+                };
+            },
+        }),
+        UiElement::FloatInput(FloatInput {
+            label: Text { text: "Max Log Count" },
+            input: f"{SETTINGS.archipelago_log_max_count}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_int() {
+                    Result::Ok(count) => if 0 <= count && count <= 100 {
+                        SETTINGS.archipelago_log_max_count = count;
+                        SETTINGS.store();
+                    },
+                    Result::Err(e) => {},
+                };
+            },
+        }),
+        UiElement::FloatInput(FloatInput {
+            label: Text { text: "Log Display Width (0.0 - 1.0)" },
+            input: f"{SETTINGS.archipelago_log_display_width}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_float() {
+                    Result::Ok(size) => if 0.0 <= size && size <= 1.0 {
+                        SETTINGS.archipelago_log_display_width = size;
+                        SETTINGS.store();
+                    },
+                    Result::Err(e) => {},
+                };
+            },
+        }),
+        UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
         UiElement::Button(UiButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
