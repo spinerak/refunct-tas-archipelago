@@ -1,6 +1,10 @@
-struct ArchipelagoPlayer {
+struct ArchipelagoPlayerId {
     team: int,
-    slot: int,
+    slot: int
+}
+
+struct ArchipelagoPlayer {
+    id: ArchipelagoPlayerId,
     alias: string,
     name: string
 }
@@ -25,7 +29,7 @@ struct ArchipelagoRoomInfo {
     this_player_team: int,
     this_player_slot: int,
     slots: Map<int, ArchipelagoSlot>,
-    players: Map<int, ArchipelagoPlayer>,
+    players: Map<ArchipelagoPlayerId, ArchipelagoPlayer>,
     games: Map<string, ArchipelagoGame>
 }
 
@@ -37,9 +41,18 @@ static mut ARCHIPELAGO_ROOM_INFO = ArchipelagoRoomInfo {
     games: Map::new()
 };
 
-static UNKNOWN_PLAYER = "someone";
+static UNKNOWN_PLAYER = ArchipelagoPlayer {
+    id: ArchipelagoPlayerId { team: -1, slot: -1 },
+    alias: "someone",
+    name: "someone"
+};
 static UNKNOWN_ITEM = "something";
 static UNKNOWN_LOCATION = "somewhere";
+
+fn archipelago_set_own_id(team: int, slot: int) {
+    ARCHIPELAGO_ROOM_INFO.this_player_team = team;
+    ARCHIPELAGO_ROOM_INFO.this_player_slot = slot;
+}
 
 fn archipelago_register_slot(index: int, name: string, game: string, type: int, group_members: List<int>) {
     ARCHIPELAGO_ROOM_INFO.slots.insert(index, ArchipelagoSlot {
@@ -49,17 +62,15 @@ fn archipelago_register_slot(index: int, name: string, game: string, type: int, 
         type: type,
         group_members: group_members
     });
-    //log(f"Registered slot {index}: {ARCHIPELAGO_ROOM_INFO.slots.get(index).unwrap()}");
 }
 
 fn archipelago_register_player(team: int, slot: int, alias: string, name: string) {
-    ARCHIPELAGO_ROOM_INFO.players.insert(slot, ArchipelagoPlayer {
-        team: team,
-        slot: slot,
+    let id = ArchipelagoPlayerId { team: team, slot: slot };
+    ARCHIPELAGO_ROOM_INFO.players.insert(id, ArchipelagoPlayer {
+        id: id,
         alias: alias,
         name: name,
     });
-    // log(f"Registered player {slot}: {ARCHIPELAGO_ROOM_INFO.players.get(slot).unwrap()}");
 }
 
 fn archipelago_get_or_create_game_info(game_name: string) -> ArchipelagoGame {
@@ -74,7 +85,6 @@ fn archipelago_get_or_create_game_info(game_name: string) -> ArchipelagoGame {
                 location_id_to_name: Map::new()
             };
             ARCHIPELAGO_ROOM_INFO.games.insert(game_name, game);
-            // log(f"Registered game {game_name}");
             game
         }
     }
@@ -90,21 +100,26 @@ fn archipelago_register_game_location(game_name: string, location_name: string, 
     let game_info = archipelago_get_or_create_game_info(game_name);
     let location_name_to_id = game_info.location_name_to_id.insert(location_name, location_id);
     let location_id_to_name = game_info.location_id_to_name.insert(location_id, location_name);
-    if location_name == "33 score" {
-        ap_log(List::of(ColorfulText {
-            text: f"Registered location {location_id}: {location_name} in {game_name}",
-            color: AP_COLOR_CYAN
-        }));
+}
+
+fn get_team_player(slot: int) -> ArchipelagoPlayer {
+    if slot == 0 {
+        ArchipelagoPlayer {
+            id: ArchipelagoPlayerId { team: -1, slot: 0 },
+            alias: "server",
+            name: "server"
+        }
+    } else {
+        let id = ArchipelagoPlayerId {team: ARCHIPELAGO_ROOM_INFO.this_player_team, slot: slot};
+        match ARCHIPELAGO_ROOM_INFO.players.get(id) {
+            Option::Some(player) => player,
+            Option::None => UNKNOWN_PLAYER
+        }
     }
 }
 
-fn get_item_name_for_player_by_id(player_id: int, item_id: string) -> string {
-    let slot_id = match ARCHIPELAGO_ROOM_INFO.players.get(player_id) {
-        Option::Some(player) => player.slot,
-        Option::None => return UNKNOWN_ITEM,
-    };
-
-    let game_name = match ARCHIPELAGO_ROOM_INFO.slots.get(slot_id) {
+fn get_item_name_for_slot(slot: int, item_id: string) -> string {
+    let game_name = match ARCHIPELAGO_ROOM_INFO.slots.get(slot) {
         Option::Some(slot) => slot.game,
         Option::None => return UNKNOWN_ITEM,
     };
@@ -120,13 +135,8 @@ fn get_item_name_for_player_by_id(player_id: int, item_id: string) -> string {
     }
 }
 
-fn get_location_name_for_player_by_id(player_id: int, location_id: string) -> string {
-    let slot_id = match ARCHIPELAGO_ROOM_INFO.players.get(player_id) {
-        Option::Some(player) => player.slot,
-        Option::None => return UNKNOWN_LOCATION,
-    };
-
-    let game_name = match ARCHIPELAGO_ROOM_INFO.slots.get(slot_id) {
+fn get_location_name_for_slot(slot: int, location_id: string) -> string {
+    let game_name = match ARCHIPELAGO_ROOM_INFO.slots.get(slot) {
         Option::Some(slot) => slot.game,
         Option::None => return UNKNOWN_LOCATION,
     };
@@ -151,7 +161,7 @@ fn get_location_name_for_player_by_id(player_id: int, location_id: string) -> st
 fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
     let mut message = List::new();
     for part in json_message.data {
-        let raw_colorful_text = archipelago_interpret_json_message_part(part);
+        let raw_colorful_text = archipelago_interpret_json_message_part(part, json_message.receiving, json_message.item);
         message.push(raw_colorful_text);
     }
 
@@ -160,24 +170,37 @@ fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
     ap_log(message);
 }
 
-fn archipelago_interpret_json_message_part(part: ReboJSONMessagePart) -> ColorfulText {
+fn archipelago_interpret_json_message_part(
+    part: ReboJSONMessagePart,
+    receiving: Option<int>,
+    network_item: Option<ReboNetworkItem>
+) -> ColorfulText {
     match part._type {
-        "player_id" => ColorfulText {
-            text: match part.text {
-                // TODO: cleanup parse_int here
-                Option::Some(player_id) => match ARCHIPELAGO_ROOM_INFO.players.get(player_id.parse_int().unwrap()) {
-                    Option::Some(player) => player.name,
-                    Option::None => UNKNOWN_PLAYER,
+        "player_id" => {
+            let team = ARCHIPELAGO_ROOM_INFO.this_player_team;
+            let player = match part.text {
+                Option::Some(slot_id_str) => match slot_id_str.parse_int() {
+                    Result::Ok(slot) => get_team_player(slot),
+                    Result::Err(e) => UNKNOWN_PLAYER
                 },
                 Option::None => UNKNOWN_PLAYER,
-            },
-            // TODO: change color if player is us! Or really, do more processing
-            color: Color { red: 0.980, green: 0.980, blue: 0.824, alpha: 1.000 }
+            };
+
+            if player.id.slot == 0 {
+                // It's the server
+                ColorfulText { text: player.name, color: COLOR_RED }
+            } else if player.id.slot == ARCHIPELAGO_ROOM_INFO.this_player_slot {
+                // It's us!
+                ColorfulText { text: player.name, color: AP_COLOR_MAGENTA }
+            } else {
+                // It's someone else
+                ColorfulText { text: player.name, color: AP_COLOR_YELLOW }
+            }
         },
         "item_id" => ColorfulText {
             text: match part.text {
                 Option::Some(item_id) => match part.player {
-                    Option::Some(player_id) => get_item_name_for_player_by_id(player_id, item_id),
+                    Option::Some(slot) => get_item_name_for_slot(slot, item_id),
                     Option::None => UNKNOWN_ITEM
                 },
                 Option::None => UNKNOWN_ITEM,
@@ -187,8 +210,8 @@ fn archipelago_interpret_json_message_part(part: ReboJSONMessagePart) -> Colorfu
         },
         "location_id" => ColorfulText {
             text: match part.text {
-                Option::Some(location_id) => match part.player {
-                    Option::Some(player_id) => get_location_name_for_player_by_id(player_id, location_id),
+                Option::Some(location_id) =>  match part.player {
+                    Option::Some(slot) => get_location_name_for_slot(slot, location_id),
                     Option::None => UNKNOWN_LOCATION
                 },
                 Option::None => UNKNOWN_LOCATION,

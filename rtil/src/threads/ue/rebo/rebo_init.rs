@@ -263,6 +263,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_register_game_location)
         .add_required_rebo_function(archipelago_print_json_message)
         .add_required_rebo_function(archipelago_init)
+        .add_required_rebo_function(archipelago_set_own_id)
         .add_required_rebo_function(on_level_state_change)
         .add_required_rebo_function(on_resolution_change)
         .add_required_rebo_function(on_menu_open)
@@ -490,12 +491,16 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     //    hint_points: 2 
                     // }
                     archipelago_init(vm, 0 as usize)?;
+
+                    archipelago_set_own_id(vm, info.team as isize, info.slot as isize)?;
+
                     for loc in &info.checked_locations {
                         let value: i64 = *loc;
                         archipelago_checked_location(vm,
                             value as usize,
                         )?;
                     }
+
                     for (key, value) in info.slot_data.as_object().unwrap() {
                         archipelago_received_slot_data(vm,
                             key.clone(),
@@ -778,6 +783,7 @@ extern "rebo" {
     fn archipelago_checked_location(id: usize);
     fn archipelago_received_slot_data(name_of_options: String, value_of_options: String);
     fn archipelago_init(gamemode: usize);
+    fn archipelago_set_own_id(team: isize, slot: isize);
     fn archipelago_register_slot(index: isize, name: String, game: String, slot_type: usize, group_members: Vec<isize>);
     fn archipelago_register_player(team: isize, slot: isize, alias: String, name: String);
     fn archipelago_register_game_item(game_name: String, item_name: String, item_id: String);

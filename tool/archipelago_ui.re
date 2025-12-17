@@ -19,6 +19,7 @@ static AP_COLOR_RED     = Color { red: 0.600, green: 0.160, blue: 0.227, alpha: 
 static AP_COLOR_CYAN    = Color { red: 0.000, green: 0.627, blue: 0.698, alpha: 1. };
 static AP_COLOR_GREEN   = Color { red: 0.231, green: 0.600, blue: 0.165, alpha: 1. };
 static AP_COLOR_YELLOW  = Color { red: 0.600, green: 0.533, blue: 0.165, alpha: 1. };
+static AP_COLOR_MAGENTA = Color { red: 1.000, green: 0.000, blue: 1.000, alpha: 1. };
 static AP_COLOR_GRAY_BG = Color { red: 0., green: 0., blue: 0., alpha: 0.6 };
 static AP_COLOR_CLEAR   = Color { red: 0., green: 0., blue: 0., alpha: 0.0 };
 
