@@ -170,6 +170,17 @@ fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
     ap_log(message);
 }
 
+static AP_ITEM_COLORS = List::of(
+    Color { red: 0.435, green: 0.502, blue: 0.722, alpha: 1.0 }, // normal
+    Color { red: 0.659, green: 0.576, blue: 0.894, alpha: 1.0 }, // progressive
+    Color { red: 0.024, green: 0.851, blue: 0.851, alpha: 1.0 }, // useful
+    Color { red: 1.000, green: 0.875, blue: 0.000, alpha: 1.0 }, // useful & progressive
+    Color { red: 0.827, green: 0.443, blue: 0.400, alpha: 1.0 }, // trap
+    Color { red: 1.000, green: 0.675, blue: 0.110, alpha: 1.0 }, // trap & progressive
+    Color { red: 0.608, green: 0.349, blue: 0.714, alpha: 1.0 }, // trap & useful
+    Color { red: 0.502, green: 1.000, blue: 0.502, alpha: 1.0 }, // trap & useful & progressive
+);
+
 fn archipelago_interpret_json_message_part(
     part: ReboJSONMessagePart,
     receiving: Option<int>,
@@ -205,8 +216,13 @@ fn archipelago_interpret_json_message_part(
                 },
                 Option::None => UNKNOWN_ITEM,
             },
-            // TODO: modify color depending on the type of item
-            color: AP_COLOR_CYAN
+            color: match network_item {
+                Option::Some(item) => match AP_ITEM_COLORS.get(item.flags) {
+                    Option::Some(color) => color,
+                    Option::None => COLOR_WHITE
+                },
+                Option::None => COLOR_WHITE
+            }
         },
         "location_id" => ColorfulText {
             text: match part.text {
