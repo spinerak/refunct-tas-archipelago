@@ -149,6 +149,7 @@ struct Settings {
     archipelago_last_port: string,
     archipelago_last_slot: string,
     archipelago_log_display: ArchipelagoLogDisplay,
+    archipelago_log_filter: ArchipelagoLogFilter,
     archipelago_log_display_width: float,
     archipelago_log_display_time_sec: int,
     archipelago_log_max_count: int
@@ -262,6 +263,13 @@ impl Settings {
                 "Off"  => ArchipelagoLogDisplay::Off,
                 other => panic(f"unknown archipelago log display style: {other}"),
             },
+            archipelago_log_filter: match get_string("archipelago_log_filter", "NoFilter") {
+                "NoFilter" => ArchipelagoLogFilter::NoFilter,
+                "OnlyYou" => ArchipelagoLogFilter::OnlyYou,
+                "OnlyProgressive" => ArchipelagoLogFilter::OnlyProgressive,
+                "OnlyYouAndProgressive" => ArchipelagoLogFilter::OnlyYouAndProgressive,
+                other => panic(f"unknown archipelago log display filter: {other}"),
+            },
             archipelago_log_display_width: get_float("archipelago_log_display_width", 0.4),
             archipelago_log_display_time_sec: get_int("archipelago_log_display_time_sec", 10),
             archipelago_log_max_count: get_int("archipelago_log_max_count", 8),
@@ -313,6 +321,7 @@ impl Settings {
         map.insert("archipelago_last_port", f"{SETTINGS.archipelago_last_port}");
         map.insert("archipelago_last_slot", f"{SETTINGS.archipelago_last_slot}");
         map.insert("archipelago_log_display", f"{SETTINGS.archipelago_log_display}");
+        map.insert("archipelago_log_filter", f"{SETTINGS.archipelago_log_filter}");
         map.insert("archipelago_log_display_width", f"{SETTINGS.archipelago_log_display_width}");
         map.insert("archipelago_log_display_time_sec", f"{SETTINGS.archipelago_log_display_time_sec}");
         map.insert("archipelago_log_max_count", f"{SETTINGS.archipelago_log_max_count}");

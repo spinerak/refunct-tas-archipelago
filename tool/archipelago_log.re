@@ -158,16 +158,53 @@ fn get_location_name_for_slot(slot: int, location_id: string) -> string {
 // - Logs should appear permanently when the player opens the AP menu (maybe?)
 //   - Annoyingly, you can leave the menu open. We should maybe fix this?
 
+enum ArchipelagoLogFilter {
+    NoFilter,
+    OnlyYou,
+    OnlyProgressive,
+    OnlyYouAndProgressive
+}
+
 fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
     let mut message = List::new();
+
+    let mut contains_player = false;
+    let mut contains_this_player = false;
+    let mut contains_item = false;
+    let mut contains_progressive_item = false;
+
     for part in json_message.data {
-        let raw_colorful_text = archipelago_interpret_json_message_part(part, json_message.receiving, json_message.item);
-        message.push(raw_colorful_text);
+        if part._type == "player_id" {
+            contains_player = true;
+            contains_this_player |= match part.text {
+                Option::Some(slot_id_str) => match slot_id_str.parse_int() {
+                    Result::Ok(slot) => (slot == ARCHIPELAGO_ROOM_INFO.this_player_slot),
+                    Result::Err(e) => false
+                },
+                Option::None => false,
+            };
+        } else if part._type == "item_id" {
+            contains_item = true;
+            contains_progressive_item |= match json_message.item {
+                // Can traps be progressive???
+                Option::Some(item) => ((1 <= item.flags && item.flags <= 3) || (5 <= item.flags && item.flags <= 7)),
+                Option::None => false
+            }
+        }
+
+        message.push(archipelago_interpret_json_message_part(part, json_message.receiving, json_message.item));
     }
 
-    // TODO: Once relevancy setting is added, do the check here
+    let filter = SETTINGS.archipelago_log_filter;
+    let should_show_message =
+        filter == ArchipelagoLogFilter::NoFilter ||
+        (!contains_player && !contains_item) ||
+        ((filter == ArchipelagoLogFilter::OnlyYou || filter == ArchipelagoLogFilter::OnlyYouAndProgressive) &&
+            contains_player && contains_this_player) ||
+        ((filter == ArchipelagoLogFilter::OnlyProgressive || filter == ArchipelagoLogFilter::OnlyYouAndProgressive) &&
+            contains_item && contains_progressive_item);
 
-    ap_log(message);
+    if should_show_message { ap_log(message); }
 }
 
 static AP_ITEM_COLORS = List::of(
