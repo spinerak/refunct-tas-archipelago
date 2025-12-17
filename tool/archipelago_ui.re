@@ -391,7 +391,6 @@ fn get_status_text_lines() -> List<ColorfulText> {
         0 => List::of(
             ColorfulText { text: "Archipelago Randomizer\n", color: COLOR_WHITE },
             ColorfulText { text: "Press new game (in Refunct menu).", color: AP_COLOR_CYAN },
-            
         ),
         1 => List::of(
             ColorfulText { text: "Archipelago Randomizer\n", color: COLOR_WHITE },
@@ -441,10 +440,10 @@ fn get_status_text_lines() -> List<ColorfulText> {
 
 fn get_move_rando_status_lines() -> List<ColorfulText> {
     let final_platform = if ARCHIPELAGO_STATE.final_platform_known { f"{ARCHIPELAGO_STATE.final_platform_c}-{ARCHIPELAGO_STATE.final_platform_p}" } else { "??-??" };
-    let ledge_grab_state = if ARCHIPELAGO_STATE.ledge_grab > 0 { "YES" } else { "NO" };
-    let wall_jump_state = if ARCHIPELAGO_STATE.wall_jump >= 2 { "INF" } else if ARCHIPELAGO_STATE.wall_jump == 1 { "ONE" } else { "NO" };
-    let jump_pad_state = if ARCHIPELAGO_STATE.jumppads > 0 { "YES" } else { "NO" };
-    let swim_state = if ARCHIPELAGO_STATE.swim > 0 { "YES" } else { "NO" };
+    let ledge_grab_state = if ARCHIPELAGO_STATE.ledge_grab > 0 { "✔" } else { "✖" };
+    let wall_jump_state = if ARCHIPELAGO_STATE.wall_jump >= 2 { "∞" } else if ARCHIPELAGO_STATE.wall_jump == 1 { "1" } else { "0" };
+    let jump_pad_state = if ARCHIPELAGO_STATE.jumppads > 0 { "✔" } else { "✖" };
+    let swim_state = if ARCHIPELAGO_STATE.swim > 0 { "✔" } else { "✖" };
 
     let vanilla_state = if ARCHIPELAGO_STATE.unlock_vanilla_minigame { "YES" } else { "NO" };
     let seeker_state = if ARCHIPELAGO_STATE.unlock_seeker_minigame { "YES" } else { "NO" };
@@ -461,19 +460,19 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
         },
         ColorfulText { text: "Abilities\n", color: COLOR_WHITE },
         ColorfulText {
-            text:  f"Ledge Grab: { ledge_grab_state }\n",
+            text:  f"{ledge_grab_state} Ledge Grab  ",
             color: if ARCHIPELAGO_STATE.ledge_grab > 0 { AP_COLOR_GREEN } else { AP_COLOR_RED }
         },
         ColorfulText {
-            text:  f"Wall Jump:  { wall_jump_state }\n",
-            color: if ARCHIPELAGO_STATE.wall_jump >= 2 { AP_COLOR_GREEN } else if ARCHIPELAGO_STATE.wall_jump == 1 { AP_COLOR_YELLOW } else { AP_COLOR_RED }
-        },
-        ColorfulText {
-            text:  f"Jump Pads:  { jump_pad_state }\n",
+            text:  f"{jump_pad_state} Jump Pads\n",
             color: if ARCHIPELAGO_STATE.jumppads > 0 { AP_COLOR_GREEN } else { AP_COLOR_RED }
         },
         ColorfulText {
-            text:  f"Swim:       { swim_state }",
+            text:  if ARCHIPELAGO_STATE.wall_jump == 1 { f"{wall_jump_state} Wall Jump   " } else { f"{wall_jump_state} Wall Jumps  " },
+            color: if ARCHIPELAGO_STATE.wall_jump >= 2 { AP_COLOR_GREEN } else if ARCHIPELAGO_STATE.wall_jump == 1 { AP_COLOR_YELLOW } else { AP_COLOR_RED }
+        },
+        ColorfulText {
+            text:  f"{swim_state} Swim",
             color: if ARCHIPELAGO_STATE.swim > 0 { AP_COLOR_GREEN } else { AP_COLOR_RED }
         },
     );
