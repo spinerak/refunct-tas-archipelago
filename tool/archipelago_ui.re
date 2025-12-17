@@ -341,18 +341,29 @@ fn create_archipelago_settings_menu() -> Ui {
                 SETTINGS.store();
             },
         }),
-        UiElement::FloatInput(FloatInput {
-            label: Text { text: "Show Logs For (sec)" },
-            input: f"{SETTINGS.archipelago_log_display_time_sec}",
-            onclick: fn(input: string) {},
-            onchange: fn(input: string) {
-                match input.parse_int() {
-                    Result::Ok(t) => if 0 <= t {
-                        SETTINGS.archipelago_log_display_time_sec = t;
-                        SETTINGS.store();
-                    },
-                    Result::Err(e) => {},
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Filter Logs" },
+            options: List::of(
+                Text { text: "No Filter" },
+                Text { text: "Only Logs About You" },
+                Text { text: "Only Logs About Progressive Items" },
+                Text { text: "Only Logs About You and Progressive Items" },
+            ),
+            selected: match SETTINGS.archipelago_log_filter {
+                ArchipelagoLogFilter::NoFilter => 0,
+                ArchipelagoLogFilter::OnlyYou => 1,
+                ArchipelagoLogFilter::OnlyProgressive => 2,
+                ArchipelagoLogFilter::OnlyYouAndProgressive => 3,
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.archipelago_log_filter = ArchipelagoLogFilter::NoFilter; },
+                    1 => { SETTINGS.archipelago_log_filter = ArchipelagoLogFilter::OnlyYou; },
+                    2 => { SETTINGS.archipelago_log_filter = ArchipelagoLogFilter::OnlyProgressive; },
+                    3 => { SETTINGS.archipelago_log_filter = ArchipelagoLogFilter::OnlyYouAndProgressive; },
+                    _ => panic(f"unknown index {index}"),
                 };
+                SETTINGS.store();
             },
         }),
         UiElement::FloatInput(FloatInput {
@@ -363,6 +374,20 @@ fn create_archipelago_settings_menu() -> Ui {
                 match input.parse_int() {
                     Result::Ok(count) => if 0 <= count && count <= 100 {
                         SETTINGS.archipelago_log_max_count = count;
+                        SETTINGS.store();
+                    },
+                    Result::Err(e) => {},
+                };
+            },
+        }),
+        UiElement::FloatInput(FloatInput {
+            label: Text { text: "Log Temporary Display Time (sec)" },
+            input: f"{SETTINGS.archipelago_log_display_time_sec}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_int() {
+                    Result::Ok(t) => if 0 <= t {
+                        SETTINGS.archipelago_log_display_time_sec = t;
                         SETTINGS.store();
                     },
                     Result::Err(e) => {},
