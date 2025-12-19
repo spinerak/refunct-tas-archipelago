@@ -146,6 +146,8 @@ struct Settings {
 
     archipelago_display_style: ArchipelagoDisplayStyle,
     archipelago_display_position: Anchor,
+    platform_display_enabled: bool,
+    platform_display_position: Anchor,
     archipelago_last_server: string,
     archipelago_last_port: string,
     archipelago_last_slot: string,
@@ -257,6 +259,18 @@ impl Settings {
                 "BottomLeft"   => Anchor::BottomLeft,
                 pos => panic(f"unknown/invalid archipelago display position: {pos}"),
             },
+            platform_display_enabled: get_bool("platform_display_enabled", true),
+            platform_display_position: match get_string("platform_display_position", "BottomCenter") {
+                "TopLeft"      => Anchor::TopLeft,
+                "TopCenter"    => Anchor::TopCenter,
+                "TopRight"     => Anchor::TopRight,
+                "CenterLeft"   => Anchor::CenterLeft,
+                "CenterRight"  => Anchor::CenterRight,
+                "BottomRight"  => Anchor::BottomRight,
+                "BottomCenter" => Anchor::BottomCenter,
+                "BottomLeft"   => Anchor::BottomLeft,
+                pos => panic(f"unknown/invalid platform display position: {pos}"),
+            },
             archipelago_last_server: get_string("archipelago_last_server", "archipelago.gg"),
             archipelago_last_port: get_string("archipelago_last_port", ""),
             archipelago_last_slot: get_string("archipelago_last_slot", ""),
@@ -323,8 +337,11 @@ impl Settings {
         map.insert("reticle_scale", f"{SETTINGS.reticle_scale}");
         map.insert("reticle_scale_position", f"{SETTINGS.reticle_scale_position}");
         map.insert("log_message_duration", f"{SETTINGS.log_message_duration}");
+
         map.insert("archipelago_display_style", f"{SETTINGS.archipelago_display_style}");
         map.insert("archipelago_display_position", f"{SETTINGS.archipelago_display_position}");
+        map.insert("platform_display_enabled", f"{SETTINGS.platform_display_enabled}");
+        map.insert("platform_display_position", f"{SETTINGS.platform_display_position}");
         map.insert("archipelago_last_server", f"{SETTINGS.archipelago_last_server}");
         map.insert("archipelago_last_port", f"{SETTINGS.archipelago_last_port}");
         map.insert("archipelago_last_slot", f"{SETTINGS.archipelago_last_slot}");

@@ -235,6 +235,57 @@ fn create_archipelago_settings_menu() -> Ui {
                 SETTINGS.store();
             },
         }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Platform Display" },
+            options: List::of(Text { text: "On" }, Text { text: "Off" }),
+            selected: if SETTINGS.platform_display_enabled { 0 } else { 1 },
+            onchange: fn(index: int) {
+                if index == 0 {
+                    SETTINGS.platform_display_enabled = true;
+                } else {
+                    SETTINGS.platform_display_enabled = false;
+                }
+                SETTINGS.store();
+            },
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Platform Display Position" },
+            options: List::of(
+                Text { text: "Top Left" },
+                Text { text: "Top Center" },
+                Text { text: "Top Right" },
+                Text { text: "Center Right" },
+                Text { text: "Bottom Right" },
+                Text { text: "Bottom Center" },
+                Text { text: "Bottom Left" },
+                Text { text: "Center Left" }
+            ),
+            selected: match SETTINGS.platform_display_position {
+                Anchor::TopLeft => 0,
+                Anchor::TopCenter => 1,
+                Anchor::TopRight => 2,
+                Anchor::CenterRight => 3,
+                Anchor::BottomRight => 4,
+                Anchor::BottomCenter => 5,
+                Anchor::BottomLeft => 6,
+                Anchor::CenterLeft => 7,
+                pos => panic(f"unknown archipelago display position: {pos}")
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.platform_display_position = Anchor::TopLeft; },
+                    1 => { SETTINGS.platform_display_position = Anchor::TopCenter; },
+                    2 => { SETTINGS.platform_display_position = Anchor::TopRight; },
+                    3 => { SETTINGS.platform_display_position = Anchor::CenterRight; },
+                    4 => { SETTINGS.platform_display_position = Anchor::BottomRight; },
+                    5 => { SETTINGS.platform_display_position = Anchor::BottomCenter; },
+                    6 => { SETTINGS.platform_display_position = Anchor::BottomLeft; },
+                    7 => { SETTINGS.platform_display_position = Anchor::CenterLeft; },
+                    _ => panic(f"unknown archipelago display index: {index}"),
+                }
+                SETTINGS.store();
+            },
+        }),
         UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
         UiElement::Chooser(Chooser {
             label: Text { text: "Minimap" },
@@ -652,9 +703,9 @@ fn archipelago_hud_color_coded() {
     let viewport = Tas::get_viewport_size();
     let w = viewport.width.to_float();
     let h = viewport.height.to_float();
-    if SETTINGS.archipelago_display_style != ArchipelagoDisplayStyle::Off {
 
-        // For now, always draw the platform display
+    if SETTINGS.platform_display_enabled {
+
         let player_loc = Tas::get_location();
         let player_vel = Tas::get_velocity();
         let platform_text = match ARCHIPELAGO_STATE.last_platform_c {
@@ -665,17 +716,41 @@ fn archipelago_hud_color_coded() {
             Option::None => "Last Platform: ??-??"
         };
 
-        ap_draw_colorful_text(
-            List::of(ColorfulText { text: platform_text, color: COLOR_WHITE }), AP_COLOR_GRAY_BG,
-            viewport.width.to_float() / 2.0, viewport.height.to_float(), Anchor::BottomCenter, 5.0);
+        let line = List::of(ColorfulText { text: platform_text, color: COLOR_WHITE });
+        let anchor = SETTINGS.platform_display_position;
+        match anchor {
+            Anchor::TopLeft => {
+                // Make sure we don't overlap with the menu
+                let text_y = match UI_STACK.last() {
+                    Option::Some(ui) => {
+                        let size = Tas::get_text_size("x", SETTINGS.ui_scale);
+                        let line_height = size.height;
+
+                        let elements = ui.elements;
+                        line_height * (elements.len().to_float() + 1.5)
+                    },
+                    Option::None => 0.0,
+                };
+
+                ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, 5.0, text_y, anchor, 5.0);
+            },
+            Anchor::TopCenter    => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w/2.0, 5.0, anchor, 5.0); },
+            Anchor::TopRight     => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w, 5.0, anchor, 5.0); },
+            Anchor::CenterRight  => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w, h/2.0, anchor, 5.0); },
+            Anchor::BottomRight  => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w, h, anchor, 5.0); },
+            Anchor::BottomCenter => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w/2.0, h, anchor, 5.0); },
+            Anchor::BottomLeft   => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, 5.0, h, anchor, 5.0); },
+            Anchor::CenterLeft   => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, 5.0, h/2.0, anchor, 5.0); },
+
+            pos => panic(f"unknown/invalid archipelago display position: {pos}"),
+        };
     }
 
     if SETTINGS.archipelago_display_style != ArchipelagoDisplayStyle::ColorCoded { return; }
 
     let lines = get_status_text_lines();
     let anchor = SETTINGS.archipelago_display_position;
-
-    match SETTINGS.archipelago_display_position {
+    match anchor {
         Anchor::TopLeft => {
             // Make sure we don't overlap with the menu
             let text_y = match UI_STACK.last() {
