@@ -143,13 +143,18 @@ struct Settings {
     reticle_scale: float,
     reticle_scale_position: bool,
     log_message_duration: int,
+
     archipelago_display_style: ArchipelagoDisplayStyle,
     archipelago_display_position: Anchor,
+    platform_display_enabled: bool,
+    platform_display_position: Anchor,
     archipelago_last_server: string,
     archipelago_last_port: string,
     archipelago_last_slot: string,
+
     archipelago_log_display: ArchipelagoLogDisplay,
-    archipelago_log_filter: ArchipelagoLogFilter,
+    archipelago_log_level_player: ArchipelagoLogLevel,
+    archipelago_log_level_others: ArchipelagoLogLevel,
     archipelago_log_display_width: float,
     archipelago_log_display_time_sec: int,
     archipelago_log_max_count: int
@@ -254,6 +259,18 @@ impl Settings {
                 "BottomLeft"   => Anchor::BottomLeft,
                 pos => panic(f"unknown/invalid archipelago display position: {pos}"),
             },
+            platform_display_enabled: get_bool("platform_display_enabled", true),
+            platform_display_position: match get_string("platform_display_position", "BottomCenter") {
+                "TopLeft"      => Anchor::TopLeft,
+                "TopCenter"    => Anchor::TopCenter,
+                "TopRight"     => Anchor::TopRight,
+                "CenterLeft"   => Anchor::CenterLeft,
+                "CenterRight"  => Anchor::CenterRight,
+                "BottomRight"  => Anchor::BottomRight,
+                "BottomCenter" => Anchor::BottomCenter,
+                "BottomLeft"   => Anchor::BottomLeft,
+                pos => panic(f"unknown/invalid platform display position: {pos}"),
+            },
             archipelago_last_server: get_string("archipelago_last_server", "archipelago.gg"),
             archipelago_last_port: get_string("archipelago_last_port", ""),
             archipelago_last_slot: get_string("archipelago_last_slot", ""),
@@ -263,12 +280,17 @@ impl Settings {
                 "Off"  => ArchipelagoLogDisplay::Off,
                 other => panic(f"unknown archipelago log display style: {other}"),
             },
-            archipelago_log_filter: match get_string("archipelago_log_filter", "NoFilter") {
-                "NoFilter" => ArchipelagoLogFilter::NoFilter,
-                "OnlyYou" => ArchipelagoLogFilter::OnlyYou,
-                "OnlyProgressive" => ArchipelagoLogFilter::OnlyProgressive,
-                "OnlyYouAndProgressive" => ArchipelagoLogFilter::OnlyYouAndProgressive,
-                other => panic(f"unknown archipelago log display filter: {other}"),
+            archipelago_log_level_player: match get_string("archipelago_log_level_player", "AllMessages") {
+                "AllMessages" => ArchipelagoLogLevel::AllMessages,
+                "OnlyProgressive" => ArchipelagoLogLevel::OnlyProgressive,
+                "NoMessages" => ArchipelagoLogLevel::NoMessages,
+                other => panic(f"unknown archipelago log filter for player: {other}"),
+            },
+            archipelago_log_level_others: match get_string("archipelago_log_level_others", "AllMessages") {
+                "AllMessages" => ArchipelagoLogLevel::AllMessages,
+                "OnlyProgressive" => ArchipelagoLogLevel::OnlyProgressive,
+                "NoMessages" => ArchipelagoLogLevel::NoMessages,
+                other => panic(f"unknown archipelago log filter for others: {other}"),
             },
             archipelago_log_display_width: get_float("archipelago_log_display_width", 0.4),
             archipelago_log_display_time_sec: get_int("archipelago_log_display_time_sec", 10),
@@ -315,13 +337,17 @@ impl Settings {
         map.insert("reticle_scale", f"{SETTINGS.reticle_scale}");
         map.insert("reticle_scale_position", f"{SETTINGS.reticle_scale_position}");
         map.insert("log_message_duration", f"{SETTINGS.log_message_duration}");
+
         map.insert("archipelago_display_style", f"{SETTINGS.archipelago_display_style}");
         map.insert("archipelago_display_position", f"{SETTINGS.archipelago_display_position}");
+        map.insert("platform_display_enabled", f"{SETTINGS.platform_display_enabled}");
+        map.insert("platform_display_position", f"{SETTINGS.platform_display_position}");
         map.insert("archipelago_last_server", f"{SETTINGS.archipelago_last_server}");
         map.insert("archipelago_last_port", f"{SETTINGS.archipelago_last_port}");
         map.insert("archipelago_last_slot", f"{SETTINGS.archipelago_last_slot}");
         map.insert("archipelago_log_display", f"{SETTINGS.archipelago_log_display}");
-        map.insert("archipelago_log_filter", f"{SETTINGS.archipelago_log_filter}");
+        map.insert("archipelago_log_level_player", f"{SETTINGS.archipelago_log_level_player}");
+        map.insert("archipelago_log_level_others", f"{SETTINGS.archipelago_log_level_others}");
         map.insert("archipelago_log_display_width", f"{SETTINGS.archipelago_log_display_width}");
         map.insert("archipelago_log_display_time_sec", f"{SETTINGS.archipelago_log_display_time_sec}");
         map.insert("archipelago_log_max_count", f"{SETTINGS.archipelago_log_max_count}");

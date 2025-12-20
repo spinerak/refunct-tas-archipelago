@@ -18,14 +18,23 @@ struct ArchipelagoState {
     highest_index_received: int,
     has_goaled: bool,
     gamemode: int,
+
     unlock_vanilla_minigame: bool,
-    unlock_seeker_minigame: bool,
     done_vanilla_minigame: bool,
     progress_vanilla_minigame: string,
-    progress_seeker_minigame: string,
+
+    unlock_seeker_minigame: bool,
     done_seeker_minigame: bool,
+    progress_seeker_minigame: string,
     seeker_pressed_platforms: List<int>,
     seeker_extra_pressed: List<int>,
+
+    unlock_button_galore_minigame: bool,
+    done_button_galore_minigame: bool,
+    progress_button_galore_minigame: string,
+
+    og_randomizer_order: List<int>,
+
     last_platform_c: Option<int>,
     last_platform_p: Option<int>,
     checked_locations: List<int>,
@@ -53,14 +62,23 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         highest_index_received: -1,
         has_goaled: false,
         gamemode: 0,
+
         unlock_vanilla_minigame: false,
-        unlock_seeker_minigame: false,
         done_vanilla_minigame: false,
         progress_vanilla_minigame: "0/37",
-        progress_seeker_minigame: "0/10",
+
+        unlock_seeker_minigame: false,
         done_seeker_minigame: false,
+        progress_seeker_minigame: "0/10",
         seeker_pressed_platforms: List::new(),
         seeker_extra_pressed: List::new(),
+
+        unlock_button_galore_minigame: false,
+        done_button_galore_minigame: false,
+        progress_button_galore_minigame: "0/37",
+
+        og_randomizer_order: List::new(),
+
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
@@ -88,7 +106,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         ARCHIPELAGO_STATE.started = 1;
         ARCHIPELAGO_STATE.triggered_clusters.clear();
     },
-    on_level_change: fn(old: int, new: int) {},
+    on_level_change: ap_on_level_change_function,
     on_buttons_change: fn(old: int, new: int) {
         // log(f"[AP] # buttons changed: {old} -> {new}");
     },
@@ -119,6 +137,14 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                 // log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
                 Tas::archipelago_send_check(10020000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
                 // log(f"Vanilla mode - sending button press {10020000 + (index.cluster_index + 1) * 100 + index.element_index + 1}");
+            }
+        }
+
+        if ARCHIPELAGO_STATE.gamemode == 2 {
+            if index.element_type == ElementType::Button {
+                // log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
+                Tas::archipelago_send_check(10040000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+                // log(f"Vanilla mode - sending button press {10040000 + (index.cluster_index + 1) * 100 + index.element_index + 1}");
             }
         }
 
@@ -167,6 +193,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 };
 
 fn archipelago_disconnected() {
+    ap_log_error("Disconnected from Archipelago server");
     remove_component(AP_LOG_COMPONENT);
     remove_component(ARCHIPELAGO_COMPONENT);
     ARCHIPELAGO_STATE.ap_connected = false;
@@ -298,6 +325,10 @@ fn archipelago_received_item(index: int, item_index: int){
         ARCHIPELAGO_STATE.unlock_seeker_minigame = true;
         return;
     }
+    if item_index == 9999960 {  // Button Galore Minigame
+        ARCHIPELAGO_STATE.unlock_button_galore_minigame = true;
+        return;
+    }
 
     ARCHIPELAGO_STATE.received_items.push(item_index);
     if ARCHIPELAGO_STATE.started < 2 {
@@ -318,6 +349,11 @@ fn archipelago_init(gamemode: int){
     ARCHIPELAGO_STATE.started = 0;
     ARCHIPELAGO_STATE.gamemode = gamemode;
     // probably want to set speed to 0 here
+
+    if gamemode == 2 {
+        Tas::set_level(30);
+        log("Setting level to 30 for Button Galore gamemode");
+    }
 }
 
 fn archipelago_start(){
@@ -330,8 +366,8 @@ fn archipelago_start(){
         archipelago_vanilla_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 2 {
-        // log("Starting Original Randomizer gamemode");
-        // original randomizer start
+        // log("Starting Button Galore gamemode");
+        archipelago_button_galore_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 3 {
         // log("Starting Seeker gamemode");
@@ -372,6 +408,26 @@ fn archipelago_vanilla_start(){
     Tas::archipelago_set_jump_pads(1);
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
+}
+
+fn archipelago_button_galore_start(){
+    Tas::set_kill_z(-6000.);
+    Tas::archipelago_set_wall_jump_and_ledge_grab(2, 1, false);
+    Tas::archipelago_set_jump_pads(1);
+    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+    ARCHIPELAGO_STATE.started = 2;
+    //ap_next_level();
+}
+
+fn ap_on_level_change_function(old: int, new: int) {
+    if ARCHIPELAGO_STATE.gamemode != 2 {
+        return;
+    }
+    log(f"[AP] on_level_change: {old} -> {new}");
+    Tas::set_level(30);
+}
+fn ap_next_level() {
+    return;
 }
 
 fn archipelago_seeker_start(){
@@ -457,6 +513,22 @@ fn archipelago_checked_location(id: int){
         }
         ARCHIPELAGO_STATE.progress_seeker_minigame = f"{number_pressed}/{seeker_locations.len()}";
     }
+    let button_galore_locations = List::of(10040101, 10040201, 10040301, 10040401, 10040501, 10040601, 10040701, 10040702, 10040801, 10040901, 10041001, 10041002, 10041101, 10041201, 10041301, 10041401, 10041501, 10041601, 10041701, 10041801, 10041802, 10041901, 10042001, 10042101, 10042201, 10042301, 10042401, 10042501, 10042601, 10042602, 10042603, 10042701, 10042801, 10042802, 10042901, 10043001, 10043101);
+    if button_galore_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in button_galore_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }else{
+                log(f"Button Galore - still need to press location {lid}");
+            }
+        }
+        if number_pressed == button_galore_locations.len() {
+            ARCHIPELAGO_STATE.done_button_galore_minigame = true;
+            log("Completed Button Galore Minigame!");
+        }
+        ARCHIPELAGO_STATE.progress_button_galore_minigame = f"{number_pressed}/{button_galore_locations.len()}";
+    }
 }
 
 fn archipelago_activate_stepped_on_platforms(){
@@ -498,6 +570,13 @@ fn archipelago_received_slot_data(key: string, value: string){
         ARCHIPELAGO_STATE.seeker_pressed_platforms = List::new();
         for p in value.slice(1, -1).split(",") {
             ARCHIPELAGO_STATE.seeker_pressed_platforms.push(p.parse_int().unwrap());
+        }
+    }
+
+    if key == "og_randomizer_order" {
+        ARCHIPELAGO_STATE.og_randomizer_order = List::new();
+        for p in value.slice(1, -1).split(",") {
+            ARCHIPELAGO_STATE.og_randomizer_order.push(p.parse_int().unwrap());
         }
     }
 }

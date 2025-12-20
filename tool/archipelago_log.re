@@ -13,11 +13,10 @@ enum ArchipelagoLogDisplay {
     On
 }
 
-enum ArchipelagoLogFilter {
-    NoFilter,
-    OnlyYou,
+enum ArchipelagoLogLevel {
+    AllMessages,
     OnlyProgressive,
-    OnlyYouAndProgressive
+    NoMessages
 }
 
 static mut AP_LOG = ArchipelagoLog { messages: List::new() };
@@ -107,14 +106,14 @@ fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
         message.push(archipelago_interpret_json_message_part(part, json_message.receiving, json_message.item));
     }
 
-    let filter = SETTINGS.archipelago_log_filter;
+    let player_log_level = SETTINGS.archipelago_log_level_player;
+    let others_log_level = SETTINGS.archipelago_log_level_others;
     let should_show_message =
-        filter == ArchipelagoLogFilter::NoFilter ||
         (!contains_player && !contains_item) ||
-        ((filter == ArchipelagoLogFilter::OnlyYou || filter == ArchipelagoLogFilter::OnlyYouAndProgressive) &&
-            contains_player && contains_this_player) ||
-        ((filter == ArchipelagoLogFilter::OnlyProgressive || filter == ArchipelagoLogFilter::OnlyYouAndProgressive) &&
-            contains_item && contains_progressive_item);
+        (player_log_level == ArchipelagoLogLevel::AllMessages     && contains_this_player) ||
+        (player_log_level == ArchipelagoLogLevel::OnlyProgressive && contains_this_player && contains_progressive_item) ||
+        (others_log_level == ArchipelagoLogLevel::AllMessages     && contains_player && !contains_this_player) ||
+        (others_log_level == ArchipelagoLogLevel::OnlyProgressive && contains_player && !contains_this_player && contains_progressive_item);
 
     if should_show_message { ap_log(message); }
 }

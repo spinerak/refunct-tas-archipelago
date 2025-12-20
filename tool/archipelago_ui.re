@@ -123,7 +123,7 @@ fn create_archipelago_connection_details_menu() -> Ui {
                 Tas::archipelago_disconnect();
                 remove_component(AP_LOG_COMPONENT);
                 remove_component(ARCHIPELAGO_COMPONENT);
-                ARCHIPELAGO_STATE = fresh_archipelago_state();
+                ARCHIPELAGO_STATE.ap_connected = false;
                 leave_ui(); leave_ui();
             },
         }));
@@ -230,6 +230,57 @@ fn create_archipelago_settings_menu() -> Ui {
                     5 => { SETTINGS.archipelago_display_position = Anchor::BottomCenter; },
                     6 => { SETTINGS.archipelago_display_position = Anchor::BottomLeft; },
                     7 => { SETTINGS.archipelago_display_position = Anchor::CenterLeft; },
+                    _ => panic(f"unknown archipelago display index: {index}"),
+                }
+                SETTINGS.store();
+            },
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Platform Display" },
+            options: List::of(Text { text: "On" }, Text { text: "Off" }),
+            selected: if SETTINGS.platform_display_enabled { 0 } else { 1 },
+            onchange: fn(index: int) {
+                if index == 0 {
+                    SETTINGS.platform_display_enabled = true;
+                } else {
+                    SETTINGS.platform_display_enabled = false;
+                }
+                SETTINGS.store();
+            },
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Platform Display Position" },
+            options: List::of(
+                Text { text: "Top Left" },
+                Text { text: "Top Center" },
+                Text { text: "Top Right" },
+                Text { text: "Center Right" },
+                Text { text: "Bottom Right" },
+                Text { text: "Bottom Center" },
+                Text { text: "Bottom Left" },
+                Text { text: "Center Left" }
+            ),
+            selected: match SETTINGS.platform_display_position {
+                Anchor::TopLeft => 0,
+                Anchor::TopCenter => 1,
+                Anchor::TopRight => 2,
+                Anchor::CenterRight => 3,
+                Anchor::BottomRight => 4,
+                Anchor::BottomCenter => 5,
+                Anchor::BottomLeft => 6,
+                Anchor::CenterLeft => 7,
+                pos => panic(f"unknown archipelago display position: {pos}")
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.platform_display_position = Anchor::TopLeft; },
+                    1 => { SETTINGS.platform_display_position = Anchor::TopCenter; },
+                    2 => { SETTINGS.platform_display_position = Anchor::TopRight; },
+                    3 => { SETTINGS.platform_display_position = Anchor::CenterRight; },
+                    4 => { SETTINGS.platform_display_position = Anchor::BottomRight; },
+                    5 => { SETTINGS.platform_display_position = Anchor::BottomCenter; },
+                    6 => { SETTINGS.platform_display_position = Anchor::BottomLeft; },
+                    7 => { SETTINGS.platform_display_position = Anchor::CenterLeft; },
                     _ => panic(f"unknown archipelago display index: {index}"),
                 }
                 SETTINGS.store();
@@ -348,25 +399,44 @@ fn create_archipelago_settings_menu() -> Ui {
             },
         }),
         UiElement::Chooser(Chooser {
-            label: Text { text: "Filter Logs" },
+            label: Text { text: "Items you send/receive" },
             options: List::of(
-                Text { text: "No Filter" },
-                Text { text: "Only Logs About You" },
-                Text { text: "Only Logs About Progressive Items" },
-                Text { text: "Only Logs About You and Progressive Items" },
+                Text { text: "Show All" },
+                Text { text: "Show Only Progressive" },
+                Text { text: "Show None" },
             ),
-            selected: match SETTINGS.archipelago_log_filter {
-                ArchipelagoLogFilter::NoFilter => 0,
-                ArchipelagoLogFilter::OnlyYou => 1,
-                ArchipelagoLogFilter::OnlyProgressive => 2,
-                ArchipelagoLogFilter::OnlyYouAndProgressive => 3,
+            selected: match SETTINGS.archipelago_log_level_player {
+                ArchipelagoLogLevel::AllMessages => 0,
+                ArchipelagoLogLevel::OnlyProgressive => 1,
+                ArchipelagoLogLevel::NoMessages => 2,
             },
             onchange: fn(index: int) {
                 match index {
-                    0 => { SETTINGS.archipelago_log_filter = ArchipelagoLogFilter::NoFilter; },
-                    1 => { SETTINGS.archipelago_log_filter = ArchipelagoLogFilter::OnlyYou; },
-                    2 => { SETTINGS.archipelago_log_filter = ArchipelagoLogFilter::OnlyProgressive; },
-                    3 => { SETTINGS.archipelago_log_filter = ArchipelagoLogFilter::OnlyYouAndProgressive; },
+                    0 => { SETTINGS.archipelago_log_level_player = ArchipelagoLogLevel::AllMessages; },
+                    1 => { SETTINGS.archipelago_log_level_player = ArchipelagoLogLevel::OnlyProgressive; },
+                    2 => { SETTINGS.archipelago_log_level_player = ArchipelagoLogLevel::NoMessages; },
+                    _ => panic(f"unknown index {index}"),
+                };
+                SETTINGS.store();
+            },
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Items others send/receive" },
+            options: List::of(
+                Text { text: "Show All" },
+                Text { text: "Show Only Progressive" },
+                Text { text: "Show None" },
+            ),
+            selected: match SETTINGS.archipelago_log_level_others {
+                ArchipelagoLogLevel::AllMessages => 0,
+                ArchipelagoLogLevel::OnlyProgressive => 1,
+                ArchipelagoLogLevel::NoMessages => 2,
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.archipelago_log_level_others = ArchipelagoLogLevel::AllMessages; },
+                    1 => { SETTINGS.archipelago_log_level_others = ArchipelagoLogLevel::OnlyProgressive; },
+                    2 => { SETTINGS.archipelago_log_level_others = ArchipelagoLogLevel::NoMessages; },
                     _ => panic(f"unknown index {index}"),
                 };
                 SETTINGS.store();
@@ -450,14 +520,24 @@ fn create_archipelago_gamemodes_menu() -> Ui {
                 leave_ui();
             },
         }),
-//        UiElement::Button(UiButton {
-//            label: Text { text: "Original randomizer" },
-//            onclick: fn(label: Text) {
-//                // log("Set gamemode to OG game");
-//                archipelago_init(2);
-//                leave_ui();
-//            },
-//        }),
+        UiElement::Button(UiButton {
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_button_galore_minigame {
+                    "Button Galore"
+                } else {
+                    "Button Galore (locked)"
+                }
+            } },
+            onclick: fn(label: Text) {
+                if !ARCHIPELAGO_STATE.unlock_button_galore_minigame {
+                    // log("Button Galore gamemode is locked!");
+                    return;
+                }
+                // log("Set gamemode to Button Galore");
+                archipelago_init(2);
+                leave_ui();
+            },
+        }),
         UiElement::Button(UiButton {
             label: Text { text: {
                 if ARCHIPELAGO_STATE.unlock_seeker_minigame {
@@ -500,10 +580,11 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: "Goal: Press the buttons!", color: AP_COLOR_CYAN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_vanilla_minigame}", color: COLOR_WHITE },
             ),
-            // 2 => List::of(
-            //     ColorfulText { text: "Archipelago - Original Rando\n", color: COLOR_WHITE },
-            //     ColorfulText { text: "Touch a platform to start!", color: AP_COLOR_CYAN },
-            // ),
+            2 => List::of(
+                ColorfulText { text: "Archipelago - Button Galore\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Press the buttons!", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_button_galore_minigame}", color: COLOR_WHITE },
+            ),
             3 => List::of(
                 ColorfulText { text: "Archipelago - Seeker\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Find the empty platforms!", color: AP_COLOR_CYAN },
@@ -565,7 +646,7 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
             color: if ARCHIPELAGO_STATE.jumppads > 0 { AP_COLOR_GREEN } else { AP_COLOR_RED }
         },
         ColorfulText {
-            text:  if ARCHIPELAGO_STATE.wall_jump == 1 { f"{wall_jump_state} Wall Jump   " } else { f"{wall_jump_state} Wall Jumps  " },
+            text:  if ARCHIPELAGO_STATE.wall_jump >= 2 { f"{wall_jump_state} Wall Jumps  " } else { f"{wall_jump_state} Wall Jump   " },
             color: if ARCHIPELAGO_STATE.wall_jump >= 2 { AP_COLOR_GREEN } else if ARCHIPELAGO_STATE.wall_jump == 1 { AP_COLOR_YELLOW } else { AP_COLOR_RED }
         },
         ColorfulText {
@@ -594,6 +675,16 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
         });
         added_minigame_header = true;
     }
+    if ARCHIPELAGO_STATE.unlock_button_galore_minigame && !ARCHIPELAGO_STATE.done_button_galore_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: "\n\nMinigames with Checks", color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nButton Galore",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
     lines
 }
 
@@ -612,9 +703,9 @@ fn archipelago_hud_color_coded() {
     let viewport = Tas::get_viewport_size();
     let w = viewport.width.to_float();
     let h = viewport.height.to_float();
-    if SETTINGS.archipelago_display_style != ArchipelagoDisplayStyle::Off {
 
-        // For now, always draw the platform display
+    if SETTINGS.platform_display_enabled {
+
         let player_loc = Tas::get_location();
         let player_vel = Tas::get_velocity();
         let platform_text = match ARCHIPELAGO_STATE.last_platform_c {
@@ -625,17 +716,41 @@ fn archipelago_hud_color_coded() {
             Option::None => "Last Platform: ??-??"
         };
 
-        ap_draw_colorful_text(
-            List::of(ColorfulText { text: platform_text, color: COLOR_WHITE }), AP_COLOR_GRAY_BG,
-            viewport.width.to_float() / 2.0, viewport.height.to_float(), Anchor::BottomCenter, 5.0);
+        let line = List::of(ColorfulText { text: platform_text, color: COLOR_WHITE });
+        let anchor = SETTINGS.platform_display_position;
+        match anchor {
+            Anchor::TopLeft => {
+                // Make sure we don't overlap with the menu
+                let text_y = match UI_STACK.last() {
+                    Option::Some(ui) => {
+                        let size = Tas::get_text_size("x", SETTINGS.ui_scale);
+                        let line_height = size.height;
+
+                        let elements = ui.elements;
+                        line_height * (elements.len().to_float() + 1.5)
+                    },
+                    Option::None => 0.0,
+                };
+
+                ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, 5.0, text_y, anchor, 5.0);
+            },
+            Anchor::TopCenter    => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w/2.0, 5.0, anchor, 5.0); },
+            Anchor::TopRight     => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w, 5.0, anchor, 5.0); },
+            Anchor::CenterRight  => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w, h/2.0, anchor, 5.0); },
+            Anchor::BottomRight  => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w, h, anchor, 5.0); },
+            Anchor::BottomCenter => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w/2.0, h, anchor, 5.0); },
+            Anchor::BottomLeft   => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, 5.0, h, anchor, 5.0); },
+            Anchor::CenterLeft   => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, 5.0, h/2.0, anchor, 5.0); },
+
+            pos => panic(f"unknown/invalid archipelago display position: {pos}"),
+        };
     }
 
     if SETTINGS.archipelago_display_style != ArchipelagoDisplayStyle::ColorCoded { return; }
 
     let lines = get_status_text_lines();
     let anchor = SETTINGS.archipelago_display_position;
-
-    match SETTINGS.archipelago_display_position {
+    match anchor {
         Anchor::TopLeft => {
             // Make sure we don't overlap with the menu
             let text_y = match UI_STACK.last() {
