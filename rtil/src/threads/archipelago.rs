@@ -37,7 +37,16 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                             receiver_abort_handle = Some(join_handle.abort_handle());
 
                         },
-                        ReboToArchipelago::ClientMessage(msg) => sender.as_mut().unwrap().send(msg).await?,
+                        ReboToArchipelago::ClientMessage(msg) => {
+                            if let Some(sender) = sender.as_mut() {
+                                sender.send(msg).await?;
+                            } else {
+                                // Handle the case where sender is None, e.g., log an error or return an error.
+                                log!("Sender is None, cannot send message");
+                                // Or return an error if appropriate:
+                                // return Err(MyError::SenderNotAvailable);
+                            }  
+                        },
                         ReboToArchipelago::Disconnect => {
                             drop(sender.take());
                             if let Some(abort_handle) = receiver_abort_handle.take() {
