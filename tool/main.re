@@ -14,6 +14,8 @@ include "timer.re";
 include "minimap.re";
 include "multiplayer.re";
 include "archipelago_gameplay.re";
+include "archipelago_log.re"
+include "archipelago_meta.re"
 include "archipelago_ui.re";
 include "movement.re";
 include "misc.re";
