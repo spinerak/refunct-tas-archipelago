@@ -15,19 +15,19 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 - You need to own the original game Refunct (via Steam for example).
 - Download the `practice-windows.zip` or `practice-linux.zip` from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest). Unzip the contents into any folder.
 - Do the usual [Archipelago custom games things](https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds): get your yaml and apworld from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest), generate and host.
-- Open a notepad (etc) and write your creditionals like this: `archipelago.gg:38281,PlayerName`
-- Copy those credentials (CTRL-C).
+- Enter the login info. Example `archipelago.gg`  `38281`  `PlayerName`
+- (you might have to put your name in notepad and then CTRL-V into the game if you have special characters)
 - Open Refunct.
 - Once it's loaded, double-click refunct-tas.exe (note: it may crash, just try again a couple of times, or check troubleshooting at the very bottom).
 - After a short lag, you'll see "Press 'm' to open the menu" top-left. Navigate to Archipelago, paste your credentials (CTRL-V) and press enter to login.
 - After closing the menu (escape), you should now see "Archipelago" and the request to start a new game. Open the Refunct menu (escape) and press New Game. Your game will start and you're good to go!
+- In the menu you can change gamemode / minigame.
 
 ## Other stuff
-- Want to switch to a different gamemode (minigame or main game), press `m`, go to Archipelago and press "Change Gamemode". You'll have to New Game to start it.
 - Softlocked? Press New Game, your progress is saved.
 - Buttons and platforms underneath buttons are not checks in the main game. (Red) buttons don't do anything.
 - Universal Tracker can help you to figure out which platforms are accessible. The mini-map should help!
-- You should be able to quit a game and continue it later, just follow the steps again.
+- You should be able to quit a game and continue it later, just follow the steps again. Minigames do save checks but do not save progress.
 - The final cluster in the game won't appear and will stay underwater in the main game (the final button is weird).
 
 
