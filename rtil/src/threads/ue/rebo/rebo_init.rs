@@ -676,7 +676,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                         log!("{}", line);
                         // we want to trigger cluster id-10000000 in-game here
 
-                        archipelago_received_item(vm, index as usize, id as usize)?;
+                        archipelago_received_item(vm, index as usize, id as usize, received.index as usize)?;
 
                         index += 1;
                     }
@@ -779,7 +779,7 @@ extern "rebo" {
     fn on_level_state_change(old: LevelState, new: LevelState);
     fn on_resolution_change();
     fn on_menu_open();
-    fn archipelago_received_item(index: usize, cluster_index: usize);
+    fn archipelago_received_item(index: usize, cluster_index: usize, starting_index: usize);
     fn archipelago_got_grass();
     fn archipelago_checked_location(id: usize);
     fn archipelago_received_slot_data(name_of_options: String, value_of_options: String);
@@ -2139,8 +2139,15 @@ fn set_stars_brightness(time_of_day: TimeOfDay, brightness: f32) {
     UWorld::set_stars_brightness(time_of_day, brightness);
 }
 #[rebo::function("Tas::set_fog_enabled")]
-fn set_fog_enabled(enabled: bool) {
+fn set_fog_enabled(enabled: bool, def: bool) {
     UWorld::set_fog_enabled(enabled);
+    if enabled == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(60));
+        UWorld::set_fog_enabled(def);
+    });
 }
 #[rebo::function("Tas::set_sun_redness")]
 fn set_sun_redness(redness: f32) {
