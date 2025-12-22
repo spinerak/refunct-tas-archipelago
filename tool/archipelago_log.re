@@ -22,9 +22,9 @@ enum ArchipelagoLogLevel {
 static mut AP_LOG = ArchipelagoLog { messages: List::new() };
 
 static AP_ITEM_COLORS = List::of(
-    Color { red: 0.435, green: 0.502, blue: 0.722, alpha: 1.0 }, // normal
+    Color { red: 0.024, green: 0.851, blue: 0.851, alpha: 1.0 }, // normal
     Color { red: 0.659, green: 0.576, blue: 0.894, alpha: 1.0 }, // progressive
-    Color { red: 0.024, green: 0.851, blue: 0.851, alpha: 1.0 }, // useful
+    Color { red: 0.435, green: 0.502, blue: 0.722, alpha: 1.0 }, // useful
     Color { red: 1.000, green: 0.875, blue: 0.000, alpha: 1.0 }, // useful & progressive
     Color { red: 0.827, green: 0.443, blue: 0.400, alpha: 1.0 }, // trap
     Color { red: 1.000, green: 0.675, blue: 0.110, alpha: 1.0 }, // trap & progressive
