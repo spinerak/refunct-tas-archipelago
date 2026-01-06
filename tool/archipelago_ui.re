@@ -162,12 +162,12 @@ fn create_archipelago_connection_details_menu() -> Ui {
 fn create_archipelago_settings_menu() -> Ui {
     Ui::new("Settings", List::of(
         UiElement::FloatInput(FloatInput {
-            label: Text { text: "UI Scale (0.0 - 1.0)" },
+            label: Text { text: "UI Scale (0.2 - 1.0)" },
             input: f"{SETTINGS.ui_scale}",
             onclick: fn(input: string) {},
             onchange: fn(input: string) {
                 match input.parse_float() {
-                    Result::Ok(size) => if 0.0 <= size && size <= 1.0 {
+                    Result::Ok(size) => if 0.2 <= size && size <= 1.0 {
                         SETTINGS.ui_scale = size;
                         SETTINGS.store();
                     },
