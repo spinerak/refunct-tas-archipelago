@@ -1,23 +1,23 @@
 Tas::set_reflection_render_scale(SETTINGS.reflection_render_scale);
-Tas::set_lighting_casts_shadows(SETTINGS.lighting_casts_shadows, SETTINGS.lighting_casts_shadows);
-Tas::set_sky_light_enabled(SETTINGS.sky_light_enabled, SETTINGS.sky_light_enabled);
-Tas::set_time_dilation(SETTINGS.time_dilation, SETTINGS.time_dilation);
+Tas::set_lighting_casts_shadows(SETTINGS.lighting_casts_shadows);
+Tas::set_sky_light_enabled(SETTINGS.sky_light_enabled);
+Tas::set_time_dilation(SETTINGS.time_dilation);
 Tas::set_gravity(SETTINGS.gravity);
 Tas::set_time_of_day(SETTINGS.time_of_day);
-Tas::set_sky_time_speed(SETTINGS.sky_time_speed, SETTINGS.sky_time_speed);
+Tas::set_sky_time_speed(SETTINGS.sky_time_speed);
 Tas::set_sky_light_brightness(SETTINGS.sky_light_brightness);
 Tas::set_sky_light_intensity(SETTINGS.sky_light_intensity);
-Tas::set_stars_brightness(SETTINGS.day_stars_brightness, SETTINGS.day_stars_brightness);
+Tas::set_stars_brightness(TimeOfDay::Day, SETTINGS.day_stars_brightness);
+Tas::set_stars_brightness(TimeOfDay::Night, SETTINGS.night_stars_brightness);
 Tas::set_fog_enabled(SETTINGS.fog_enabled, SETTINGS.fog_enabled);
-Tas::set_cloud_speed(SETTINGS.cloud_speed, SETTINGS.cloud_speed);
+Tas::set_cloud_speed(SETTINGS.cloud_speed);
 Tas::set_gamma(SETTINGS.display_gamma);
 Tas::set_kill_z(SETTINGS.kill_z);
-Tas::set_cloud_redness(SETTINGS.cloud_redness, SETTINGS.cloud_redness);
+Tas::set_cloud_redness(SETTINGS.cloud_redness);
 Tas::set_outro_dilated_duration(SETTINGS.outro_dilated_duration);
 Tas::set_outro_time_dilation(SETTINGS.outro_time_dilation);
-Tas::set_sun_redness(SETTINGS.sun_redness, SETTINGS.sun_redness);
-Tas::set_screen_percentage(SETTINGS.screen_percentage, SETTINGS.screen_percentage);
-
+Tas::set_sun_redness(SETTINGS.sun_redness);
+Tas::set_screen_percentage(SETTINGS.screen_percentage);
 
 fn create_world_options_menu() -> Ui {
     let mut lighting_casts_shadows_button_text = Text { text: f"Lighting Casts Shadows: {SETTINGS.lighting_casts_shadows}" };
@@ -28,7 +28,7 @@ fn create_world_options_menu() -> Ui {
             label: lighting_casts_shadows_button_text,
             onclick: fn(label: Text) {
                 SETTINGS.toggle_lighting_casts_shadows();
-                Tas::set_lighting_casts_shadows(SETTINGS.lighting_casts_shadows, SETTINGS.lighting_casts_shadows);
+                Tas::set_lighting_casts_shadows(SETTINGS.lighting_casts_shadows);
                 lighting_casts_shadows_button_text.text = f"Lighting Casts Shadows: {SETTINGS.lighting_casts_shadows}";
             },
         }),
@@ -36,7 +36,7 @@ fn create_world_options_menu() -> Ui {
             label: sky_light_enabled_button_text,
             onclick: fn(label: Text) {
                 SETTINGS.toggle_sky_light_enabled();
-                Tas::set_sky_light_enabled(SETTINGS.sky_light_enabled, SETTINGS.sky_light_enabled);
+                Tas::set_sky_light_enabled(SETTINGS.sky_light_enabled);
                 sky_light_enabled_button_text.text = f"Sky Light Enabled: {SETTINGS.sky_light_enabled}";
             },
         }),
@@ -56,7 +56,7 @@ fn create_world_options_menu() -> Ui {
                     Result::Ok(dilation) => {
                         SETTINGS.time_dilation = dilation;
                         SETTINGS.store();
-                        Tas::set_time_dilation(dilation, dilation);
+                        Tas::set_time_dilation(dilation);
                     },
                     Result::Err(e) => {},
                 }
@@ -145,7 +145,7 @@ fn create_world_options_menu() -> Ui {
             onchange: fn(input: string) {
                 match input.parse_float() {
                     Result::Ok(speed) => {
-                        Tas::set_sky_time_speed(speed, speed);
+                        Tas::set_sky_time_speed(speed);
                         SETTINGS.sky_time_speed = speed;
                         SETTINGS.store();
                     },
@@ -184,14 +184,29 @@ fn create_world_options_menu() -> Ui {
             },
         }),
         UiElement::FloatInput(FloatInput {
-            label: Text { text: "Stars Brightness" },
+            label: Text { text: "Day Stars Brightness" },
             input: f"{SETTINGS.day_stars_brightness}",
             onclick: fn(input: string) {},
             onchange: fn(input: string) {
                 match input.parse_float() {
                     Result::Ok(brightness) => {
-                        Tas::set_stars_brightness(brightness, brightness);
+                        Tas::set_stars_brightness(TimeOfDay::Day, brightness);
                         SETTINGS.day_stars_brightness = brightness;
+                        SETTINGS.store();
+                    },
+                    Result::Err(e) => {},
+                }
+            },
+        }),
+        UiElement::FloatInput(FloatInput {
+            label: Text { text: "Night Stars Brightness" },
+            input: f"{SETTINGS.night_stars_brightness}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_float() {
+                    Result::Ok(brightness) => {
+                        Tas::set_stars_brightness(TimeOfDay::Night, brightness);
+                        SETTINGS.night_stars_brightness = brightness;
                         SETTINGS.store();
                     },
                     Result::Err(e) => {},
@@ -205,7 +220,7 @@ fn create_world_options_menu() -> Ui {
             onchange: fn(input: string) {
                 match input.parse_float() {
                     Result::Ok(color) => {
-                        Tas::set_sun_redness(color, color);
+                        Tas::set_sun_redness(color);
                         SETTINGS.sun_redness = color;
                         SETTINGS.store();
                     },
@@ -220,7 +235,7 @@ fn create_world_options_menu() -> Ui {
             onchange: fn(input: string) {
                 match input.parse_float() {
                     Result::Ok(color) => {
-                        Tas::set_cloud_redness(color, color);
+                        Tas::set_cloud_redness(color);
                         SETTINGS.cloud_redness = color;
                         SETTINGS.store();
                     },
@@ -234,7 +249,7 @@ fn create_world_options_menu() -> Ui {
             onclick: fn(input: string) {
                 match input.parse_float() {
                     Result::Ok(speed) => {
-                        Tas::set_cloud_speed(speed, speed);
+                        Tas::set_cloud_speed(speed);
                         SETTINGS.cloud_speed = speed;
                         SETTINGS.store();
                     },
@@ -280,7 +295,7 @@ fn create_world_options_menu() -> Ui {
             onchange: fn(input: string) {
                 match input.parse_float() {
                     Result::Ok(percentage) => {
-                        Tas::set_screen_percentage(percentage, percentage);
+                        Tas::set_screen_percentage(percentage);
                         SETTINGS.screen_percentage = percentage;
                         SETTINGS.store();
                     },

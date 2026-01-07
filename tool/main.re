@@ -57,6 +57,6 @@ loop {
         }
     }
     Tas::show_hud();
-    Tas::set_sky_time_speed(SETTINGS.sky_time_speed, SETTINGS.sky_time_speed);
+    Tas::set_sky_time_speed(SETTINGS.sky_time_speed);
     step_frame(tick_mode);
 }
