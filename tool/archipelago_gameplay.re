@@ -228,7 +228,7 @@ fn archipelago_disconnected() {
     ARCHIPELAGO_STATE.ap_connected = false;
 };
 
-fn archipelago_process_item(item_index: int, ignore_activate_and_deactivate: bool, starting_index: int) {
+fn archipelago_process_item(item_index: int, ignore_activate_and_deactivate: bool) {
     if ARCHIPELAGO_STATE.gamemode == 0 {
         // log(f"Processing received item index {item_index}");
         if item_index == 9999990 {  // Ledge Grab
@@ -330,19 +330,10 @@ fn archipelago_process_item(item_index: int, ignore_activate_and_deactivate: boo
     if item_index == 60000015{
         Tas::archipelago_trigger_goal_animation();
     }
-
-    if starting_index > 0 {
-        log(f"Processing received item index {item_index} complete");
-        if item_index == 60000020{
-            Tas::set_fog_enabled(false, SETTINGS.fog_enabled);
-            log("Disabled fog for 60 seconds");
-        }
-    }
-
 }
 
 // triggers cluster clusterindex
-fn archipelago_received_item(index: int, item_index: int, starting_index: int) {
+fn archipelago_received_item(index: int, item_index: int){
     // log(f"Received item index {item_index} (cluster index {index})");
     if index <= ARCHIPELAGO_STATE.highest_index_received {
         // log(f"Ignoring duplicate or out-of-order item index {index} (highest received: {ARCHIPELAGO_STATE.highest_index_received})");
@@ -374,7 +365,7 @@ fn archipelago_received_item(index: int, item_index: int, starting_index: int) {
     if ARCHIPELAGO_STATE.started < 2 {
         return;
     }
-    archipelago_process_item(item_index, false, starting_index);
+    archipelago_process_item(item_index, false);
 
 }
 
@@ -440,7 +431,7 @@ fn archipelago_main_start(){
 
     Tas::archipelago_activate_all_buttons(-1);
     for item in ARCHIPELAGO_STATE.received_items {
-        archipelago_process_item(item, true, 0);
+        archipelago_process_item(item, true);
     }
     Tas::archipelago_deactivate_all_buttons(-1);
 
