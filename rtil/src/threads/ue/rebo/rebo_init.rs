@@ -5,7 +5,7 @@ use std::io::{ErrorKind, Write};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
-use archipelago_rs::protocol::{ClientMessage, ServerMessage, GetDataPackage, PrintJSON, JSONColor, JSONMessagePart, NetworkItem};
+use archipelago_rs::protocol::{ClientMessage, ServerMessage, BounceData, DeathLink, GetDataPackage, PrintJSON, JSONColor, JSONMessagePart, NetworkItem, ItemsHandlingFlags};
 use crossbeam_channel::{Sender, TryRecvError};
 use image::Rgba;
 use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span, Stdlib, Value, VmContext};
@@ -137,6 +137,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(disable_collision)
         .add_function(exit_water)
         .add_function(respawn)
+        .add_function(is_death_link_on)
+        .add_function(set_death_link)
         .add_function(open_maps_folder)
         .add_function(open_recordings_folder)
         .add_function(set_lighting_casts_shadows)
@@ -264,6 +266,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_register_game_item)
         .add_required_rebo_function(archipelago_register_game_location)
         .add_required_rebo_function(archipelago_print_json_message)
+        .add_required_rebo_function(archipelago_received_death)
         .add_required_rebo_function(archipelago_init)
         .add_required_rebo_function(archipelago_set_own_id)
         .add_required_rebo_function(on_level_state_change)
@@ -350,7 +353,7 @@ impl ReboPrintJSONMessage {
             PrintJSON::Release { data, .. } => (String::from("Release"), data),
             PrintJSON::Collect { data, .. } => (String::from("Collect"), data),
             PrintJSON::Countdown { data, .. } => (String::from("Countdown"), data),
-            PrintJSON::Text { data, .. } => (String::from("Text"), data),
+            PrintJSON::Unknown { data, .. } => (String::from("Text"), data),
         };
 
         let (_receiving, _item) = match print_json {
@@ -387,14 +390,14 @@ impl ReboJSONMessagePart {
             JSONMessagePart::ItemId { text, flags, player, .. } => ReboJSONMessagePart {
                 _type: String::from("item_id"),
                 text: Some(String::from(text)),
-                flags: Some(*flags as usize),
+                flags: Some(Into::<u8>::into(flags.clone()) as usize),
                 player: Some(*player as isize),
                 color: None,
             },
             JSONMessagePart::ItemName { text, flags, player, .. } => ReboJSONMessagePart {
                 _type: String::from("item_name"),
                 text: Some(String::from(text)),
-                flags: Some(*flags as usize),
+                flags: Some(Into::<u8>::into(flags.clone()) as usize),
                 player: Some(*player as isize),
                 color: None,
             },
@@ -436,7 +439,7 @@ impl ReboNetworkItem {
             item: item.item as isize,
             location: item.location as isize,
             player: item.player as isize,
-            flags: item.flags as isize,
+            flags: Into::<u8>::into(item.flags.clone()) as isize,
         }
     }
 }
@@ -704,7 +707,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::PrintJSON(json))) => {
                     log!("PrintJSON message");
-                    let msg = format!("Archipelago ServerMessage::PrintJSON: {:?}", json);
+                    let msg = format!("Archipelago ServerMessage::Print: {:?}", json);
                     log!("{}", msg);
 
                     archipelago_print_json_message(vm, ReboPrintJSONMessage::from(&json))?;
@@ -727,6 +730,14 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     log!("Bounced message");
                     let msg = format!("Archipelago ServerMessage::Bounced: {:?}", info);
                     log!("{}", msg);
+                    match info.data {
+                        BounceData::DeathLink(DeathLink { source, cause, .. }) => {
+                            log!("[{}] {:?}", source, cause);
+                            AMyCharacter::respawn();
+                            archipelago_received_death(vm, source, cause.unwrap_or(String::from("")))?;
+                        }
+                        _ => (),
+                    }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::InvalidPacket(pkt))) => {
                     log!("InvalidPacket message");
@@ -791,6 +802,7 @@ extern "rebo" {
     fn archipelago_register_game_item(game_name: String, item_name: String, item_id: String);
     fn archipelago_register_game_location(game_name: String, location_name: String, location_id: String);
     fn archipelago_print_json_message(json_message: ReboPrintJSONMessage);
+    fn archipelago_received_death(source: String, cause: String);
 }
 
 fn config_path() -> PathBuf {
@@ -1385,7 +1397,7 @@ fn archipelago_connect(server_and_port: String, game: String, slot: String, pass
 
     tx.send(ReboToArchipelago::Connect {
         server_and_port, game, slot, password,
-        items_handling: Some(7),
+        items_handling: ItemsHandlingFlags::OWN_WORLD | ItemsHandlingFlags::STARTING_INVENTORY,
         tags: vec![],
     }).unwrap();
 
@@ -1397,6 +1409,9 @@ fn archipelago_connect(server_and_port: String, game: String, slot: String, pass
 #[rebo::function(raw("Tas::archipelago_disconnect"))]
 fn archipelago_disconnect() {
     STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(ReboToArchipelago::Disconnect).unwrap();
+}
+fn archipelago_send_death() {
+    STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(ReboToArchipelago::SendDeath).unwrap();
 }
 #[rebo::function(raw("Tas::archipelago_send_check"))]
 fn archipelago_send_check(location_id: i64) {
@@ -2090,6 +2105,29 @@ fn exit_water() {
 #[rebo::function("Tas::respawn")]
 fn respawn() {
     AMyCharacter::respawn();
+}
+#[rebo::function("Tas::is_death_link_on")]
+fn is_death_link_on() -> bool {
+    AMyCharacter::has_death_hook()
+}
+#[rebo::function("Tas::set_death_link")]
+fn set_death_link(on: bool) {
+    let tags: Vec<String>;
+    if on {
+        tags = vec![String::from("DeathLink")];
+        AMyCharacter::set_death_hook(archipelago_send_death as fn());
+    } else {
+        tags = vec![];
+        AMyCharacter::unset_death_hook();
+    }
+
+    let state = STATE.lock().unwrap();
+    let tx = &state.as_ref().unwrap().rebo_archipelago_tx;
+
+    tx.send(ReboToArchipelago::ConnectUpdate {
+        items_handling: ItemsHandlingFlags::OWN_WORLD | ItemsHandlingFlags::STARTING_INVENTORY,
+        tags,
+    }).unwrap();
 }
 #[rebo::function("Tas::open_maps_folder")]
 fn open_maps_folder() {
