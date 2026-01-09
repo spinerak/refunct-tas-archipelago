@@ -297,59 +297,37 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
     }
 
     if starting_index > 0 {
-        if item_index == 9999001{
+        if item_id == 9999001{
             Tas::set_fog_enabled(false, SETTINGS.fog_enabled);
         }
-        if item_index == 9999002{
+        if item_id == 9999002{
             Tas::set_sky_light_enabled(false, SETTINGS.sky_light_enabled);
         }
-        if item_index == 9999003{
+        if item_id == 9999003{
             Tas::set_time_dilation(0.5, SETTINGS.time_dilation);
         }
-        if item_index == 9999004{
+        if item_id == 9999004{
             Tas::set_time_dilation(1.5, SETTINGS.time_dilation);
         }
         // if item_index == 9999005{
         //     log("Setting sky time speed from item speed: 7500.");
         //     Tas::set_sky_time_speed(7500., SETTINGS.sky_time_speed);
         // }
-        if item_index == 9999006{
+        if item_id == 9999006{
             Tas::set_stars_brightness(1000., SETTINGS.day_stars_brightness);
         }
-        if item_index == 9999007{
+        if item_id == 9999007{
             Tas::set_sun_redness(20., SETTINGS.sun_redness);
             Tas::set_cloud_redness(20., SETTINGS.cloud_redness);
         }
-        if item_index == 9999008{
+        if item_id == 9999008{
             Tas::set_cloud_speed(200., SETTINGS.cloud_speed);
         }
-        if item_index == 9999009{
+        if item_id == 9999009{
             Tas::set_screen_percentage(10., SETTINGS.screen_percentage);
         }
     }
 
-}
-
-fn archipelago_trigger_one_cluster_now(){
-    if ARCHIPELAGO_STATE.triggering_clusters.len() == 0 {
-        return;
-    }
-    ARCHIPELAGO_STATE.triggering_clusters_counter += 1;
-    if ARCHIPELAGO_STATE.triggering_clusters_counter % 50 != 0 {
-        return;
-    }
-
-    let c = ARCHIPELAGO_STATE.triggering_clusters.get(0).unwrap();
-    ARCHIPELAGO_STATE.triggering_clusters.remove(0);
-    
-    let last_unlocked = ARCHIPELAGO_STATE.last_level_unlocked;
-    Tas::archipelago_raise_cluster(c - 2, last_unlocked - 1);
-
-    ARCHIPELAGO_STATE.last_level_unlocked = c;
-
-    if !ARCHIPELAGO_STATE.triggered_clusters.contains(c) {
-        ARCHIPELAGO_STATE.triggered_clusters.push(c);
-    }
 }
 
 fn archipelago_trigger_one_cluster_now(){
