@@ -643,4 +643,8 @@ fn archipelago_received_slot_data(key: string, value: string){
             ARCHIPELAGO_STATE.og_randomizer_order.push(p.parse_int().unwrap());
         }
     }
+
+    if key == "death_link" && value == "1" {
+        Tas::set_death_link(true);
+    }
 }
