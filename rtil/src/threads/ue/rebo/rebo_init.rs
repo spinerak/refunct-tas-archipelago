@@ -139,6 +139,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(enable_collision)
         .add_function(disable_collision)
         .add_function(exit_water)
+        .add_function(respawn)
         .add_function(open_maps_folder)
         .add_function(open_recordings_folder)
         .add_function(set_lighting_casts_shadows)
@@ -2207,6 +2208,10 @@ fn disable_collision() {
 #[rebo::function("Tas::exit_water")]
 fn exit_water() {
     AMyCharacter::exit_water();
+}
+#[rebo::function("Tas::respawn")]
+fn respawn() {
+    AMyCharacter::respawn();
 }
 #[rebo::function("Tas::open_maps_folder")]
 fn open_maps_folder() {
