@@ -1545,22 +1545,22 @@ fn archipelago_raise_cluster(cluster_index: i32, last_unlocked: usize) {
 fn archipelago_raise_cluster_in(cluster_index: i32, last_unlocked: usize) {
     set_level_in(cluster_index);
     if last_unlocked == 6 {
-        trigger_element_by_type_in(last_unlocked, "Button".to_string(), 1);
+        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 1);
     }
     if last_unlocked == 9 {
-        trigger_element_by_type_in(last_unlocked, "Button".to_string(), 1);
+        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 1);
     }
     if last_unlocked == 17 {
-        trigger_element_by_type_in(last_unlocked, "Button".to_string(), 1);
+        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 1);
     }
     if last_unlocked == 25 {
-        trigger_element_by_type_in(last_unlocked, "Button".to_string(), 1);
-        trigger_element_by_type_in(last_unlocked, "Button".to_string(), 2);
+        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 1);
+        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 2);
     }
     if last_unlocked == 27 {
-        trigger_element_by_type_in(last_unlocked, "Button".to_string(), 1);
+        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 1);
     }
-    trigger_element_by_type_in(last_unlocked, "Button".to_string(), 0);
+    trigger_element_by_type_here(last_unlocked, "Button".to_string(), 0);
 }
 
 
@@ -1635,15 +1635,19 @@ fn trigger_element(index: ElementIndex) {
         }
     });
 }
-#[rebo::function("Tas::trigger_element_by_type")]
-fn trigger_element_by_type(cluster_index: usize, element_type: String, element_index: usize) {
+fn trigger_element_by_type_here(cluster_index: usize, element_type: String, element_index: usize) {
     if element_type == "Button" {
-        archipelago_activate_buttons(element_index as i32);
+        archipelago_activate_buttons(-1);
     }
     trigger_element_by_type_in(cluster_index, element_type.clone(), element_index);
     if element_type == "Button" {
-        archipelago_deactivate_buttons(element_index as i32);
+        archipelago_deactivate_buttons(-1);
     }
+}
+
+#[rebo::function("Tas::trigger_element_by_type")]
+fn trigger_element_by_type(cluster_index: usize, element_type: String, element_index: usize) {
+    trigger_element_by_type_here(cluster_index, element_type, element_index);
 } 
 
 fn trigger_element_by_type_in(cluster_index: usize, element_type: String, element_index: usize) {
