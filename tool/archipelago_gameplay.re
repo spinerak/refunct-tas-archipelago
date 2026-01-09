@@ -295,6 +295,37 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
     if item_id == 60000015{
         Tas::archipelago_trigger_goal_animation();
     }
+
+    if starting_index > 0 {
+        log(f"Processing received item index {item_index} complete");
+        if item_index == 60000020{
+            Tas::set_fog_enabled(false, SETTINGS.fog_enabled);
+            log("Disabled fog for 60 seconds");
+        }
+    }
+
+}
+
+fn archipelago_trigger_one_cluster_now(){
+    if ARCHIPELAGO_STATE.triggering_clusters.len() == 0 {
+        return;
+    }
+    ARCHIPELAGO_STATE.triggering_clusters_counter += 1;
+    if ARCHIPELAGO_STATE.triggering_clusters_counter % 50 != 0 {
+        return;
+    }
+
+    let c = ARCHIPELAGO_STATE.triggering_clusters.get(0).unwrap();
+    ARCHIPELAGO_STATE.triggering_clusters.remove(0);
+    
+    let last_unlocked = ARCHIPELAGO_STATE.last_level_unlocked;
+    Tas::archipelago_raise_cluster(c - 2, last_unlocked - 1);
+
+    ARCHIPELAGO_STATE.last_level_unlocked = c;
+
+    if !ARCHIPELAGO_STATE.triggered_clusters.contains(c) {
+        ARCHIPELAGO_STATE.triggered_clusters.push(c);
+    }
 }
 
 fn archipelago_trigger_one_cluster_now(){

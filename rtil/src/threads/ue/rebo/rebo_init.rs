@@ -2261,8 +2261,15 @@ fn set_stars_brightness(time_of_day: TimeOfDay, brightness: f32) {
     UWorld::set_stars_brightness(time_of_day, brightness);
 }
 #[rebo::function("Tas::set_fog_enabled")]
-fn set_fog_enabled(enabled: bool) {
+fn set_fog_enabled(enabled: bool, def: bool) {
     UWorld::set_fog_enabled(enabled);
+    if enabled == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(60));
+        UWorld::set_fog_enabled(def);
+    });
 }
 #[rebo::function("Tas::set_sun_redness")]
 fn set_sun_redness(redness: f32) {
