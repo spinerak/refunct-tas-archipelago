@@ -52,7 +52,6 @@ pub const ALIFTBASE_REMOVEBASEDCHARACTER: usize = 0xfaa60;
 pub const AMYCHARACTER_STATICCLASS: usize = 0xedda0;
 pub const AMYCHARACTER_TICK: usize = 0xf0870;
 pub const AMYCHARACTER_UNDERWATERCHANGED: usize = 0xfbb50;
-pub const AMYCHARACTER_FELLOUTOFWORLD: usize = 0xef1a0;
 pub const AMYCHARACTER_FORCEDUNCROUCH: usize = 0xef1b0;
 pub const AMYHUD_DRAWHUD: usize = 0xf6710;
 pub const UFONTBULKDATA_INITIALIZE: usize = 0x2e2e80;

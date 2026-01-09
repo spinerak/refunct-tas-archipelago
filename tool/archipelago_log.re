@@ -76,27 +76,6 @@ fn ap_log_info(text: string)    { ap_log(List::of(ColorfulText { text: text, col
 fn ap_log_warning(text: string) { ap_log(List::of(ColorfulText { text: text, color: AP_COLOR_YELLOW })); }
 fn ap_log_error(text: string)   { ap_log(List::of(ColorfulText { text: text, color: AP_COLOR_RED })); }
 
-fn archipelago_received_death(source: string, cause: string) {
-    let mut message = List::new();
-    match cause {
-        "" => {
-            message.push(ColorfulText { text: source, color: COLOR_RED });
-            message.push(ColorfulText { text: " died", color: AP_COLOR_YELLOW });
-        },
-        _ => {
-            for part in cause.split(source) {
-                if part != "" {
-                    message.push(ColorfulText { text: part, color: AP_COLOR_YELLOW });
-                }
-                message.push(ColorfulText { text: source, color: COLOR_RED });
-            }
-            message.pop();
-        }
-    }
-
-    ap_log(message);
-}
-
 fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
     let mut message = List::new();
 

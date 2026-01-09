@@ -117,18 +117,6 @@ fn create_archipelago_connection_details_menu() -> Ui {
     }));
 
     if ARCHIPELAGO_STATE.ap_connected {
-        elements.push(UiElement::Chooser(Chooser {
-            label: Text { text: "Death Link" },
-            options: List::of(Text { text: "On" }, Text { text: "Off" }),
-            selected: if Tas::is_death_link_on() { 0 } else { 1 },
-            onchange: fn(index: int) {
-                if index == 0 {
-                    Tas::set_death_link(true);
-                } else {
-                    Tas::set_death_link(false);
-                }
-            },
-        }));
         elements.push(UiElement::Button(UiButton {
             label: Text { text: "Disconnect" },
             onclick: fn(label: Text) {

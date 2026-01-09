@@ -86,7 +86,6 @@ pub struct Hooks {
     pub _ugameusersettings_applyresolutionsettings: &'static RawHook<RefunctIsaAbi, ()>,
     pub _uuserwidget_addtoscreen: &'static RawHook<RefunctIsaAbi, ()>,
     pub _amycharacter_tick: &'static RawHook<RefunctIsaAbi, ()>,
-    pub _amycharacter_felloutofworld: &'static RawHook<RefunctIsaAbi, ()>,
 }
 
 pub fn init() -> Hooks {
@@ -108,7 +107,6 @@ pub fn init() -> Hooks {
             _ugameusersettings_applyresolutionsettings: RawHook::create(UGAMEUSERSETTINGS_APPLYRESOLUTIONSETTINGS.load(Ordering::Relaxed), gameusersettings::apply_resolution_settings).enabled(),
             _uuserwidget_addtoscreen: RawHook::create(UUSERWIDGET_ADDTOSCREEN.load(Ordering::Relaxed), uworld::add_to_screen_hook).enabled(),
             _amycharacter_tick: RawHook::create(AMYCHARACTER_TICK.load(Ordering::Relaxed), character::tick_hook).enabled(),
-            _amycharacter_felloutofworld: RawHook::create(AMYCHARACTER_FELLOUTOFWORLD.load(Ordering::Relaxed), character::felloutofworld_hook).enabled(),
         }
     }
 }

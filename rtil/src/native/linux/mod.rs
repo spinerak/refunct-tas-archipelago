@@ -125,7 +125,6 @@ find! {
     ALIFTBASE_ADDBASEDCHARACTER, "^ALiftBase::AddBasedCharacter(AMyCharacter*)",
     ALIFTBASE_REMOVEBASEDCHARACTER, "^ALiftBase::RemoveBasedCharacter(AMyCharacter*)",
     AMYCHARACTER_UNDERWATERCHANGED, "^AMyCharacter::UnderwaterChanged(bool)",
-    AMYCHARACTER_FELLOUTOFWORLD, "^AMyCharacter::FellOutOfWorld(UDamageType const&)",
     UMATERIALINSTANCEDYNAMIC_SETSCALARPARAMETERVALUE, "^UMaterialInstanceDynamic::SetScalarParameterValue(FName, float)",
     UFONTBULKDATA_INITIALIZE, "^UFontBulkData::Initialize(void const*, int)",
     FVIEWPORT_SETGAMERENDERINGENABLED, "^FViewport::SetGameRenderingEnabled(bool, int)",

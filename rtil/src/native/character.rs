@@ -5,12 +5,11 @@ use std::sync::atomic::{AtomicPtr, Ordering};
 use hook::{ArgsRef, RawHook, IsaAbi};
 use iced::mouse::Interaction;
 use crate::native::ue::{FVector, FRotator, FString, UeU64};
-use crate::native::{AMYCHARACTER_STATICCLASS, REBO_DOESNT_START_SEMAPHORE, APLAYERCONTROLLER_GETVIEWPORTSIZE, ActorWrapper, ObjectWrapper, StructValueWrapper, BoolValueWrapper, AMYCHARACTER_UNDERWATERCHANGED, AMYCHARACTER_FELLOUTOFWORLD, UObject, UeScope, APLAYERCONTROLLER_FLUSHPRESSEDKEYS, APLAYERCONTROLLER_GETMOUSEPOSITION};
+use crate::native::{AMYCHARACTER_STATICCLASS, REBO_DOESNT_START_SEMAPHORE, APLAYERCONTROLLER_GETVIEWPORTSIZE, ActorWrapper, ObjectWrapper, StructValueWrapper, BoolValueWrapper, AMYCHARACTER_UNDERWATERCHANGED, UObject, UeScope, APLAYERCONTROLLER_FLUSHPRESSEDKEYS, APLAYERCONTROLLER_GETMOUSEPOSITION};
 use crate::native::reflection::UClass;
 use crate::native::uworld::CAMERA_INDEX;
 
 static CURRENT_PLAYER: AtomicPtr<AMyCharacterUE> = AtomicPtr::new(std::ptr::null_mut());
-static mut DEATH_HOOK: Option<fn()> = None;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct AMyCharacter(*mut AMyCharacterUE);
@@ -197,25 +196,6 @@ impl AMyCharacter {
             fun.call(obj.as_ptr(), &params);
         }
     }
-    pub fn respawn() {
-        unsafe {
-            let hook = DEATH_HOOK;
-            DEATH_HOOK = None;
-            let fun: extern_fn!(fn(this: *mut AMyCharacterUE, value: i32))
-                = ::std::mem::transmute(AMYCHARACTER_FELLOUTOFWORLD.load(Ordering::SeqCst));
-            fun(AMyCharacter::get_player().as_ptr(), 0);
-            DEATH_HOOK = hook;
-        }
-    }
-    pub fn set_death_hook(fun: fn()) {
-        unsafe { DEATH_HOOK = Some(fun); }
-    }
-    pub fn unset_death_hook() {
-        unsafe { DEATH_HOOK = None; }
-    }
-    pub fn has_death_hook() -> bool {
-        unsafe { (&DEATH_HOOK).is_some().clone() }
-    }
     pub fn camera_mode() -> u8 {
         UeScope::with(|scope| {
             let cam = scope.get(CAMERA_INDEX.get().unwrap());
@@ -370,23 +350,4 @@ pub fn tick_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, mut args: ArgsRef<'
     hook.disable();
     unsafe { hook.call_original_function(args) };
     REBO_DOESNT_START_SEMAPHORE.release();
-}
-
-pub fn felloutofworld_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, args: ArgsRef<'_, IA>) {
-    AMyCharacter::set_velocity(&mut AMyCharacter::get_player(), 0., 0., 0.);
-    AMyCharacter::set_rotation(&mut AMyCharacter::get_player(), 0., 90., 0.);
-    //let death_hook = DEATH_HOOK.load(Ordering::SeqCst);
-    //log!("death hook is null: {}", death_hook.is_null());
-    //if !death_hook.is_null() {
-    //    log!("running death hook");
-    //    unsafe { (*death_hook)(); }
-    //    log!("death hook ran");
-    //}
-    unsafe {
-        match DEATH_HOOK {
-            None => (),
-            Some(death_hook) => death_hook()
-        }
-    }
-    unsafe { hook.call_original_function(args) };
 }
