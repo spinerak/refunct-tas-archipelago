@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+
 use std::error::Error;
 use std::thread;
 use archipelago_rs::client::{ArchipelagoClient, ArchipelagoClientReceiver, ArchipelagoClientSender};
@@ -6,7 +6,6 @@ use archipelago_rs::protocol::{ClientStatus, ServerMessage, Bounce, BounceData, 
 use crossbeam_channel::Sender;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::task::AbortHandle;
-use rand::seq::IndexedRandom;
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago};
 
 pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_rx: UnboundedReceiver<ReboToArchipelago>) {
@@ -35,14 +34,6 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                             receiver_abort_handle = Some(join_handle.abort_handle());
 
                         },
-                        ReboToArchipelago::ConnectUpdate { items_handling, tags } => {
-                            if let Some(sender) = sender.as_mut() {
-                                sender.send(ClientMessage::ConnectUpdate(ConnectUpdate {
-                                    items_handling: items_handling.bits(),
-                                    tags
-                                })).await?;
-                            }
-                        }
                         ReboToArchipelago::ClientMessage(msg) => {
                             if let Some(sender) = sender.as_mut() {
                                 sender.send(msg).await?;

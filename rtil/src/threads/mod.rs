@@ -1,5 +1,5 @@
 use crate::native::Hooks;
-use archipelago_rs::protocol::{ClientMessage, ServerMessage, ItemsHandlingFlags};
+use archipelago_rs::protocol::{ClientMessage, ServerMessage};
 
 mod listener;
 mod stream_read;
@@ -43,24 +43,19 @@ pub enum ReboToStream {
 
 #[derive(Debug)]
 pub enum ArchipelagoToRebo {
-    ServerMessage(ServerMessage<serde_json::Value>),
+    ServerMessage(ServerMessage),
     ConnectionAborted,
 }
-//#[derive(Debug)]
+#[derive(Debug)]
 pub enum ReboToArchipelago {
     Connect {
         server_and_port: String,
         game: String,
         slot: String,
         password: Option<String>,
-        items_handling: ItemsHandlingFlags,
+        items_handling: Option<i32>,
         tags: Vec<String>,
     },
-    ConnectUpdate {
-        items_handling: ItemsHandlingFlags,
-        tags: Vec<String>,
-    },
-    SendDeath,
     ClientMessage(ClientMessage),
     Disconnect,
     LocationChecks { locations: Vec<i64> },

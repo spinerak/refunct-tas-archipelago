@@ -10,7 +10,6 @@ use crate::native::reflection::UClass;
 use crate::native::uworld::CAMERA_INDEX;
 
 static CURRENT_PLAYER: AtomicPtr<AMyCharacterUE> = AtomicPtr::new(std::ptr::null_mut());
-static mut DEATH_HOOK: Option<fn()> = None;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct AMyCharacter(*mut AMyCharacterUE);
@@ -199,22 +198,10 @@ impl AMyCharacter {
     }
     pub fn respawn() {
         unsafe {
-            let hook = DEATH_HOOK;
-            DEATH_HOOK = None;
             let fun: extern_fn!(fn(this: *mut AMyCharacterUE, value: i32))
                 = ::std::mem::transmute(AMYCHARACTER_FELLOUTOFWORLD.load(Ordering::SeqCst));
             fun(AMyCharacter::get_player().as_ptr(), 0);
-            DEATH_HOOK = hook;
         }
-    }
-    pub fn set_death_hook(fun: fn()) {
-        unsafe { DEATH_HOOK = Some(fun); }
-    }
-    pub fn unset_death_hook() {
-        unsafe { DEATH_HOOK = None; }
-    }
-    pub fn has_death_hook() -> bool {
-        unsafe { (&DEATH_HOOK).is_some().clone() }
     }
     pub fn camera_mode() -> u8 {
         UeScope::with(|scope| {
@@ -375,18 +362,5 @@ pub fn tick_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, mut args: ArgsRef<'
 pub fn felloutofworld_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, args: ArgsRef<'_, IA>) {
     AMyCharacter::set_velocity(&mut AMyCharacter::get_player(), 0., 0., 0.);
     AMyCharacter::set_rotation(&mut AMyCharacter::get_player(), 0., 90., 0.);
-    //let death_hook = DEATH_HOOK.load(Ordering::SeqCst);
-    //log!("death hook is null: {}", death_hook.is_null());
-    //if !death_hook.is_null() {
-    //    log!("running death hook");
-    //    unsafe { (*death_hook)(); }
-    //    log!("death hook ran");
-    //}
-    unsafe {
-        match DEATH_HOOK {
-            None => (),
-            Some(death_hook) => death_hook()
-        }
-    }
     unsafe { hook.call_original_function(args) };
 }

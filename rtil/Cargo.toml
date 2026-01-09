@@ -26,7 +26,6 @@ bit_field = "0.10.2"
 image = "0.25.6"
 ureq = "3.0.11"
 corosensei = "0.2.2"
-rand = "0.9.2"
 
 tokio = { version = "1.40.0", features = ["full"] }
 archipelago_rs = { git = "https://github.com/nex3/archipelago_rs", rev = "12a9385fb9f0df8d863a64750e44352bc1cbbeca" }

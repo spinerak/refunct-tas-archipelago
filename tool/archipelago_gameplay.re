@@ -45,6 +45,9 @@ struct ArchipelagoState {
     checked_locations: List<int>,
     mod_version: string,
     apworld_version: string,
+
+    triggering_clusters: List<int>,
+    triggering_clusters_counter: int,
 }
 
 fn fresh_archipelago_state() -> ArchipelagoState {
@@ -92,8 +95,11 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "0.3.2",
+        mod_version: "0.4.0",
         apworld_version: "",
+
+        triggering_clusters: List::new(),
+        triggering_clusters_counter: 0,
     }
 }
 
@@ -228,145 +234,158 @@ fn archipelago_disconnected() {
     ARCHIPELAGO_STATE.ap_connected = false;
 };
 
-fn archipelago_process_item(item_index: int, ignore_activate_and_deactivate: bool) {
+fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) {
     if ARCHIPELAGO_STATE.gamemode == 0 {
-        // log(f"Processing received item index {item_index}");
-        if item_index == 9999990 {  // Ledge Grab
+        // log(f"Processing received item index {item_id}");
+        if item_id == 9999990 {  // Ledge Grab
             // log("Received Ledge Grab!");
             ARCHIPELAGO_STATE.ledge_grab += 1;
             Tas::archipelago_set_wall_jump_and_ledge_grab(-1, 1, true);
         }
-        if item_index == 9999991 {  // Wall Jump
+        if item_id == 9999991 {  // Wall Jump
             // log("Received Wall Jump!");
             ARCHIPELAGO_STATE.wall_jump += 1;
             Tas::archipelago_set_wall_jump_and_ledge_grab(ARCHIPELAGO_STATE.wall_jump, -1, true);
         }
-        if item_index == 9999992 {  // Swim
+        if item_id == 9999992 {  // Swim
             // log("Received Swim!");
             ARCHIPELAGO_STATE.swim += 1;
             Tas::set_kill_z(-6000.);
         }
-        if item_index == 9999993 {  // Jumppads
+        if item_id == 9999993 {  // Jumppads
             // log("Received Jumppads!");
             ARCHIPELAGO_STATE.jumppads += 1;
             Tas::archipelago_set_jump_pads(1);
         }
-        if item_index == 9999997 {  // Final Platform Known
+        if item_id == 9999997 {  // Final Platform Known
             ARCHIPELAGO_STATE.final_platform_known = true;
         }
-        if item_index == 9999999 {  // Grass
+        if item_id == 9999999 {  // Grass
             archipelago_got_grass();
         }
-        let clusterindex = item_index - 10000000;
+        let clusterindex = item_id - 10000000;
         if clusterindex >= 2 && clusterindex < 32 {
             if !ARCHIPELAGO_STATE.triggered_clusters.contains(clusterindex) {
-                if !ignore_activate_and_deactivate {
-                    Tas::archipelago_activate_all_buttons(-1);
-                }
-
-                let last_unlocked = ARCHIPELAGO_STATE.last_level_unlocked;
-                // log(f"Received Trigger Cluster {clusterindex}");
-                Tas::set_level(clusterindex - 2);
-                if last_unlocked == 7 {
-                    Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-                }
-                if last_unlocked == 10 {
-                    Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-                }
-                if last_unlocked == 18 {
-                    Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-                }
-                if last_unlocked == 26 {
-                    Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-                    Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 2 });
-                }
-                if last_unlocked == 28 {
-                    Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-                }
-                Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 0 });
-                ARCHIPELAGO_STATE.last_level_unlocked = clusterindex;
-
-                if !ignore_activate_and_deactivate {
-                    Tas::archipelago_deactivate_all_buttons(-1);
-                }
-
-
-                if !ARCHIPELAGO_STATE.triggered_clusters.contains(clusterindex) {
-                    ARCHIPELAGO_STATE.triggered_clusters.push(clusterindex);
-                }
+                ARCHIPELAGO_STATE.triggering_clusters.push(clusterindex);
             }
         }
     }
 
     // DEBUG items:
-    if item_index >= 20000000 && item_index < 30000000 {
-        log(f"DEBUG set_level {item_index - 20000000}");
-        Tas::set_level(item_index - 20000000);
+    if item_id >= 20000000 && item_id < 30000000 {
+        log(f"DEBUG set_level {item_id - 20000000}");
+        Tas::set_level(item_id - 20000000);
     }
-    if item_index >= 30000000 && item_index < 40000000{
-        log(f"DEBUG trigger_element {item_index - 30000000} Button 0");
-        Tas::trigger_element(ElementIndex { cluster_index: item_index - 30000000, element_type: ElementType::Button, element_index: 0 });
+    if item_id >= 30000000 && item_id < 40000000{
+        log(f"DEBUG trigger_element {item_id - 30000000} Button 0");
+        Tas::trigger_element_by_type(item_id - 30000000, "Button", 0);
     }
-    if item_index >= 40000000 && item_index < 50000000{
-        log(f"DEBUG activate button {item_index - 40000000} Button 0");
-        Tas::archipelago_activate_all_buttons(item_index-40000000);
-    }
-    if item_index >= 50000000 && item_index < 60000000{
-        log(f"DEBUG deactivate button {item_index - 50000000} Button 0");
-        Tas::archipelago_deactivate_all_buttons(item_index-50000000);
-    }
-    if item_index == 60000000{
+    if item_id == 60000000{
         Tas::archipelago_set_wall_jump_and_ledge_grab(0, 0, true);
     }
-    if item_index == 60000001{
+    if item_id == 60000001{
         Tas::archipelago_set_wall_jump_and_ledge_grab(1, -1, true);
     }
-    if item_index == 60000005{
+    if item_id == 60000005{
         Tas::set_kill_z(-60.);
     }
-    if item_index == 60000010{
+    if item_id == 60000010{
         Tas::archipelago_set_jump_pads(0);
     }
-    if item_index == 60000015{
+    if item_id == 60000015{
         Tas::archipelago_trigger_goal_animation();
+    }
+
+    if starting_index > 0 {
+        if item_id == 9999001{
+            Tas::set_fog_enabled(false, SETTINGS.fog_enabled);
+        }
+        if item_id == 9999002{
+            Tas::set_sky_light_enabled(false, SETTINGS.sky_light_enabled);
+        }
+        if item_id == 9999003{
+            Tas::set_time_dilation(0.5, SETTINGS.time_dilation);
+        }
+        if item_id == 9999004{
+            Tas::set_time_dilation(1.5, SETTINGS.time_dilation);
+        }
+        // if item_index == 9999005{
+        //     log("Setting sky time speed from item speed: 7500.");
+        //     Tas::set_sky_time_speed(7500., SETTINGS.sky_time_speed);
+        // }
+        if item_id == 9999006{
+            Tas::set_stars_brightness(1000., SETTINGS.day_stars_brightness);
+        }
+        if item_id == 9999007{
+            Tas::set_sun_redness(20., SETTINGS.sun_redness);
+            Tas::set_cloud_redness(20., SETTINGS.cloud_redness);
+        }
+        if item_id == 9999008{
+            Tas::set_cloud_speed(200., SETTINGS.cloud_speed);
+        }
+        if item_id == 9999009{
+            Tas::set_screen_percentage(10., SETTINGS.screen_percentage);
+        }
+    }
+
+}
+
+fn archipelago_trigger_one_cluster_now(){
+    if ARCHIPELAGO_STATE.triggering_clusters.len() == 0 {
+        return;
+    }
+    ARCHIPELAGO_STATE.triggering_clusters_counter += 1;
+    if ARCHIPELAGO_STATE.triggering_clusters_counter % 50 != 0 {
+        return;
+    }
+
+    let c = ARCHIPELAGO_STATE.triggering_clusters.get(0).unwrap();
+    ARCHIPELAGO_STATE.triggering_clusters.remove(0);
+    
+    let last_unlocked = ARCHIPELAGO_STATE.last_level_unlocked;
+    Tas::archipelago_raise_cluster(c - 2, last_unlocked - 1);
+
+    ARCHIPELAGO_STATE.last_level_unlocked = c;
+
+    if !ARCHIPELAGO_STATE.triggered_clusters.contains(c) {
+        ARCHIPELAGO_STATE.triggered_clusters.push(c);
     }
 }
 
 // triggers cluster clusterindex
-fn archipelago_received_item(index: int, item_index: int){
-    // log(f"Received item index {item_index} (cluster index {index})");
+fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
+    // log(f"Received item index {item_id} (cluster index {index})");
     if index <= ARCHIPELAGO_STATE.highest_index_received {
         // log(f"Ignoring duplicate or out-of-order item index {index} (highest received: {ARCHIPELAGO_STATE.highest_index_received})");
         return;
     }else{
-        if item_index < 10000000 {
+        if item_id < 10000000 {
             ARCHIPELAGO_STATE.highest_index_received = index;
         }
     }
 
-    if item_index == 9999980 {  // Vanilla Minigame
+    if item_id == 9999980 {  // Vanilla Minigame
         ARCHIPELAGO_STATE.unlock_vanilla_minigame = true;
         return;
     }
-    if item_index == 9999970 {  // Seeker Minigame
+    if item_id == 9999970 {  // Seeker Minigame
         ARCHIPELAGO_STATE.unlock_seeker_minigame = true;
         return;
     }
-    if item_index == 9999960 {  // Button Galore Minigame
+    if item_id == 9999960 {  // Button Galore Minigame
         ARCHIPELAGO_STATE.unlock_button_galore_minigame = true;
         return;
     }
-    if item_index == 9999950 {  // OG Randomizer Minigame
+    if item_id == 9999950 {  // OG Randomizer Minigame
         ARCHIPELAGO_STATE.unlock_OG_randomizer = true;
         return;
     }
 
-    ARCHIPELAGO_STATE.received_items.push(item_index);
+    ARCHIPELAGO_STATE.received_items.push(item_id);
     if ARCHIPELAGO_STATE.started < 2 {
         return;
     }
-    archipelago_process_item(item_index, false);
-
+    archipelago_process_item(item_id, starting_index, index);
 }
 
 fn archipelago_got_grass(){
@@ -375,16 +394,19 @@ fn archipelago_got_grass(){
 }
 
 fn archipelago_init(gamemode: int){
+
     ARCHIPELAGO_STATE.ap_connected = true;
     // log("Archipelago started, waiting for new game");
     ARCHIPELAGO_STATE.started = 0;
     ARCHIPELAGO_STATE.gamemode = gamemode;
-    // probably want to set speed to 0 here
+    ARCHIPELAGO_STATE.triggering_clusters.clear();
 
     if gamemode == 2 {
         Tas::set_level(30);
         // log("Setting level to 30 for Button Galore gamemode");
     }
+
+    Tas::archipelago_gather_all_buttons();
 }
 
 fn archipelago_start(){
@@ -428,13 +450,11 @@ fn archipelago_main_start(){
     archipelago_activate_stepped_on_platforms();
 
     ARCHIPELAGO_STATE.started = 2;
-
-    Tas::archipelago_activate_all_buttons(-1);
+    let mut i = 0;
     for item in ARCHIPELAGO_STATE.received_items {
-        archipelago_process_item(item, true);
+        archipelago_process_item(item, 0, i);
+        i += 1;
     }
-    Tas::archipelago_deactivate_all_buttons(-1);
-
 }
 
 fn archipelago_vanilla_start(){
@@ -456,38 +476,20 @@ fn archipelago_seeker_start(){
     let list = List::of(2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31);
 
     for i in list {
-        Tas::set_level(i - 2);
-        let last_unlocked = i - 1;
-        if last_unlocked == 7 {
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-        }
-        if last_unlocked == 10 {
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-        }
-        if last_unlocked == 18 {
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-        }
-        if last_unlocked == 26 {
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 2 });
-        }
-        if last_unlocked == 28 {
-            Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 1 });
-        }
-        Tas::trigger_element(ElementIndex { cluster_index: last_unlocked - 1, element_type: ElementType::Button, element_index: 0 });
+        ARCHIPELAGO_STATE.triggering_clusters.push(i);
     }
 
     for p in ARCHIPELAGO_STATE.seeker_pressed_platforms{
         let q = p;
         let cluster = (q - 10010000) / 100;
         let plat = (q - 10010000) % 100;
-        Tas::trigger_element(ElementIndex { cluster_index: cluster-1, element_type: ElementType::Platform, element_index: plat-1 });
+        Tas::trigger_element_by_type(cluster-1, "Platform", plat-1);
     }
     for p in ARCHIPELAGO_STATE.seeker_extra_pressed{
         let q = p;
         let cluster = (q - 10010000) / 100;
         let plat = (q - 10010000) % 100;
-        Tas::trigger_element(ElementIndex { cluster_index: cluster-1, element_type: ElementType::Platform, element_index: plat-1 });
+        Tas::trigger_element_by_type(cluster-1, "Platform", plat-1);
     }
 }
 
@@ -600,7 +602,7 @@ fn archipelago_activate_stepped_on_platforms(){
         let cluster = (id - 10010000) / 100;
         let plat = (id - 10010000) % 100;
 
-        Tas::trigger_element(ElementIndex { cluster_index: cluster-1, element_type: ElementType::Platform, element_index: plat-1 });
+        Tas::trigger_element_by_type(cluster-1, "Platform", plat-1);
     }
 }
 
@@ -642,9 +644,5 @@ fn archipelago_received_slot_data(key: string, value: string){
         for p in value.slice(1, -1).split(",") {
             ARCHIPELAGO_STATE.og_randomizer_order.push(p.parse_int().unwrap());
         }
-    }
-
-    if key == "death_link" && value == "1" {
-        Tas::set_death_link(true);
     }
 }
