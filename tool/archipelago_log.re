@@ -22,9 +22,9 @@ enum ArchipelagoLogLevel {
 static mut AP_LOG = ArchipelagoLog { messages: List::new() };
 
 static AP_ITEM_COLORS = List::of(
-    Color { red: 0.435, green: 0.502, blue: 0.722, alpha: 1.0 }, // normal
+    Color { red: 0.024, green: 0.851, blue: 0.851, alpha: 1.0 }, // normal
     Color { red: 0.659, green: 0.576, blue: 0.894, alpha: 1.0 }, // progressive
-    Color { red: 0.024, green: 0.851, blue: 0.851, alpha: 1.0 }, // useful
+    Color { red: 0.435, green: 0.502, blue: 0.722, alpha: 1.0 }, // useful
     Color { red: 1.000, green: 0.875, blue: 0.000, alpha: 1.0 }, // useful & progressive
     Color { red: 0.827, green: 0.443, blue: 0.400, alpha: 1.0 }, // trap
     Color { red: 1.000, green: 0.675, blue: 0.110, alpha: 1.0 }, // trap & progressive
@@ -75,6 +75,27 @@ fn ap_log(texts: List<ColorfulText>) {
 fn ap_log_info(text: string)    { ap_log(List::of(ColorfulText { text: text, color: COLOR_WHITE })); }
 fn ap_log_warning(text: string) { ap_log(List::of(ColorfulText { text: text, color: AP_COLOR_YELLOW })); }
 fn ap_log_error(text: string)   { ap_log(List::of(ColorfulText { text: text, color: AP_COLOR_RED })); }
+
+fn archipelago_received_death(source: string, cause: string) {
+    let mut message = List::new();
+    match cause {
+        "" => {
+            message.push(ColorfulText { text: source, color: COLOR_RED });
+            message.push(ColorfulText { text: " died", color: AP_COLOR_YELLOW });
+        },
+        _ => {
+            for part in cause.split(source) {
+                if part != "" {
+                    message.push(ColorfulText { text: part, color: AP_COLOR_YELLOW });
+                }
+                message.push(ColorfulText { text: source, color: COLOR_RED });
+            }
+            message.pop();
+        }
+    }
+
+    ap_log(message);
+}
 
 fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
     let mut message = List::new();

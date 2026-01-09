@@ -117,6 +117,18 @@ fn create_archipelago_connection_details_menu() -> Ui {
     }));
 
     if ARCHIPELAGO_STATE.ap_connected {
+        elements.push(UiElement::Chooser(Chooser {
+            label: Text { text: "Death Link" },
+            options: List::of(Text { text: "On" }, Text { text: "Off" }),
+            selected: if Tas::is_death_link_on() { 0 } else { 1 },
+            onchange: fn(index: int) {
+                if index == 0 {
+                    Tas::set_death_link(true);
+                } else {
+                    Tas::set_death_link(false);
+                }
+            },
+        }));
         elements.push(UiElement::Button(UiButton {
             label: Text { text: "Disconnect" },
             onclick: fn(label: Text) {
@@ -162,12 +174,12 @@ fn create_archipelago_connection_details_menu() -> Ui {
 fn create_archipelago_settings_menu() -> Ui {
     Ui::new("Settings", List::of(
         UiElement::FloatInput(FloatInput {
-            label: Text { text: "UI Scale (0.0 - 1.0)" },
+            label: Text { text: "UI Scale (0.2 - 1.0)" },
             input: f"{SETTINGS.ui_scale}",
             onclick: fn(input: string) {},
             onchange: fn(input: string) {
                 match input.parse_float() {
-                    Result::Ok(size) => if 0.0 <= size && size <= 1.0 {
+                    Result::Ok(size) => if 0.2 <= size && size <= 1.0 {
                         SETTINGS.ui_scale = size;
                         SETTINGS.store();
                     },
