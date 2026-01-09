@@ -297,10 +297,34 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
     }
 
     if starting_index > 0 {
-        log(f"Processing received item index {item_index} complete");
-        if item_index == 60000020{
+        if item_index == 9999001{
             Tas::set_fog_enabled(false, SETTINGS.fog_enabled);
-            log("Disabled fog for 60 seconds");
+        }
+        if item_index == 9999002{
+            Tas::set_sky_light_enabled(false, SETTINGS.sky_light_enabled);
+        }
+        if item_index == 9999003{
+            Tas::set_time_dilation(0.5, SETTINGS.time_dilation);
+        }
+        if item_index == 9999004{
+            Tas::set_time_dilation(1.5, SETTINGS.time_dilation);
+        }
+        // if item_index == 9999005{
+        //     log("Setting sky time speed from item speed: 7500.");
+        //     Tas::set_sky_time_speed(7500., SETTINGS.sky_time_speed);
+        // }
+        if item_index == 9999006{
+            Tas::set_stars_brightness(1000., SETTINGS.day_stars_brightness);
+        }
+        if item_index == 9999007{
+            Tas::set_sun_redness(20., SETTINGS.sun_redness);
+            Tas::set_cloud_redness(20., SETTINGS.cloud_redness);
+        }
+        if item_index == 9999008{
+            Tas::set_cloud_speed(200., SETTINGS.cloud_speed);
+        }
+        if item_index == 9999009{
+            Tas::set_screen_percentage(10., SETTINGS.screen_percentage);
         }
     }
 

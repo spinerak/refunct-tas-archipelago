@@ -2221,16 +2221,37 @@ fn open_recordings_folder() {
     }
 }
 #[rebo::function("Tas::set_lighting_casts_shadows")]
-fn set_lighting_casts_shadows(value: bool) {
+fn set_lighting_casts_shadows(value: bool, def: bool) {
     UWorld::set_lighting_casts_shadows(value);
+    if value == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(60));
+        UWorld::set_lighting_casts_shadows(def);
+    });
 }
 #[rebo::function("Tas::set_sky_light_enabled")]
-fn set_sky_light_enabled(enabled: bool) {
+fn set_sky_light_enabled(enabled: bool, def: bool) {
     UWorld::set_sky_light_enabled(enabled);
+    if enabled == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(60));
+        UWorld::set_sky_light_enabled(def);
+    });
 }
 #[rebo::function("Tas::set_time_dilation")]
-fn set_time_dilation(dilation: f32) {
+fn set_time_dilation(dilation: f32, def: f32) {
     UWorld::set_time_dilation(dilation);
+    if dilation == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(30));
+        UWorld::set_time_dilation(def);
+    });
 }
 #[rebo::function("Tas::set_gravity")]
 fn set_gravity(gravity: f32) {
@@ -2245,8 +2266,15 @@ fn set_time_of_day(time: f32) {
     UWorld::set_time_of_day(time);
 }
 #[rebo::function("Tas::set_sky_time_speed")]
-fn set_sky_time_speed(speed: f32) {
+fn set_sky_time_speed(speed: f32, def: f32) {
     UWorld::set_sky_time_speed(speed);
+    if speed == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(60));
+        UWorld::set_sky_time_speed(def);
+    });
 }
 #[rebo::function("Tas::set_sky_light_brightness")]
 fn set_sky_light_brightness(brightness: f32) {
@@ -2257,8 +2285,15 @@ fn set_sky_light_intensity(intensity: f32) {
     UWorld::set_sky_light_intensity(intensity);
 }
 #[rebo::function("Tas::set_stars_brightness")]
-fn set_stars_brightness(time_of_day: TimeOfDay, brightness: f32) {
-    UWorld::set_stars_brightness(time_of_day, brightness);
+fn set_stars_brightness(brightness: f32, def: f32) {
+    UWorld::set_stars_brightness(brightness);
+    if brightness == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(60));
+        UWorld::set_stars_brightness(def);
+    });
 }
 #[rebo::function("Tas::set_fog_enabled")]
 fn set_fog_enabled(enabled: bool, def: bool) {
@@ -2272,20 +2307,41 @@ fn set_fog_enabled(enabled: bool, def: bool) {
     });
 }
 #[rebo::function("Tas::set_sun_redness")]
-fn set_sun_redness(redness: f32) {
+fn set_sun_redness(redness: f32, def: f32) {
     UWorld::set_sun_redness(redness);
+    if redness == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(60));
+        UWorld::set_sun_redness(def);
+    });
 }
 #[rebo::function("Tas::set_cloud_redness")]
-fn set_cloud_redness(red: f32) {
+fn set_cloud_redness(red: f32, def: f32) {
     UWorld::set_cloud_redness(red);
+    if red == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(60));
+        UWorld::set_cloud_redness(def);
+    });
 }
 #[rebo::function("Tas::set_reflection_render_scale")]
 fn set_reflection_render_scale(render_scale: i32) {
     UWorld::set_reflection_render_scale(render_scale);
 }
 #[rebo::function("Tas::set_cloud_speed")]
-fn set_cloud_speed(speed: f32) {
+fn set_cloud_speed(speed: f32, def: f32) {
     UWorld::set_cloud_speed(speed);
+    if speed == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(60));
+        UWorld::set_cloud_speed(def);
+    });
 }
 #[rebo::function("Tas::set_outro_time_dilation")]
 fn set_outro_time_dilation(dilation: f32) {
@@ -2304,8 +2360,15 @@ fn set_gamma(value: f32) {
     UEngine::set_gamma(value);
 }
 #[rebo::function("Tas::set_screen_percentage")]
-fn set_screen_percentage(percentage: f32) {
+fn set_screen_percentage(percentage: f32, def: f32) {
     UWorld::set_screen_percentage(percentage);
+    if percentage == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(30));
+        UWorld::set_screen_percentage(def);
+    });
 }
 #[rebo::function("Tas::set_reticle_width")]
 fn set_reticle_width(width: f32) {
