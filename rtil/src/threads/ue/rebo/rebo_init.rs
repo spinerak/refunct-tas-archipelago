@@ -5,7 +5,8 @@ use std::io::{ErrorKind, Write};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
-use archipelago_rs::protocol::{ClientMessage, ServerMessage, BounceData, DeathLink, GetDataPackage, PrintJSON, JSONColor, JSONMessagePart, NetworkItem, ItemsHandlingFlags};
+use std::sync::Arc;
+use archipelago_rs::protocol::{ClientMessage, ServerMessage, BounceData, DeathLink, GetDataPackage, RichPrint, RichMessageColor, RichMessagePart, NetworkItem, ItemsHandlingFlags};
 use crossbeam_channel::{Sender, TryRecvError};
 use image::Rgba;
 use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span, Stdlib, Value, VmContext};
@@ -333,33 +334,33 @@ pub struct ReboNetworkItem {
 }
 
 impl ReboPrintJSONMessage {
-    pub fn from(print_json: &PrintJSON) -> ReboPrintJSONMessage {
+    pub fn from(print_json: &RichPrint) -> ReboPrintJSONMessage {
         let _type: String;
-        let _data: &Vec<JSONMessagePart>;
+        let _data: &Vec<RichMessagePart>;
 
         let (_type, _data) = match print_json {
-            PrintJSON::ItemSend { data, .. } => (String::from("ItemSend"), data),
-            PrintJSON::ItemCheat { data, .. } => (String::from("ItemCheat"), data),
-            PrintJSON::Hint { data, .. } => (String::from("Hint"), data),
-            PrintJSON::Join { data, .. } => (String::from("Join"), data),
-            PrintJSON::Part { data, .. } => (String::from("Part"), data),
-            PrintJSON::Chat { data, .. } => (String::from("Chat"), data),
-            PrintJSON::ServerChat { data, .. } => (String::from("ServerChat"), data),
-            PrintJSON::Tutorial { data, .. } => (String::from("Tutorial"), data),
-            PrintJSON::TagsChanged { data, .. } => (String::from("TagsChanged"), data),
-            PrintJSON::CommandResult { data, .. } => (String::from("CommandResult"), data),
-            PrintJSON::AdminCommandResult { data, .. } => (String::from("AdminCommandResult"), data),
-            PrintJSON::Goal { data, .. } => (String::from("Goal"), data),
-            PrintJSON::Release { data, .. } => (String::from("Release"), data),
-            PrintJSON::Collect { data, .. } => (String::from("Collect"), data),
-            PrintJSON::Countdown { data, .. } => (String::from("Countdown"), data),
-            PrintJSON::Unknown { data, .. } => (String::from("Text"), data),
+            RichPrint::ItemSend { data, .. } => (String::from("ItemSend"), data),
+            RichPrint::ItemCheat { data, .. } => (String::from("ItemCheat"), data),
+            RichPrint::Hint { data, .. } => (String::from("Hint"), data),
+            RichPrint::Join { data, .. } => (String::from("Join"), data),
+            RichPrint::Part { data, .. } => (String::from("Part"), data),
+            RichPrint::Chat { data, .. } => (String::from("Chat"), data),
+            RichPrint::ServerChat { data, .. } => (String::from("ServerChat"), data),
+            RichPrint::Tutorial { data, .. } => (String::from("Tutorial"), data),
+            RichPrint::TagsChanged { data, .. } => (String::from("TagsChanged"), data),
+            RichPrint::CommandResult { data, .. } => (String::from("CommandResult"), data),
+            RichPrint::AdminCommandResult { data, .. } => (String::from("AdminCommandResult"), data),
+            RichPrint::Goal { data, .. } => (String::from("Goal"), data),
+            RichPrint::Release { data, .. } => (String::from("Release"), data),
+            RichPrint::Collect { data, .. } => (String::from("Collect"), data),
+            RichPrint::Countdown { data, .. } => (String::from("Countdown"), data),
+            RichPrint::Unknown { data, .. } => (String::from("Text"), data),
         };
 
         let (_receiving, _item) = match print_json {
-            PrintJSON::ItemSend { receiving, item, .. }
-            | PrintJSON::ItemCheat { receiving, item, .. }
-            | PrintJSON::Hint { receiving, item, .. } => {
+            RichPrint::ItemSend { receiving, item, .. }
+            | RichPrint::ItemCheat { receiving, item, .. }
+            | RichPrint::Hint { receiving, item, .. } => {
                 (Some(*receiving as isize), Some(ReboNetworkItem::from(item)))
             },
             _ => (None, None),
@@ -375,56 +376,56 @@ impl ReboPrintJSONMessage {
 }
 
 impl ReboJSONMessagePart {
-    pub fn from(json_message_part: &JSONMessagePart) -> ReboJSONMessagePart {
+    pub fn from(json_message_part: &RichMessagePart) -> ReboJSONMessagePart {
         match json_message_part {
-            JSONMessagePart::PlayerId { text, .. } => ReboJSONMessagePart {
+            RichMessagePart::PlayerId { id, .. } => ReboJSONMessagePart {
                 _type: String::from("player_id"),
-                text: Some(String::from(text)),
+                text: Some(id.to_string()),
                 color: None, flags: None, player: None,
             },
-            JSONMessagePart::PlayerName { text, .. } => ReboJSONMessagePart {
+            RichMessagePart::PlayerName { text, .. } => ReboJSONMessagePart {
                 _type: String::from("player_name"),
                 text: Some(String::from(text)),
                 color: None, flags: None, player: None,
             },
-            JSONMessagePart::ItemId { text, flags, player, .. } => ReboJSONMessagePart {
+            RichMessagePart::ItemId { id, flags, player, .. } => ReboJSONMessagePart {
                 _type: String::from("item_id"),
-                text: Some(String::from(text)),
+                text: Some(id.to_string()),
                 flags: Some(Into::<u8>::into(flags.clone()) as usize),
                 player: Some(*player as isize),
                 color: None,
             },
-            JSONMessagePart::ItemName { text, flags, player, .. } => ReboJSONMessagePart {
+            RichMessagePart::ItemName { text, flags, player, .. } => ReboJSONMessagePart {
                 _type: String::from("item_name"),
                 text: Some(String::from(text)),
                 flags: Some(Into::<u8>::into(flags.clone()) as usize),
                 player: Some(*player as isize),
                 color: None,
             },
-            JSONMessagePart::LocationId { text, player, .. } => ReboJSONMessagePart {
+            RichMessagePart::LocationId { id, player, .. } => ReboJSONMessagePart {
                 _type: String::from("location_id"),
-                text: Some(String::from(text)),
+                text: Some(id.to_string()),
                 player: Some(*player as isize),
                 color: None, flags: None,
             },
-            JSONMessagePart::LocationName { text, player, .. } => ReboJSONMessagePart {
+            RichMessagePart::LocationName { text, player, .. } => ReboJSONMessagePart {
                 _type: String::from("location_name"),
                 text: Some(String::from(text)),
                 player: Some(*player as isize),
                 color: None, flags: None,
             },
-            JSONMessagePart::EntranceName { text, .. } => ReboJSONMessagePart {
+            RichMessagePart::EntranceName { text, .. } => ReboJSONMessagePart {
                 _type: String::from("entrance_name"),
                 text: Some(String::from(text)),
                 color: None, flags: None, player: None,
             },
-            JSONMessagePart::Color { text, color, .. } => ReboJSONMessagePart {
+            RichMessagePart::Color { text, color, .. } => ReboJSONMessagePart {
                 _type: String::from("color"),
                 text: Some(String::from(text)),
                 color: Some(json_color_to_string(color)),
                 flags: None, player: None,
             },
-            JSONMessagePart::Text { text, .. } => ReboJSONMessagePart {
+            RichMessagePart::Text { text, .. } => ReboJSONMessagePart {
                 _type: String::from("text"),
                 text: Some(String::from(text)),
                 color: None, flags: None, player: None,
@@ -444,26 +445,26 @@ impl ReboNetworkItem {
     }
 }
 
-fn json_color_to_string(json_color: &JSONColor) -> String {
+fn json_color_to_string(json_color: &RichMessageColor) -> String {
     match json_color {
-        JSONColor::Bold => "bold",
-        JSONColor::Underline => "underline",
-        JSONColor::Black => "black",
-        JSONColor::Red => "red",
-        JSONColor::Green => "green",
-        JSONColor::Yellow => "yellow",
-        JSONColor::Blue => "blue",
-        JSONColor::Magenta => "magenta",
-        JSONColor::Cyan => "cyan",
-        JSONColor::White => "white",
-        JSONColor::BlackBg => "black_bg",
-        JSONColor::RedBg => "red_bg",
-        JSONColor::GreenBg => "green_bg",
-        JSONColor::YellowBg => "yellow_bg",
-        JSONColor::BlueBg => "blue_bg",
-        JSONColor::MagentaBg => "magenta_bg",
-        JSONColor::CyanBg => "cyan_bg",
-        JSONColor::WhiteBg => "white_bg",
+        RichMessageColor::Bold => "bold",
+        RichMessageColor::Underline => "underline",
+        RichMessageColor::Black => "black",
+        RichMessageColor::Red => "red",
+        RichMessageColor::Green => "green",
+        RichMessageColor::Yellow => "yellow",
+        RichMessageColor::Blue => "blue",
+        RichMessageColor::Magenta => "magenta",
+        RichMessageColor::Cyan => "cyan",
+        RichMessageColor::White => "white",
+        RichMessageColor::BlackBg => "black_bg",
+        RichMessageColor::RedBg => "red_bg",
+        RichMessageColor::GreenBg => "green_bg",
+        RichMessageColor::YellowBg => "yellow_bg",
+        RichMessageColor::BlueBg => "blue_bg",
+        RichMessageColor::MagentaBg => "magenta_bg",
+        RichMessageColor::CyanBg => "cyan_bg",
+        RichMessageColor::WhiteBg => "white_bg",
     }.to_string()
 }
 
@@ -705,9 +706,9 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     let msg = format!("Archipelago ServerMessage::Print: {:?}", text);
                     log!("{}", msg);
                 },
-                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::PrintJSON(json))) => {
+                Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::RichPrint(json))) => {
                     log!("PrintJSON message");
-                    let msg = format!("Archipelago ServerMessage::Print: {:?}", json);
+                    let msg = format!("Archipelago ServerMessage::PrintJSON: {:?}", json);
                     log!("{}", msg);
 
                     archipelago_print_json_message(vm, ReboPrintJSONMessage::from(&json))?;
@@ -719,10 +720,10 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
 
                     for (game_name, game_data) in pkg.data.games {
                         for (item_name, item_id) in game_data.item_name_to_id {
-                            archipelago_register_game_item(vm, game_name.clone(), item_name.clone(), item_id.to_string())?;
+                            archipelago_register_game_item(vm, game_name.clone(), Arc::unwrap_or_clone(item_name), item_id.to_string())?;
                         }
                         for (location_name, location_id) in game_data.location_name_to_id {
-                            archipelago_register_game_location(vm, game_name.clone(), location_name.clone(), location_id.to_string())?;
+                            archipelago_register_game_location(vm, game_name.clone(), Arc::unwrap_or_clone(location_name), location_id.to_string())?;
                         }
                     }
                 },
