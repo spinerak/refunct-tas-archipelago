@@ -1,24 +1,27 @@
 
 use std::error::Error;
 use std::thread;
-use archipelago_rs::client::{ArchipelagoClient, ArchipelagoClientReceiver, ArchipelagoClientSender};
-use archipelago_rs::protocol::{ClientStatus, ServerMessage, Bounce, BounceData, ClientMessage, DeathLink, ConnectUpdate}; // adjust path if needed
+use archipelago_rs::client::{ArchipelagoClient, ArchipelagoClientReceiver, ArchipelagoError};
+use archipelago_rs::protocol::{ClientStatus, ServerMessage}; // adjust path if needed
 use crossbeam_channel::Sender;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::task::AbortHandle;
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago};
+use crate::native::{BoolValueWrapper};
+
+use crate::native::UeScope;
+
+
 
 pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_rx: UnboundedReceiver<ReboToArchipelago>) {
     thread::spawn(move || {
         loop {
             let future = async {
-                let mut sender: Option<ArchipelagoClientSender> = None;
-                let mut current_slot: Option<String> = None;
+                let mut sender = None;
                 let mut receiver_abort_handle: Option<AbortHandle> = None;
                 loop {
                     match rebo_archipelago_rx.recv().await.unwrap() {
                         ReboToArchipelago::Connect { server_and_port, game, slot, password, items_handling, tags } => {
-                            current_slot = Some(slot.clone());
                             if let Some(receiver) = receiver_abort_handle {
                                 receiver.abort();
                             }
@@ -43,38 +46,6 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                                 // Or return an error if appropriate:
                                 // return Err(MyError::SenderNotAvailable);
                             }  
-                        },
-                        ReboToArchipelago::SendDeath => {
-                            let slot: String;
-                            match &current_slot {
-                                None => slot = String::from("null"),
-                                Some(s) => slot = s.clone()
-                            }
-
-                            let msgs = vec![
-                                format!("{} can't swim", slot),
-                                format!("{} drowned", slot),
-                                format!("{} got their feet wet", slot),
-                                format!("{} sank like a rock", slot),
-                                format!("{} needs a towel", slot),
-                                format!("{} used splash", slot),
-                                format!("{} can't breathe under water", slot),
-                            ];
-
-                            if let Some(sender) = sender.as_mut() {
-                                sender.send(ClientMessage::Bounce(Bounce {
-                                    games: None,
-                                    slots: None,
-                                    tags: vec![String::from("DeathLink")],
-                                    data: BounceData::DeathLink(DeathLink {
-                                        time: SystemTime::now(),
-                                        source: slot.clone(),
-                                        cause: msgs.choose(&mut rand::rng()).map(|s|{s.clone()}),
-                                    })
-                                })).await?;
-                            } else {
-                                log!("Sender is None, cannot send message");
-                            }
                         },
                         ReboToArchipelago::Disconnect => {
                             drop(sender.take());
