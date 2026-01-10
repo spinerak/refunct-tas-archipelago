@@ -3,7 +3,7 @@ use std::fmt::{Formatter, Pointer};
 use std::ops::Deref;
 use std::sync::Mutex;
 use std::ptr;
-use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld};
+use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld, DynamicValue};
 use crate::native::reflection::{AActor, ActorWrapper, UeObjectWrapper};
 use crate::native::ue::{FRotator, FVector, FName};
 use crate::native::uworld::{ESpawnActorCollisionHandlingMethod, ESpawnActorNameMode, FActorSpawnParameters};
@@ -196,6 +196,70 @@ impl<'a> CubeWrapper<'a> {
     pub fn destroy(&self) {
         unsafe {
             UWorld::destroy_actor(self.base.as_ptr() as *const AActor, true, true);
+        }
+    }
+
+    pub fn set_color(&self, r: f32, g: f32, b: f32) {
+        self.set_mesh_color(r, g, b);
+        self.set_light_color(r, g, b);
+    }
+
+    fn set_mesh_color(&self, r: f32, g: f32, b: f32) {
+        let mesh: ObjectWrapper = self.base.get_field("Mesh").unwrap();
+
+        let create_dynamic = mesh.class()
+            .find_function("CreateDynamicMaterialInstance")
+            .unwrap();
+
+        let params = create_dynamic.create_argument_struct();
+        params.get_field("ElementIndex").unwrap::<&Cell<i32>>().set(0);
+        unsafe { create_dynamic.call(mesh.as_ptr(), &params); }
+
+        let dynamic_mat: ObjectWrapper = params.get_field("ReturnValue").unwrap();
+
+        let set_vector = dynamic_mat.class()
+            .find_function("SetVectorParameterValue")
+            .unwrap();
+
+        let arg_struct = set_vector.create_argument_struct();
+
+        let fname = FName::from("GlowColor");
+        unsafe {
+            let base_ptr = arg_struct.as_ptr() as *mut u8;
+            let name_field = arg_struct.get_field("ParameterName");
+            let offset = name_field.prop().offset();
+            let fname_ptr = base_ptr.offset(offset) as *mut FName;
+            ptr::write(fname_ptr, fname);
+        }
+
+        let value: StructValueWrapper = arg_struct.get_field("Value").unwrap();
+        value.get_field("R").unwrap::<&Cell<f32>>().set(r * 20.0);
+        value.get_field("G").unwrap::<&Cell<f32>>().set(g * 20.0);
+        value.get_field("B").unwrap::<&Cell<f32>>().set(b * 20.0);
+        value.get_field("A").unwrap::<&Cell<f32>>().set(1.0);
+
+        unsafe { set_vector.call(dynamic_mat.as_ptr(), &arg_struct); }
+    }
+
+    fn set_light_color(&self, r: f32, g: f32, b: f32) {
+        if let Some(light) = self.base.get_field("PointLight1").unwrap_nullable::<ObjectWrapper>() {
+            let set_light_color = light.class()
+                .find_function("SetLightColor")
+                .unwrap();
+
+            let params = set_light_color.create_argument_struct();
+            let color: StructValueWrapper = params.get_field("NewLightColor").unwrap();
+
+            color.get_field("R").unwrap::<&Cell<f32>>().set(r);
+            color.get_field("G").unwrap::<&Cell<f32>>().set(g);
+            color.get_field("B").unwrap::<&Cell<f32>>().set(b);
+            color.get_field("A").unwrap::<&Cell<f32>>().set(1.0);
+
+            unsafe {
+                set_light_color.call(light.as_ptr(), &params);
+            }
+        } else {
+            log!("Warning: No light component found on cube {}", self.as_ptr().addr());
         }
     }
 }

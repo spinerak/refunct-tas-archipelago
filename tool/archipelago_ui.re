@@ -24,11 +24,30 @@ static AP_COLOR_GRAY_BG = Color { red: 0., green: 0., blue: 0., alpha: 0.6 };
 static AP_COLOR_CLEAR   = Color { red: 0., green: 0., blue: 0., alpha: 0.0 };
 
 fn create_archipelago_menu() -> Ui {
-    for x in List::of(-2250, -2150, -2050, -1950, -1850, -1750, -1650, -1550, -1450, -1350) {
-        for y in List::of(-900, -800, -700, -600, -500, -400) {
-            Tas::spawn_cube(x.to_float(), y.to_float(), 0.);
+    let mut cubes = List::new();
+//    for x in List::of(-2250, -2150, -2050, -1950, -1850, -1750, -1650, -1550, -1450, -1350) {
+//        for y in List::of(-900, -800, -700, -600, -500, -400) {
+    for x in List::of(-1850) {
+        for y in List::of(-600) {
+            let index = Tas::spawn_cube(x.to_float(), y.to_float(), 0.);
+            Tas::set_cube_color(index, 0., 1., 0.);
+            Tas::set_cube_collision(index, false);
+            cubes.push(index);
         }
     }
+
+//    let mut i = 0;
+//    for cube_id in cubes {
+//        if i % 5 != 0 {
+//        }
+//        i += 1;
+//    }
+//
+//    let cubes = Tas::get_all_cubes();
+//    log(f"{cubes}");
+//    for cube in cubes {
+//        Tas::set_cube_collision(cube, false);
+//    }
 
     let elements = List::new();
 
