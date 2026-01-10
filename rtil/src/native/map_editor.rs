@@ -189,7 +189,7 @@ impl<'a> CubeWrapper<'a> {
         })
     }
 
-    pub fn set_colllision(&self, enabled: bool) {
+    pub fn set_collision(&self, enabled: bool) {
         AActor::set_actor_enable_collision(self.base.as_ptr(), enabled);
     }
 

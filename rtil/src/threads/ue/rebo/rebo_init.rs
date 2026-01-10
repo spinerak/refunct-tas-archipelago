@@ -1256,7 +1256,7 @@ fn set_cube_collision(internal_index: i32, collision_enabled: bool) {
     UeScope::with(|scope| {
         if let Some(item) = scope.object_array().try_get(internal_index) {
             if let Some(cube) = item.object().try_upcast::<CubeWrapper>() {
-                cube.set_colllision(collision_enabled);
+                cube.set_collision(collision_enabled);
             }
         }
     });
