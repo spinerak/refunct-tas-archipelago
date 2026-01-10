@@ -1,18 +1,14 @@
 use std::time::SystemTime;
 use std::error::Error;
 use std::thread;
-use std::sync::atomic::{AtomicPtr, Ordering};
-use archipelago_rs::client::{ArchipelagoClient, ArchipelagoClientReceiver, ArchipelagoClientSender, ArchipelagoError};
+use archipelago_rs::client::{ArchipelagoClient, ArchipelagoClientReceiver, ArchipelagoClientSender};
 use archipelago_rs::protocol::{ClientStatus, ServerMessage, Bounce, BounceData, ClientMessage, DeathLink, ConnectUpdate}; // adjust path if needed
 use crossbeam_channel::Sender;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::task::AbortHandle;
 use rand::seq::IndexedRandom;
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago};
-use crate::native::{BoolValueWrapper};
-use crate::native::UeScope;
 
-static mut CURRENT_SLOT: Option<String> = None;
 
 pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_rx: UnboundedReceiver<ReboToArchipelago>) {
     thread::spawn(move || {
@@ -24,7 +20,7 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                 loop {
                     match rebo_archipelago_rx.recv().await.unwrap() {
                         ReboToArchipelago::Connect { server_and_port, game, slot, password, items_handling, tags } => {
-                            unsafe { CURRENT_SLOT = Some(slot.clone()); }
+                            current_slot = Some(slot.clone());
                             if let Some(receiver) = receiver_abort_handle {
                                 receiver.abort();
                             }
@@ -60,11 +56,9 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                         },
                         ReboToArchipelago::SendDeath => {
                             let slot: String;
-                            unsafe {
-                                match &CURRENT_SLOT {
-                                    None => slot = String::from("null"),
-                                    Some(s) => slot = s.clone()
-                                }
+                            match &current_slot {
+                                None => slot = String::from("null"),
+                                Some(s) => slot = s.clone()
                             }
 
                             let msgs = vec![
