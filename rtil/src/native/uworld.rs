@@ -196,7 +196,7 @@ impl UWorld {
             key.get_field("Value").unwrap::<&Cell<f32>>().set(red);
         }
     }
-    pub fn set_stars_brightness(time: TimeOfDay, brightness: f32) {
+    pub fn set_stars_brightness(brightness: f32) {
         let obj = unsafe { ObjectWrapper::new(UMyGameInstance::get_umygameinstance() as *mut UObject) };
         let keys = obj.get_field("WorldReferences")
             .field("TimeOfDay")
@@ -204,10 +204,9 @@ impl UWorld {
             .field("FloatCurve")
             .field("Keys")
             .unwrap::<ArrayWrapper<StructValueWrapper>>();
-        match time {
-            TimeOfDay::Day => keys.get(0).unwrap().get_field("Value").unwrap::<&Cell<f32>>().set(brightness),
-            TimeOfDay::Night => keys.get(1).unwrap().get_field("Value").unwrap::<&Cell<f32>>().set(brightness),
-        }
+        keys.get(0).unwrap().get_field("Value").unwrap::<&Cell<f32>>().set(brightness);
+        keys.get(1).unwrap().get_field("Value").unwrap::<&Cell<f32>>().set(brightness);
+        
     }
 
     pub fn set_sky_light_intensity(intensity: f32) {
