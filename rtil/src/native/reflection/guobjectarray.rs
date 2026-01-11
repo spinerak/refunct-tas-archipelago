@@ -78,8 +78,17 @@ impl UeScope {
         Ok(item.object())
     }
     pub fn get<'a, T: UeObjectWrapperType>(&'a self, index: impl Borrow<ObjectIndex<T>>) -> T::UeObjectWrapper<'a> {
-        let object = self.resolve_untyped_object_index(index.borrow().index).unwrap();
-        object.upcast()
+        let idx = index.borrow();
+        match self.resolve_untyped_object_index(idx.index) {
+            Ok(object) => object.upcast(),
+            Err(GetUeObjectError::Invalidated) => {
+                log!(
+                    "UeScope::get: object invalidated (internal_index={}, serial_number={})",
+                    idx.index.internal_index, idx.index.serial_number
+                );
+                unsafe { std::mem::zeroed() }
+            }
+        }
     }
 }
 
