@@ -13,8 +13,7 @@ use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use websocket::{ClientBuilder, Message, OwnedMessage, WebSocketError};
-use crate::log;
-use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX};
+use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX, CubeWrapper};
 use crate::native::{try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
 use protocol::{Request, Response};
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo, archipelago};
@@ -90,6 +89,17 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(project)
         .add_function(get_viewport_size)
         .add_function(get_text_size)
+        .add_function(spawn_cube)
+        .add_function(destroy_cube)
+        .add_function(get_vanilla_cube)
+        .add_function(set_cube_collision)
+        .add_function(set_cube_color)
+        .add_function(set_cube_color_random)
+        .add_function(set_cube_location)
+        .add_function(set_cube_scale)
+        .add_function(get_vanilla_cubes)
+        .add_function(get_non_vanilla_cubes)
+        .add_function(get_all_cubes)
         .add_function(spawn_pawn)
         .add_function(destroy_pawn)
         .add_function(move_pawn)
@@ -136,8 +146,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(apply_map_cluster_speeds)
         .add_function(get_looked_at_element_index)
         .add_function(get_element_bounds)
-        .add_function(enable_collision)
-        .add_function(disable_collision)
+        .add_function(enable_player_collision)
+        .add_function(disable_player_collision)
         .add_function(exit_water)
         .add_function(respawn)        
         .add_function(is_death_link_on)
@@ -533,7 +543,12 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
         let evt = YIELDER.with(|yielder| unsafe { (*yielder.get()).suspend(suspend) });
         match evt {
             UeEvent::Tick => to_be_returned = Some(Step::Tick),
-            UeEvent::ElementPressed(index) => element_pressed(vm, index)?,
+            UeEvent::ElementPressed(index) => {
+                if index.element_type == ElementType::Cube && index.cluster_index == 9999 {
+                    maybe_remove_extra_cube(index.element_index as i32);
+                }
+                element_pressed(vm, index)?
+            },
             UeEvent::ElementReleased(index) => element_released(vm, index)?,
             UeEvent::NothingHappened => to_be_returned = Some(Step::Yield),
             UeEvent::NewGame => to_be_returned = Some(Step::NewGame),
@@ -1216,6 +1231,123 @@ fn get_viewport_size() -> Size {
     let (width, height) = AMyCharacter::get_player().get_viewport_size();
     Size { width, height }
 }
+
+#[rebo::function("Tas::spawn_cube")]
+fn spawn_cube(loc: Location) -> i32 {
+    match CubeWrapper::spawn(loc.x, loc.y, loc.z) {
+        Ok(cube) => {
+            let index = cube.internal_index();
+            STATE.lock().unwrap().as_mut().unwrap().extra_cubes.push(index);
+            log!("Successfully spawned cube at {:p} with internal index {}", cube.as_ptr(), cube.internal_index());
+            index
+        }
+        Err(e) => {
+            // TODO: should we just panic here???
+            log!("Failed to spawn cube: {}", e);
+            -1
+        }
+    }
+}
+
+#[rebo::function("Tas::get_vanilla_cubes")]
+fn get_vanilla_cubes() -> Vec<i32> {
+    UeScope::with(|scope| {
+        LEVELS.lock().unwrap().iter().flat_map(|level| {
+            level.cubes.iter().map(|cube| scope.get(cube).internal_index()).collect::<Vec<i32>>()
+        }).collect::<Vec<i32>>()
+    })
+}
+
+#[rebo::function("Tas::get_non_vanilla_cubes")]
+fn get_non_vanilla_cubes() -> Vec<i32> {
+    STATE.lock().unwrap().as_ref().unwrap().extra_cubes.clone()
+}
+
+#[rebo::function("Tas::get_all_cubes")]
+fn get_all_cubes() -> Vec<i32> {
+    let mut cubes = UeScope::with(|scope| {
+        LEVELS.lock().unwrap().iter().flat_map(|level| {
+            level.cubes.iter().map(|cube| scope.get(cube).internal_index()).collect::<Vec<i32>>()
+        }).collect::<Vec<i32>>()
+    });
+    cubes.extend(&STATE.lock().unwrap().as_ref().unwrap().extra_cubes);
+    cubes
+}
+
+fn find_cube_and<R, F: FnOnce(&CubeWrapper) -> R>(internal_index: i32, f: F) -> bool {
+    UeScope::with(|scope| {
+        if let Some(item) = scope.object_array().try_get(internal_index) {
+            if let Some(cube) = item.object().try_upcast::<CubeWrapper>() {
+                f(&cube);
+                return true;
+            }
+        }
+        return false;
+    })
+}
+
+#[rebo::function("Tas::get_vanilla_cube")]
+fn get_vanilla_cube(cluster: usize, element_index: usize) -> i32 {
+    UeScope::with(|scope| {
+        for (c, level) in LEVELS.lock().unwrap().iter().enumerate() {
+            if c != cluster { continue; }
+
+            for (i, cube_index) in level.cubes.iter().enumerate() {
+                if i == element_index { return scope.get(cube_index).internal_index(); }
+            }
+        }
+
+        return -1;
+    })
+}
+
+#[rebo::function("Tas::set_cube_collision")]
+fn set_cube_collision(internal_index: i32, collision_enabled: bool) {
+    find_cube_and(internal_index, |cube| cube.set_collision(collision_enabled));
+}
+
+#[rebo::function("Tas::set_cube_color")]
+fn set_cube_color(internal_index: i32, c: Color) {
+    // Sadly alpha seems to be ignored, so we're just going to silently drop it
+    find_cube_and(internal_index, |cube| cube.set_color(c.red, c.green, c.blue));
+}
+
+#[rebo::function("Tas::set_cube_color_random")]
+fn set_cube_color_random(internal_index: i32) {
+    find_cube_and(internal_index, |cube| {
+        let r = rand::random::<f32>();
+        let g = rand::random::<f32>();
+        let b = rand::random::<f32>();
+        cube.set_color(r, g, b);
+    });
+}
+
+#[rebo::function("Tas::set_cube_location")]
+fn set_cube_location(internal_index: i32, loc: Location) {
+    find_cube_and(internal_index, |cube| cube.set_location(loc.x, loc.y, loc.z));
+}
+
+#[rebo::function("Tas::set_cube_scale")]
+fn set_cube_scale(internal_index: i32, s: f32) {
+    find_cube_and(internal_index, |cube| cube.set_scale(s));
+}
+
+pub fn maybe_remove_extra_cube(internal_index: i32) -> bool {
+    if let Some(state) = STATE.lock().unwrap().as_mut() {
+        if let Some(pos) = state.extra_cubes.iter().position(|i| *i == internal_index) {
+            state.extra_cubes.remove(pos);
+            return true;
+        }
+    }
+    false
+}
+
+#[rebo::function("Tas::destroy_cube")]
+fn destroy_cube(internal_index: i32) {
+    maybe_remove_extra_cube(internal_index);
+    find_cube_and(internal_index, |cube| cube.destroy());
+}
+
 #[rebo::function("Tas::spawn_pawn")]
 fn spawn_pawn(loc: Location, rot: Rotation) -> u32 {
     let my_character = UWorld::spawn_amycharacter(loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll);
@@ -2216,13 +2348,13 @@ fn get_element_bounds(index: ElementIndex) -> Bounds {
     })
 }
 
-#[rebo::function("Tas::enable_collision")]
-fn enable_collision() {
+#[rebo::function("Tas::enable_player_collision")]
+fn enable_player_collision() {
     AActor::set_actor_enable_collision(AMyCharacter::get_player().as_ptr() as *const AActor, true);
 }
 
-#[rebo::function("Tas::disable_collision")]
-fn disable_collision() {
+#[rebo::function("Tas::disable_player_collision")]
+fn disable_player_collision() {
     AActor::set_actor_enable_collision(AMyCharacter::get_player().as_ptr() as *const AActor, false);
 }
 

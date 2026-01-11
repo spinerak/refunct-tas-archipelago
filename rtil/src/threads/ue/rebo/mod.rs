@@ -18,7 +18,7 @@ use crate::native::{AMyCharacter, FPlatformMisc, Hooks, UTexture2D, UWorld, REBO
 use crate::threads::ue::{Suspend, UeEvent};
 use crate::threads::ue::iced_ui::ReboUi;
 
-mod rebo_init;
+pub(crate) mod rebo_init;
 mod livesplit;
 
 type Coroutine = corosensei::Coroutine<UeEvent, Suspend, ()>;
@@ -47,6 +47,7 @@ struct State {
     pressed_keys: HashSet<i32>,
     websocket: Option<Client<Box<dyn NetworkStream + Send>>>,
     local_time_offset: i32,
+    extra_cubes: Vec<i32>,
     pawns: HashMap<u32, AMyCharacter>,
     pawn_id: u32,
     minimap_texture: Option<UTexture2D>,
@@ -169,6 +170,7 @@ pub fn init(
         pressed_keys: HashSet::new(),
         websocket: None,
         local_time_offset: 0,
+        extra_cubes: Vec::new(),
         pawns: HashMap::new(),
         pawn_id: 0,
         minimap_texture: None,

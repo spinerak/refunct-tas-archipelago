@@ -9,7 +9,7 @@ use crate::native::{AMYCHARACTER_STATICCLASS, REBO_DOESNT_START_SEMAPHORE, APLAY
 use crate::native::reflection::UClass;
 use crate::native::uworld::CAMERA_INDEX;
 
-static CURRENT_PLAYER: AtomicPtr<AMyCharacterUE> = AtomicPtr::new(std::ptr::null_mut());
+pub static CURRENT_PLAYER: AtomicPtr<AMyCharacterUE> = AtomicPtr::new(std::ptr::null_mut());
 static mut DEATH_HOOK: Option<fn()> = None;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -198,7 +198,7 @@ impl AMyCharacter {
         }
     }
     pub fn respawn() {
-        unsafe {            
+        unsafe {
             let hook = DEATH_HOOK;
             DEATH_HOOK = None;
             let fun: extern_fn!(fn(this: *mut AMyCharacterUE, value: i32))

@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicPtr, Ordering};
 use hook::{ArgsRef, IsaAbi, RawHook, TypedHook};
-use crate::native::{FSLATEAPPLICATION_TICK, FSLATEAPPLICATION_ONKEYDOWN, FSLATEAPPLICATION_ONKEYUP, FSLATEAPPLICATION_ONRAWMOUSEMOVE, REBO_DOESNT_START_SEMAPHORE, RefunctIsaAbi, FSLATEAPPLICATION_ONMOUSEDOUBLECLICK, FSLATEAPPLICATION_ONMOUSEDOWN, FSLATEAPPLICATION_ONMOUSEMOVE, FSLATEAPPLICATION_ONMOUSEUP, FSLATEAPPLICATION_ONMOUSEWHEEL};
+use crate::native::{AACTOR_RECEIVEACTORBEGINOVERLAP, FSLATEAPPLICATION_TICK, FSLATEAPPLICATION_ONKEYDOWN, FSLATEAPPLICATION_ONKEYUP, FSLATEAPPLICATION_ONRAWMOUSEMOVE, REBO_DOESNT_START_SEMAPHORE, RefunctIsaAbi, FSLATEAPPLICATION_ONMOUSEDOUBLECLICK, FSLATEAPPLICATION_ONMOUSEDOWN, FSLATEAPPLICATION_ONMOUSEMOVE, FSLATEAPPLICATION_ONMOUSEUP, FSLATEAPPLICATION_ONMOUSEWHEEL, AActor};
 
 static SLATEAPP: AtomicPtr<FSlateApplicationUE> = AtomicPtr::new(std::ptr::null_mut());
 
@@ -49,6 +49,8 @@ pub struct FSlateApplication {
     _onmousedoubleclick: &'static RawHook<RefunctIsaAbi, ()>,
     _onmouseup: &'static RawHook<RefunctIsaAbi, ()>,
     _onmousewheel: &'static RawHook<RefunctIsaAbi, ()>,
+
+    on_aactor_receive_begin_overlap: &'static TypedHook<RefunctIsaAbi, fn(*mut AActor, *mut AActor), ()>,
 }
 
 impl FSlateApplication {
@@ -64,6 +66,8 @@ impl FSlateApplication {
                 _onmousedoubleclick: RawHook::create(FSLATEAPPLICATION_ONMOUSEDOUBLECLICK.load(Ordering::Relaxed), on_mouse_double_click_hook).enabled(),
                 _onmouseup: RawHook::create(FSLATEAPPLICATION_ONMOUSEUP.load(Ordering::Relaxed), on_mouse_up_hook).enabled(),
                 _onmousewheel: RawHook::create(FSLATEAPPLICATION_ONMOUSEWHEEL.load(Ordering::Relaxed), on_mouse_wheel_hook).enabled(),
+
+                on_aactor_receive_begin_overlap: TypedHook::create(AACTOR_RECEIVEACTORBEGINOVERLAP.load(Ordering::Relaxed), on_aactor_receive_begin_overlap).enabled(),
             }
         }
     }
@@ -158,4 +162,9 @@ fn on_mouse_wheel_hook<IA: IsaAbi>(hook: &RawHook<IA, ()>, mut args: ArgsRef<'_,
     let (_this, delta) = args.load::<(*mut FSlateApplicationUE, f32)>();
     crate::threads::ue::mouse_wheel(*delta);
     unsafe { hook.call_original_function(args); }
+}
+
+fn on_aactor_receive_begin_overlap<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut AActor, *mut AActor), ()>,  this: *mut AActor, other: *mut AActor) {
+    crate::threads::ue::aactor_receive_begin_overlap(this, other);
+    unsafe { hook.call_original_function((this, other)); }
 }

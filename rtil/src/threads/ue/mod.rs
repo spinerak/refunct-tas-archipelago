@@ -1,6 +1,8 @@
+use std::sync::atomic::Ordering;
 use crossbeam_channel::{Receiver, Sender};
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use crate::native::{ALiftBaseUE, ElementIndex, EMouseButtonsType, Hooks, try_find_element_index, UObject};
+use tokio::sync::mpsc::UnboundedSender;
+use crate::native::{ALiftBaseUE, ElementIndex, ElementType, EMouseButtonsType, Hooks, try_find_element_index, UObject, AActor, ActorWrapper};
+use crate::native::character::CURRENT_PLAYER;
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo};
 use crate::threads::ue::iced_ui::Key;
 
@@ -95,6 +97,22 @@ pub fn mouse_button_up(button: EMouseButtonsType) {
 }
 pub fn mouse_wheel(delta: f32) {
     handle(UeEvent::MouseWheel(delta));
+}
+
+pub fn aactor_receive_begin_overlap(this: *mut AActor, other: *mut AActor) {
+    if this.addr() == CURRENT_PLAYER.load(Ordering::SeqCst).addr() {
+        unsafe {
+            let other_actor = ActorWrapper::new(other);
+            if other_actor.name().starts_with("BP_PowerCore") {
+                // Cluster index 9999 is a hacky way to identify that this is a cube we spawned
+                let element_index = match try_find_element_index(other as *mut UObject) {
+                    Some(i) => i,
+                    None => ElementIndex { cluster_index: 9999, element_type: ElementType::Cube, element_index: other_actor.internal_index() as usize },
+                };
+                handle(UeEvent::ElementPressed(element_index));
+            }
+        }
+    }
 }
 
 pub fn draw_hud() {

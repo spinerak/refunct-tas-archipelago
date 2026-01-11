@@ -128,12 +128,12 @@ static MOVEMENT_COMPONENT = Component {
             match MOVEMENT_STATE.enable_fly {
                 false => {
                     MOVEMENT_STATE.enable_fly = true;
-                    Tas::disable_collision();
+                    Tas::disable_player_collision();
                 },
                 true => {
                     MOVEMENT_STATE.enable_fly = false;
                     Tas::set_movement_mode(1);
-                    Tas::enable_collision();
+                    Tas::enable_player_collision();
                 }
             }
         }

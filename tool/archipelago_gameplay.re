@@ -15,6 +15,8 @@ struct ArchipelagoState {
     started: int,
     triggered_clusters: List<int>,
     stepped_on_platforms: List<int>,
+    collected_cubes: List<int>,
+    cubes_options: int,
     highest_index_received: int,
     has_goaled: bool,
     gamemode: int,
@@ -67,6 +69,8 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         started: 0,
         triggered_clusters: List::new(),
         stepped_on_platforms: List::new(),
+        collected_cubes: List::new(),
+        cubes_options: -1,
         highest_index_received: -1,
         has_goaled: false,
         gamemode: 0,
@@ -95,7 +99,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "0.4.2",
+        mod_version: "0.5.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -148,6 +152,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             ARCHIPELAGO_STATE.last_platform_p = Option::Some(index.element_index + 1);
         }
 
+
+
         if ARCHIPELAGO_STATE.started == 0 {
             return;
         }
@@ -171,6 +177,41 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                         ARCHIPELAGO_STATE.has_goaled = true;
                         Tas::archipelago_trigger_goal_animation();
                     }
+                }
+            }
+
+            if index.element_type == ElementType::Cube {
+                /*
+                In Vanilla:
+                    Cube 4-1 is on Platform 4-2
+                    Cube 7-1 is on Platform 7-3
+                    Cube 8-1 is on Platform 8-10
+                    Cube 8-2 is on Platform 8-4
+                    Cube 9-1 is on Platform 9-8
+                    Cube 10-1 is on Platform 10-2
+                    Cube 12-1 is on Platform 12-3
+                    Cube 13-1 is on Platform 13-3
+                    Cube 14-1 is on Platform 14-2
+                    Cube 18-1 is on Platform 18-3
+                    Cube 21-1 is on Platform 21-5
+                    Cube 21-2 is on Platform 21-9
+                    Cube 23-1 is on Platform 23-2
+                    Cube 27-1 is on Platform 27-1
+                    Cube 28-1 is on Platform 28-11
+                    Cube 29-1 is on Platform 29-2
+                    Cube 29-2 is on Platform 29-9
+                    Cube 30-1 is on Platform 30-11
+
+                    @Spineraks this is here so that you can modify the .apworld easier :)
+                    @Nielrenned thank you for this <3
+                */
+                if index.cluster_index == 9999 {
+                    // We picked up a non-vanilla cube
+                    log(f"Picked up Spawned Cube (index: {index.element_index})");
+                } else {
+                    // We picked up a vanilla cube
+                    // log(f"Picked up Vanilla Cube {index.cluster_index + 1}-{index.element_index + 1}");
+                    Tas::archipelago_send_check(10060000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
                 }
             }
         }
@@ -447,6 +488,7 @@ fn archipelago_main_start(){
     Tas::archipelago_set_jump_pads(0);
 
     archipelago_activate_stepped_on_platforms();
+    archipelago_collect_collected_cubes();
 
     ARCHIPELAGO_STATE.started = 2;
     let mut i = 0;
@@ -536,6 +578,9 @@ fn archipelago_checked_location(id: int){
     if id >= 10010000 && id < 10020000 {
         ARCHIPELAGO_STATE.stepped_on_platforms.push(id);
     }
+    if id >= 10060000 && id < 10070000 {
+        ARCHIPELAGO_STATE.collected_cubes.push(id);
+    }
     let vanilla_locations = List::of(10020101, 10020201, 10020301, 10020401, 10020501, 10020601, 10020701, 10020702, 10020801, 10020901, 10021001, 10021002, 10021101, 10021201, 10021301, 10021401, 10021501, 10021601, 10021701, 10021801, 10021802, 10021901, 10022001, 10022101, 10022201, 10022301, 10022401, 10022501, 10022601, 10022602, 10022603, 10022701, 10022801, 10022802, 10022901, 10023001, 10023101);
     if vanilla_locations.contains(id) {
         let mut number_pressed = 0;
@@ -604,6 +649,28 @@ fn archipelago_activate_stepped_on_platforms(){
         Tas::trigger_element_by_type(cluster-1, "Platform", plat-1);
     }
 }
+fn archipelago_collect_collected_cubes(){
+    if ARCHIPELAGO_STATE.cubes_options == 9{
+        let all_cubes = Tas::get_vanilla_cubes();
+        for cube in all_cubes {
+            Tas::destroy_cube(cube);
+        }
+    }else{
+        let all_cubes = Tas::get_vanilla_cubes();
+        for cube in all_cubes {
+            Tas::set_cube_color_random(cube);
+            Tas::set_cube_scale(cube, 3.0);
+        }
+
+        for id in ARCHIPELAGO_STATE.collected_cubes {
+            let cluster = (id - 10060000) / 100;
+            let plat = (id - 10060000) % 100;
+
+            let ind = Tas::get_vanilla_cube(cluster-1, plat-1);
+            Tas::destroy_cube(ind);
+        }
+    }
+}
 
 fn archipelago_received_slot_data(key: string, value: string){
     if key == "ap_world_version" {
@@ -647,5 +714,9 @@ fn archipelago_received_slot_data(key: string, value: string){
 
     if key == "death_link" && value == "1" {
         Tas::set_death_link(true);
+    }
+
+    if key == "cubes" {
+        ARCHIPELAGO_STATE.cubes_options = value.parse_int().unwrap();
     }
 }
