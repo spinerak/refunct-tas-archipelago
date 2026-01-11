@@ -539,7 +539,12 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
         let evt = YIELDER.with(|yielder| unsafe { (*yielder.get()).suspend(suspend) });
         match evt {
             UeEvent::Tick => to_be_returned = Some(Step::Tick),
-            UeEvent::ElementPressed(index) => element_pressed(vm, index)?,
+            UeEvent::ElementPressed(index) => {
+                if index.element_type == ElementType::Cube && index.cluster_index == 9999 {
+                    maybe_remove_extra_cube(index.element_index as i32);
+                }
+                element_pressed(vm, index)?
+            },
             UeEvent::ElementReleased(index) => element_released(vm, index)?,
             UeEvent::NothingHappened => to_be_returned = Some(Step::Yield),
             UeEvent::NewGame => to_be_returned = Some(Step::NewGame),

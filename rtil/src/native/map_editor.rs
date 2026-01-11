@@ -499,7 +499,7 @@ impl<'a> SpringpadWrapper<'a> {
     }
 }
 
-#[derive(Debug, Copy, Clone, rebo::ExternalType)]
+#[derive(Debug, Copy, Clone, rebo::ExternalType, PartialEq)]
 pub enum ElementType {
     Platform,
     Cube,

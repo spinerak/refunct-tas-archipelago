@@ -148,6 +148,14 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             ARCHIPELAGO_STATE.last_platform_p = Option::Some(index.element_index + 1);
         }
 
+        if index.element_type == ElementType::Cube {
+            if index.cluster_index == 9999 {
+                log(f"Picked up Spawned Cube (index: {index.element_index})");
+            } else {
+                log(f"Picked up Cube {index.cluster_index + 1}-{index.element_index + 1}")
+            }
+        }
+
         if ARCHIPELAGO_STATE.started == 0 {
             return;
         }
