@@ -1232,8 +1232,8 @@ fn get_viewport_size() -> Size {
 }
 
 #[rebo::function("Tas::spawn_cube")]
-fn spawn_cube(x: f32, y: f32, z: f32) -> i32 {
-    match CubeWrapper::spawn(x, y, z) {
+fn spawn_cube(loc: Location) -> i32 {
+    match CubeWrapper::spawn(loc.x, loc.y, loc.z) {
         Ok(cube) => {
             let index = cube.internal_index();
             STATE.lock().unwrap().as_mut().unwrap().extra_cubes.push(index);
@@ -1307,14 +1307,14 @@ fn set_cube_collision(internal_index: i32, collision_enabled: bool) {
 }
 
 #[rebo::function("Tas::set_cube_color")]
-fn set_cube_color(internal_index: i32, r: f32, g: f32, b: f32) {
-    // TODO: Can we use the pre-existing Color struct?
-    find_cube_and(internal_index, |cube| cube.set_color(r, g, b));
+fn set_cube_color(internal_index: i32, c: Color) {
+    // Sadly alpha seems to be ignored, so we're just going to silently drop it
+    find_cube_and(internal_index, |cube| cube.set_color(c.red, c.green, c.blue));
 }
 
 #[rebo::function("Tas::set_cube_location")]
-fn set_cube_location(internal_index: i32, x: f32, y: f32, z: f32) {
-    find_cube_and(internal_index, |cube| cube.set_location(x, y, z));
+fn set_cube_location(internal_index: i32, loc: Location) {
+    find_cube_and(internal_index, |cube| cube.set_location(loc.x, loc.y, loc.z));
 }
 
 #[rebo::function("Tas::set_cube_scale")]
