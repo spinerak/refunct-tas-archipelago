@@ -91,6 +91,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(get_text_size)
         .add_function(spawn_cube)
         .add_function(destroy_cube)
+        .add_function(get_vanilla_cube)
         .add_function(set_cube_collision)
         .add_function(set_cube_color)
         .add_function(set_cube_location)
@@ -1266,6 +1267,21 @@ fn find_cube_and<R, F: FnOnce(&CubeWrapper) -> R>(internal_index: i32, f: F) -> 
             }
         }
         return false;
+    })
+}
+
+#[rebo::function("Tas::get_vanilla_cube")]
+fn get_vanilla_cube(cluster: usize, element_index: usize) -> i32 {
+    UeScope::with(|scope| {
+        for (c, level) in LEVELS.lock().unwrap().iter().enumerate() {
+            if c != cluster { continue; }
+
+            for (i, cube_index) in level.cubes.iter().enumerate() {
+                if i == element_index { return scope.get(cube_index).internal_index(); }
+            }
+        }
+
+        return -1;
     })
 }
 
