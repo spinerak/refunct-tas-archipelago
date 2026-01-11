@@ -1242,7 +1242,6 @@ fn spawn_cube(x: f32, y: f32, z: f32) -> i32 {
 
 #[rebo::function("Tas::get_all_cubes")]
 fn get_all_cubes() -> Vec<i32> {
-    // TODO: this is probably misnamed? Since we're returning internal indices
     // TODO: should extra_cubes reset on new_game? Or should we leave that up to the Rebo code?
     let mut cubes = UeScope::with(|scope| {
         return LEVELS.lock().unwrap().iter().flat_map(|level| {
@@ -1253,76 +1252,53 @@ fn get_all_cubes() -> Vec<i32> {
     cubes
 }
 
-#[rebo::function("Tas::set_cube_collision")]
-fn set_cube_collision(internal_index: i32, collision_enabled: bool) {
-    // TODO: This silently fails right now. That's bad API design.
+fn find_cube_and<R, F: FnOnce(&CubeWrapper) -> R>(internal_index: i32, f: F) -> bool {
     UeScope::with(|scope| {
         if let Some(item) = scope.object_array().try_get(internal_index) {
             if let Some(cube) = item.object().try_upcast::<CubeWrapper>() {
-                cube.set_collision(collision_enabled);
+                f(&cube);
+                return true;
             }
         }
-    });
+        return false;
+    })
+}
+
+#[rebo::function("Tas::set_cube_collision")]
+fn set_cube_collision(internal_index: i32, collision_enabled: bool) {
+    find_cube_and(internal_index, |cube| cube.set_collision(collision_enabled));
 }
 
 #[rebo::function("Tas::set_cube_color")]
 fn set_cube_color(internal_index: i32, r: f32, g: f32, b: f32) {
     // TODO: Can we use the pre-existing Color struct?
-    // TODO: This silently fails right now. That's bad API design.
-    UeScope::with(|scope| {
-        if let Some(item) = scope.object_array().try_get(internal_index) {
-            if let Some(cube) = item.object().try_upcast::<CubeWrapper>() {
-                cube.set_color(r, g, b);
-            }
-        }
-    });
+    find_cube_and(internal_index, |cube| cube.set_color(r, g, b));
 }
 
 #[rebo::function("Tas::set_cube_location")]
 fn set_cube_location(internal_index: i32, x: f32, y: f32, z: f32) {
-    // TODO: This silently fails right now. That's bad API design.
-    UeScope::with(|scope| {
-        if let Some(item) = scope.object_array().try_get(internal_index) {
-            if let Some(cube) = item.object().try_upcast::<CubeWrapper>() {
-                cube.set_location(x, y, z);
-            }
-        }
-    });
+    find_cube_and(internal_index, |cube| cube.set_location(x, y, z));
 }
 
 #[rebo::function("Tas::set_cube_scale")]
 fn set_cube_scale(internal_index: i32, s: f32) {
-    // TODO: This silently fails right now. That's bad API design.
-    UeScope::with(|scope| {
-        if let Some(item) = scope.object_array().try_get(internal_index) {
-            if let Some(cube) = item.object().try_upcast::<CubeWrapper>() {
-                cube.set_scale(s);
-            }
-        }
-    });
+    find_cube_and(internal_index, |cube| cube.set_scale(s));
 }
 
-pub fn maybe_remove_extra_cube(internal_index: i32) {
+pub fn maybe_remove_extra_cube(internal_index: i32) -> bool {
     if let Some(state) = STATE.lock().unwrap().as_mut() {
         if let Some(pos) = state.extra_cubes.iter().position(|i| *i == internal_index) {
             state.extra_cubes.remove(pos);
+            return true;
         }
     }
+    false
 }
 
 #[rebo::function("Tas::destroy_cube")]
 fn destroy_cube(internal_index: i32) {
-    // TODO: This silently fails right now. That's bad API design.
     maybe_remove_extra_cube(internal_index);
-
-    // Destroy the cube object
-    UeScope::with(|scope| {
-        if let Some(item) = scope.object_array().try_get(internal_index) {
-            if let Some(cube) = item.object().try_upcast::<CubeWrapper>() {
-                cube.destroy();
-            }
-        }
-    });
+    find_cube_and(internal_index, |cube| cube.destroy());
 }
 
 #[rebo::function("Tas::spawn_pawn")]
