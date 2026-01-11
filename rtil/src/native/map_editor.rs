@@ -3,6 +3,7 @@ use std::fmt::{Formatter, Pointer};
 use std::ops::Deref;
 use std::sync::Mutex;
 use std::ptr;
+use iced_wgpu::graphics::damage::list;
 use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld, DynamicValue, BoolValueWrapper, DerefToObjectWrapper};
 use crate::native::reflection::{AActor, ActorWrapper, UeObjectWrapper};
 use crate::native::ue::{FRotator, FVector, FName};
@@ -180,9 +181,7 @@ impl<'a> CubeWrapper<'a> {
             }
 
             let cube = CubeWrapper::new(ActorWrapper::new(actor_ptr));
-
-            // cube.set_scale(10.0);
-            // cube.set_location(x, y, z - 9.0*160.0 + 160.0);
+            cube.play_animation();
 
             // Mark as root to prevent GC
             let item = scope.object_array().get_item_of_object(&cube);
@@ -304,6 +303,25 @@ impl<'a> CubeWrapper<'a> {
         params.get_field("bTeleport").unwrap::<BoolValueWrapper>().set(true);
         unsafe {
             set_world_location_and_rotation.call(root_component.as_ptr(), &params);
+        }
+    }
+
+    pub fn play_animation(&self) {
+        let timeline: ObjectWrapper = self.base.get_field("MoveAnimation").unwrap();
+
+        // Set play rate to match original cubes (0.25)
+        let the_timeline: StructValueWrapper = timeline.get_field("TheTimeline").unwrap();
+        the_timeline.get_field("PlayRate").unwrap::<&Cell<f32>>().set(0.25);
+
+        // Find and call the Play function
+        if let Some(play_func) = timeline.class().find_function("Play") {
+            let params = play_func.create_argument_struct();
+            unsafe {
+                play_func.call(timeline.as_ptr(), &params);
+            }
+            log!("Started MoveAnimation timeline");
+        } else {
+            log!("Warning: Could not find Play function on timeline");
         }
     }
 }
