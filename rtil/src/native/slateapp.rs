@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use hook::{ArgsRef, IsaAbi, RawHook, TypedHook};
 use crate::native::{AACTOR_RECEIVEACTORBEGINOVERLAP, FSLATEAPPLICATION_TICK, FSLATEAPPLICATION_ONKEYDOWN, FSLATEAPPLICATION_ONKEYUP, FSLATEAPPLICATION_ONKEYCHAR, FSLATEAPPLICATION_ONRAWMOUSEMOVE, REBO_DOESNT_START_SEMAPHORE, RefunctIsaAbi, FSLATEAPPLICATION_ONMOUSEDOUBLECLICK, FSLATEAPPLICATION_ONMOUSEDOWN, FSLATEAPPLICATION_ONMOUSEMOVE, FSLATEAPPLICATION_ONMOUSEUP, FSLATEAPPLICATION_ONMOUSEWHEEL, AActor};
@@ -135,14 +137,45 @@ fn on_key_up_hook<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut FSlateApplicationUE, 
     unsafe { hook.call_original_function((this, key_code, character_code, is_repeat)); }
 }
 
-fn on_key_char_hook<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut FSlateApplicationUE, TCHAR, bool), ()>, this: *mut FSlateApplicationUE, character: TCHAR, is_repeat: bool) {
-    // For now, on windows, we'll ignore utf-16 surrogate pairs
-    #[cfg(windows)]
-    let ch = if character < 0xD800 || character > 0xDFFF {
+#[cfg(windows)]
+mod windows_utf16 {
+    use super::*;
+    static SURROGATE_BUFFER: Mutex<Option<u16>> = Mutex::new(None);
+    const SURROGATES:      RangeInclusive<u16> = 0xD800..=0xDFFF;
+    const HIGH_SURROGATES: RangeInclusive<u16> = 0xD800..=0xDBFF;
+    const LOW_SURROGATES:  RangeInclusive<u16> = 0xDC00..=0xDFFF;
+    const HIGH_SURROGATE_OFFSET: u16 = 0xD800;
+    const LOW_SURROGATE_OFFSET: u16  = 0xDC00;
+
+    // This is probably overkill, as we will almost surely never come across surrogate pairs.
+    // But anything worth doing is worth doing right!
+    pub fn tchar_to_char(character: TCHAR) -> Option<char> {
+        let mut buffer = SURROGATE_BUFFER.lock().unwrap();
+
+        if SURROGATES.contains(&character) {
+            if let Some(high_surrogate) = *buffer {
+                *buffer = None; // reset high surrogate
+
+                if LOW_SURROGATES.contains(&character) {
+                    let high = (high_surrogate - HIGH_SURROGATE_OFFSET) as u32;
+                    let low  = (character - LOW_SURROGATE_OFFSET) as u32;
+                    return char::from_u32(0x10000 + (high << 10) + low);
+                }
+            } else if HIGH_SURROGATES.contains(&character) {
+                *buffer = Some(character);
+            }
+
+            return None;
+        }
+
         char::from_u32(character as u32)
-    } else {
-        None
-    };
+    }
+}
+
+fn on_key_char_hook<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut FSlateApplicationUE, TCHAR, bool), ()>, this: *mut FSlateApplicationUE, character: TCHAR, is_repeat: bool) {
+    // For now, on windows, we'll ignore utf-16 surrogate pairs. It's very unlikely we'll ever encounter them.
+    #[cfg(windows)]
+    let ch = windows_utf16::tchar_to_char(character);
 
     #[cfg(unix)]
     let ch = char::from_u32(character);
@@ -150,10 +183,7 @@ fn on_key_char_hook<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut FSlateApplicationUE
     if let Some(ch) = ch {
         // Only process printable characters
         if !ch.is_control() {
-            log!("Character typed: '{}'", ch);
             crate::threads::ue::key_char(ch, is_repeat);
-        } else {
-            log!("Control character: U+{:04X}", ch as u32);
         }
     }
 
