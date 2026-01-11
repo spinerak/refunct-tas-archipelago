@@ -149,10 +149,35 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         }
 
         if index.element_type == ElementType::Cube {
+            /*
+            In Vanilla:
+                Cube 4-1 is on Platform 4-2
+                Cube 7-1 is on Platform 7-3
+                Cube 8-1 is on Platform 8-10
+                Cube 8-2 is on Platform 8-4
+                Cube 9-1 is on Platform 9-8
+                Cube 10-1 is on Platform 10-2
+                Cube 12-1 is on Platform 12-3
+                Cube 13-1 is on Platform 13-3
+                Cube 14-1 is on Platform 14-2
+                Cube 18-1 is on Platform 18-3
+                Cube 21-1 is on Platform 21-5
+                Cube 21-2 is on Platform 21-9
+                Cube 23-1 is on Platform 23-2
+                Cube 27-1 is on Platform 27-1
+                Cube 28-1 is on Platform 28-11
+                Cube 29-1 is on Platform 29-2
+                Cube 29-2 is on Platform 29-9
+                Cube 30-1 is on Platform 30-11
+
+                @Spineraks this is here so that you can modify the .apworld easier :)
+            */
             if index.cluster_index == 9999 {
+                // We picked up a non-vanilla cube
                 log(f"Picked up Spawned Cube (index: {index.element_index})");
             } else {
-                log(f"Picked up Cube {index.cluster_index + 1}-{index.element_index + 1}")
+                // We picked up a vanilla cube
+                log(f"Picked up Vanilla Cube {index.cluster_index + 1}-{index.element_index + 1}");
             }
         }
 
