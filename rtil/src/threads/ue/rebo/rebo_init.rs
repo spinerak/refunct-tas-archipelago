@@ -1264,7 +1264,6 @@ fn get_non_vanilla_cubes() -> Vec<i32> {
 
 #[rebo::function("Tas::get_all_cubes")]
 fn get_all_cubes() -> Vec<i32> {
-    // TODO: should extra_cubes reset on new_game? Or should we leave that up to the Rebo code?
     let mut cubes = UeScope::with(|scope| {
         LEVELS.lock().unwrap().iter().flat_map(|level| {
             level.cubes.iter().map(|cube| scope.get(cube).internal_index()).collect::<Vec<i32>>()
