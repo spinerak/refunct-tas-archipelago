@@ -1,7 +1,7 @@
 use std::time::SystemTime;
 use std::error::Error;
 use std::thread;
-use archipelago_rs::client::{ArchipelagoClient, ArchipelagoClientReceiver, ArchipelagoClientSender};
+use archipelago_rs::client::{ArchipelagoClient, ArchipelagoClientReceiver, ArchipelagoClientSender, ArchipelagoError};
 use archipelago_rs::protocol::{ClientStatus, ServerMessage, Bounce, BounceData, ClientMessage, DeathLink, ConnectUpdate}; // adjust path if needed
 use crossbeam_channel::Sender;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -17,24 +17,48 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                 let mut sender: Option<ArchipelagoClientSender> = None;
                 let mut current_slot: Option<String> = None;
                 let mut receiver_abort_handle: Option<AbortHandle> = None;
+                let handle_ap_err = |err: ArchipelagoError| {
+                    log!("Failed to connect to archipelago server: {:?}", err);
+                    let msg: String;
+                    match err {
+                        ArchipelagoError::NetworkError(neterr) => msg = neterr.to_string(),
+                        ArchipelagoError::IllegalResponse { expected, received } => {
+                            if expected == "Connected" && received == "ConnectionRefused" {
+                                msg = String::from("Archipelago server refused connection, slot or password incorrect?");
+                            } else {
+                                msg = String::from(received);
+                            }
+                        },
+                        _ => msg = err.to_string(),
+                    }
+                    archipelago_rebo_tx.send(ArchipelagoToRebo::ConnectionFailed(msg)).unwrap()
+                };
                 loop {
                     match rebo_archipelago_rx.recv().await.unwrap() {
                         ReboToArchipelago::Connect { server_and_port, game, slot, password, items_handling, tags } => {
                             current_slot = Some(slot.clone());
-                            if let Some(receiver) = receiver_abort_handle {
+                            if let Some(ref receiver) = receiver_abort_handle {
                                 receiver.abort();
                             }
-                            let mut client = ArchipelagoClient::new(&server_and_port).await?;
-                            log!("Connected to archipelago server `{server_and_port}`");
-                            let connected_info = client.connect(&game, &slot, password.as_deref(), items_handling, tags)
-                                .await?;
-                            log!("Connected info: {:?}", connected_info);
-                            archipelago_rebo_tx.send(ArchipelagoToRebo::ServerMessage(ServerMessage::Connected(connected_info))).unwrap();
-                            let (s, mut receiver) = client.split();
-                            sender = Some(s);
-                            let join_handle = tokio::spawn(handle_receiver(receiver, archipelago_rebo_tx.clone()));
-                            receiver_abort_handle = Some(join_handle.abort_handle());
-
+                            match ArchipelagoClient::new(&server_and_port).await {
+                                Ok(mut client) => {
+                                    log!("Connected to archipelago server `{server_and_port}`");
+                                    match client.connect(&game, &slot, password.as_deref(), items_handling, tags).await {
+                                        Ok(connected_info) => {
+                                            log!("Connected info: {:?}", connected_info);
+                                            archipelago_rebo_tx.send(ArchipelagoToRebo::ServerMessage(ServerMessage::Connected(connected_info))).unwrap();
+                                            let (s, mut receiver) = client.split();
+                                            sender = Some(s);
+                                            let join_handle = tokio::spawn(handle_receiver(receiver, archipelago_rebo_tx.clone()));
+                                            receiver_abort_handle = Some(join_handle.abort_handle());
+                                        },
+                                        Err(err) => {
+                                            handle_ap_err(err)
+                                        },
+                                    }
+                                },
+                                Err(err) => handle_ap_err(err),
+                            }
                         },
                         ReboToArchipelago::ConnectUpdate { items_handling, tags } => {
                             if let Some(sender) = sender.as_mut() {

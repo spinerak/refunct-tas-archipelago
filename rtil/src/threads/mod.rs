@@ -45,6 +45,7 @@ pub enum ReboToStream {
 pub enum ArchipelagoToRebo {
     ServerMessage(ServerMessage<serde_json::Value>),
     ConnectionAborted,
+    ConnectionFailed(String),
 }
 //#[derive(Debug)]
 pub enum ReboToArchipelago {

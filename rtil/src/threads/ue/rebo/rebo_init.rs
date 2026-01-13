@@ -284,6 +284,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_trigger_one_cluster_now)
         .add_required_rebo_function(archipelago_init)
         .add_required_rebo_function(archipelago_set_own_id)
+        .add_required_rebo_function(ap_log_error)
         .add_required_rebo_function(on_level_state_change)
         .add_required_rebo_function(on_resolution_change)
         .add_required_rebo_function(on_menu_open)
@@ -624,6 +625,10 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
             match res {
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => panic!("archipelago_rebo_rx became disconnected"),
+                Ok(ArchipelagoToRebo::ConnectionFailed(cause)) => {
+                    ap_log_error(vm, format!("Failed connecting to archipelago server: {}", cause));
+                    archipelago_disconnected(vm)?
+                },
                 Ok(ArchipelagoToRebo::ConnectionAborted) => {
                     log!("ArchipelagoToRebo::ConnectionAborted");
                     archipelago_disconnected(vm)?
@@ -829,6 +834,7 @@ extern "rebo" {
     fn archipelago_print_json_message(json_message: ReboPrintJSONMessage);
     fn archipelago_received_death(source: String, cause: String);
     fn archipelago_trigger_one_cluster_now(time: u64);
+    fn ap_log_error(message: String);
 }
 
 fn config_path() -> PathBuf {
