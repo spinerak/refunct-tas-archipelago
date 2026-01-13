@@ -121,6 +121,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_level)
         .add_function(trigger_element)
         .add_function(trigger_element_by_type)
+        .add_function(archipelago_activate_buttons_ap)
         .add_function(archipelago_gather_all_buttons)
         .add_function(archipelago_set_wall_jump_and_ledge_grab)
         .add_function(archipelago_set_jump_pads)
@@ -1349,9 +1350,14 @@ fn set_cube_color(internal_index: i32, c: Color) {
 #[rebo::function("Tas::set_cube_color_random")]
 fn set_cube_color_random(internal_index: i32) {
     find_cube_and(internal_index, |cube| {
-        let r = rand::random::<f32>();
-        let g = rand::random::<f32>();
-        let b = rand::random::<f32>();
+        let mut r = rand::random::<f32>();
+        let mut g = rand::random::<f32>();
+        let mut b = rand::random::<f32>();
+        match rand::random::<u8>() % 3 {
+            0 => r = 1.0,
+            1 => g = 1.0,
+            _ => b = 1.0,
+        }
         cube.set_color(r, g, b);
     }).unwrap_or_else(|e| log!("Could not set random color for cube {:?}: {}", internal_index, e));
 }
@@ -1661,6 +1667,11 @@ fn archipelago_gather_all_buttons() {
     let mut cache_lock = BUTTON_CACHE.lock().unwrap();
     *cache_lock = Some(vec);
     log!("Archipelago: gathered {} buttons", cache_lock.as_ref().unwrap().len());
+}
+
+#[rebo::function("Tas::archipelago_activate_buttons_ap")]
+fn archipelago_activate_buttons_ap() {
+    archipelago_activate_buttons(-1);
 }
 
 fn archipelago_activate_buttons(index: i32) {

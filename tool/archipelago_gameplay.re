@@ -30,6 +30,7 @@ struct ArchipelagoState {
     progress_seeker_minigame: string,
     seeker_pressed_platforms: List<int>,
     seeker_extra_pressed: List<int>,
+    seeker_done_triggering: int,
 
     unlock_button_galore_minigame: bool,
     done_button_galore_minigame: bool,
@@ -84,6 +85,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         progress_seeker_minigame: "0/10",
         seeker_pressed_platforms: List::new(),
         seeker_extra_pressed: List::new(),
+        seeker_done_triggering: 0,
 
         unlock_button_galore_minigame: false,
         done_button_galore_minigame: false,
@@ -374,11 +376,18 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
 }
 
 fn archipelago_trigger_one_cluster_now(time: int) {
-    if ARCHIPELAGO_STATE.triggering_clusters.len() == 0 {
-        return;
-    }
     if time - ARCHIPELAGO_STATE.triggering_clusters_counter < 400 {
         return;
+    }
+    if ARCHIPELAGO_STATE.triggering_clusters.len() == 0 {
+        if ARCHIPELAGO_STATE.gamemode == 3 && ARCHIPELAGO_STATE.seeker_done_triggering == 1 {
+            Tas::archipelago_activate_buttons_ap();
+            ARCHIPELAGO_STATE.seeker_done_triggering = 2;
+        }
+        return;
+    }
+    if ARCHIPELAGO_STATE.gamemode == 3 && ARCHIPELAGO_STATE.seeker_done_triggering == 0 {
+        ARCHIPELAGO_STATE.seeker_done_triggering = 1;
     }
     ARCHIPELAGO_STATE.triggering_clusters_counter = time;
 

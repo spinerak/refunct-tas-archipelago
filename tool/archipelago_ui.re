@@ -617,7 +617,9 @@ fn get_status_text_lines() -> List<ColorfulText> {
             ),
             3 => List::of(
                 ColorfulText { text: "Archipelago - Seeker\n", color: COLOR_WHITE },
-                ColorfulText { text: "Goal: Find the empty platforms!", color: AP_COLOR_CYAN },
+                ColorfulText { text: "Goal: Find the empty platforms!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: "Final platform is not a check\n", color: COLOR_WHITE },
+                ColorfulText { text: "but pressing it gives a nice view!", color: COLOR_WHITE },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_seeker_minigame}", color: COLOR_WHITE },
             ),
             4 => List::of(
