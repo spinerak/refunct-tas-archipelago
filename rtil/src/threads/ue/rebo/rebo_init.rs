@@ -90,7 +90,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(get_viewport_size)
         .add_function(get_text_size)
         .add_function(spawn_cube)
-        .add_function(destroy_cube)
+        .add_function(reset_cubes)
+        .add_function(collect_cube)
         .add_function(get_vanilla_cube)
         .add_function(set_cube_collision)
         .add_function(set_cube_color)
@@ -623,7 +624,10 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
             match res {
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => panic!("archipelago_rebo_rx became disconnected"),
-                Ok(ArchipelagoToRebo::ConnectionAborted) => archipelago_disconnected(vm)?,
+                Ok(ArchipelagoToRebo::ConnectionAborted) => {
+                    log!("ArchipelagoToRebo::ConnectionAborted");
+                    archipelago_disconnected(vm)?
+                },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::RoomInfo(info))) => {
                     log!("RoomInfo message");
                     let msg = format!("Archipelago ServerMessage::RoomInfo: {:?}", info);
@@ -695,9 +699,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     //loop through received items
                     for net in &received.items {
                         let id = net.item as i32;
-                        let line = format!("APAPAP Trigger Cluster #{} in-game", id - 10000000);
-                        log!("{}", line);
-                        // we want to trigger cluster id-10000000 in-game here
+                        log!("APAPAP Received Item: {}", id);
 
                         archipelago_received_item(vm, index as usize, id as usize, received.index as usize)?;
 
@@ -1242,74 +1244,106 @@ fn spawn_cube(loc: Location) -> i32 {
             index
         }
         Err(e) => {
-            // TODO: should we just panic here???
-            log!("Failed to spawn cube: {}", e);
-            -1
+            panic!("Failed to spawn cube: {}", e);
         }
     }
 }
 
-#[rebo::function("Tas::get_vanilla_cubes")]
-fn get_vanilla_cubes() -> Vec<i32> {
+fn get_uncollected_vanilla_cubes() -> Vec<i32> {
     UeScope::with(|scope| {
         LEVELS.lock().unwrap().iter().flat_map(|level| {
-            level.cubes.iter().map(|cube| scope.get(cube).internal_index()).collect::<Vec<i32>>()
+            level.cubes.iter()
+                .filter_map(|&cube| {
+                    let cube = scope.get(cube);
+                    match cube.is_picked_up() {
+                        true => None,
+                        false => Some(cube.internal_index())
+                    }
+                })
+                .collect::<Vec<i32>>()
         }).collect::<Vec<i32>>()
     })
+}
+
+fn get_uncollected_extra_cubes() -> Vec<i32> {
+    let state = STATE.lock().unwrap();
+
+    state.as_ref().unwrap()
+        .extra_cubes.iter()
+        .filter_map(|&cube_index| {
+            match find_cube_and(cube_index, |cube| cube.is_picked_up()) {
+                Ok(false) => Some(cube_index),
+                Ok(true) | Err(_) => None,
+            }
+        })
+        .collect::<Vec<i32>>()
+}
+
+#[rebo::function("Tas::reset_cubes")]
+fn reset_cubes() {
+    UeScope::with(|scope| {
+        LEVELS.lock().unwrap().iter().for_each(|level| {
+            level.cubes.iter().for_each(|cube| scope.get(cube).reset());
+        });
+    });
+}
+
+#[rebo::function("Tas::get_vanilla_cubes")]
+fn get_vanilla_cubes() -> Vec<i32> {
+    get_uncollected_vanilla_cubes()
 }
 
 #[rebo::function("Tas::get_non_vanilla_cubes")]
 fn get_non_vanilla_cubes() -> Vec<i32> {
-    STATE.lock().unwrap().as_ref().unwrap().extra_cubes.clone()
+    get_uncollected_extra_cubes()
 }
 
 #[rebo::function("Tas::get_all_cubes")]
 fn get_all_cubes() -> Vec<i32> {
-    let mut cubes = UeScope::with(|scope| {
-        LEVELS.lock().unwrap().iter().flat_map(|level| {
-            level.cubes.iter().map(|cube| scope.get(cube).internal_index()).collect::<Vec<i32>>()
-        }).collect::<Vec<i32>>()
-    });
-    cubes.extend(&STATE.lock().unwrap().as_ref().unwrap().extra_cubes);
+    let mut cubes = get_uncollected_vanilla_cubes();
+    cubes.extend(get_uncollected_extra_cubes());
+
     cubes
 }
 
-fn find_cube_and<R, F: FnOnce(&CubeWrapper) -> R>(internal_index: i32, f: F) -> bool {
+fn find_cube_and<R: 'static, F: FnOnce(&CubeWrapper) -> R>(internal_index: i32, f: F) -> Result<R, String> {
     UeScope::with(|scope| {
-        if let Some(item) = scope.object_array().try_get(internal_index) {
-            if let Some(cube) = item.object().try_upcast::<CubeWrapper>() {
-                f(&cube);
-                return true;
-            }
+        let item = scope.object_array().try_get(internal_index)
+            .ok_or_else(|| format!("Failed to find cube at index {}", internal_index))?;
+
+        match item.object().try_upcast::<CubeWrapper>() {
+            Some(cube) => Ok(f(&cube)),
+            None => Err(format!("Failed to find cube {}", internal_index))
         }
-        return false;
     })
 }
 
 #[rebo::function("Tas::get_vanilla_cube")]
-fn get_vanilla_cube(cluster: usize, element_index: usize) -> i32 {
+fn get_vanilla_cube(cluster: usize, element_index: usize) -> Option<i32> {
     UeScope::with(|scope| {
         for (c, level) in LEVELS.lock().unwrap().iter().enumerate() {
             if c != cluster { continue; }
 
             for (i, cube_index) in level.cubes.iter().enumerate() {
-                if i == element_index { return scope.get(cube_index).internal_index(); }
+                if i == element_index { return Some(scope.get(cube_index).internal_index()); }
             }
         }
 
-        return -1;
+        return None;
     })
 }
 
 #[rebo::function("Tas::set_cube_collision")]
 fn set_cube_collision(internal_index: i32, collision_enabled: bool) {
-    find_cube_and(internal_index, |cube| cube.set_collision(collision_enabled));
+    find_cube_and(internal_index, |cube| cube.set_collision(collision_enabled))
+        .unwrap_or_else(|e| log!("Could not set collision for cube {:?}: {}", internal_index, e));
 }
 
 #[rebo::function("Tas::set_cube_color")]
 fn set_cube_color(internal_index: i32, c: Color) {
     // Sadly alpha seems to be ignored, so we're just going to silently drop it
-    find_cube_and(internal_index, |cube| cube.set_color(c.red, c.green, c.blue));
+    find_cube_and(internal_index, |cube| cube.set_color(c.red, c.green, c.blue))
+        .unwrap_or_else(|e| log!("Could not set color for cube {:?}: {}", internal_index, e));
 }
 
 #[rebo::function("Tas::set_cube_color_random")]
@@ -1319,17 +1353,26 @@ fn set_cube_color_random(internal_index: i32) {
         let g = rand::random::<f32>();
         let b = rand::random::<f32>();
         cube.set_color(r, g, b);
-    });
+    }).unwrap_or_else(|e| log!("Could not set random color for cube {:?}: {}", internal_index, e));
 }
 
 #[rebo::function("Tas::set_cube_location")]
 fn set_cube_location(internal_index: i32, loc: Location) {
-    find_cube_and(internal_index, |cube| cube.set_location(loc.x, loc.y, loc.z));
+    find_cube_and(internal_index, |cube| cube.set_location(loc.x, loc.y, loc.z))
+        .unwrap_or_else(|e| log!("Could not set location for cube {:?}: {}", internal_index, e));
 }
 
 #[rebo::function("Tas::set_cube_scale")]
 fn set_cube_scale(internal_index: i32, s: f32) {
-    find_cube_and(internal_index, |cube| cube.set_scale(s));
+    find_cube_and(internal_index, |cube| cube.set_scale(s))
+        .unwrap_or_else(|e| log!("Could not set scale for cube {:?}: {}", internal_index, e));
+}
+
+#[rebo::function("Tas::collect_cube")]
+fn collect_cube(internal_index: i32) {
+    maybe_remove_extra_cube(internal_index);
+    find_cube_and(internal_index, |cube| cube.pickup())
+        .unwrap_or_else(|e| log!("Could not pickup cube {:?}: {}", internal_index, e));
 }
 
 pub fn maybe_remove_extra_cube(internal_index: i32) -> bool {
@@ -1340,12 +1383,6 @@ pub fn maybe_remove_extra_cube(internal_index: i32) -> bool {
         }
     }
     false
-}
-
-#[rebo::function("Tas::destroy_cube")]
-fn destroy_cube(internal_index: i32) {
-    maybe_remove_extra_cube(internal_index);
-    find_cube_and(internal_index, |cube| cube.destroy());
 }
 
 #[rebo::function("Tas::spawn_pawn")]

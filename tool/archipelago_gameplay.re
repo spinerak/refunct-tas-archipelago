@@ -121,6 +121,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     draw_hud_text: archipelago_hud_text,
     draw_hud_always: archipelago_hud_color_coded,
     on_new_game: fn() {
+        Tas::reset_cubes();
+
         if ARCHIPELAGO_STATE.gamemode == 4 {
             ARCHIPELAGO_STATE.og_randomizer_need_another_new_game = false;
             ARCHIPELAGO_STATE.started = 0;
@@ -207,7 +209,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                 */
                 if index.cluster_index == 9999 {
                     // We picked up a non-vanilla cube
-                    log(f"Picked up Spawned Cube (index: {index.element_index})");
+                    // log(f"Picked up Spawned Cube (index: {index.element_index})");
                 } else {
                     // We picked up a vanilla cube
                     // log(f"Picked up Vanilla Cube {index.cluster_index + 1}-{index.element_index + 1}");
@@ -653,21 +655,23 @@ fn archipelago_collect_collected_cubes(){
     if ARCHIPELAGO_STATE.cubes_options == 9{
         let all_cubes = Tas::get_vanilla_cubes();
         for cube in all_cubes {
-            Tas::destroy_cube(cube);
+            Tas::collect_cube(cube);
         }
     }else{
-        let all_cubes = Tas::get_vanilla_cubes();
-        for cube in all_cubes {
-            Tas::set_cube_color_random(cube);
-            Tas::set_cube_scale(cube, 2.0);
-        }
-
         for id in ARCHIPELAGO_STATE.collected_cubes {
             let cluster = (id - 10060000) / 100;
             let plat = (id - 10060000) % 100;
 
-            let ind = Tas::get_vanilla_cube(cluster-1, plat-1);
-            Tas::destroy_cube(ind);
+            match Tas::get_vanilla_cube(cluster-1, plat-1) {
+                Option::Some(cube) => Tas::collect_cube(cube),
+                Option::None => {}
+            }
+        }
+
+        let all_cubes = Tas::get_vanilla_cubes();
+        for cube in all_cubes {
+            Tas::set_cube_color_random(cube);
+            Tas::set_cube_scale(cube, 2.0);
         }
     }
 }

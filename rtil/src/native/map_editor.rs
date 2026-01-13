@@ -3,7 +3,7 @@ use std::fmt::{Formatter, Pointer};
 use std::ops::Deref;
 use std::sync::Mutex;
 use std::ptr;
-use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld, DynamicValue, BoolValueWrapper, DerefToObjectWrapper};
+use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld, DynamicValue, BoolValueWrapper, DerefToObjectWrapper, AMyCharacter};
 use crate::native::reflection::{AActor, ActorWrapper, UeObjectWrapper};
 use crate::native::ue::{FRotator, FVector, FName};
 use crate::native::uworld::{ESpawnActorCollisionHandlingMethod, ESpawnActorNameMode, FActorSpawnParameters};
@@ -190,10 +190,59 @@ impl<'a> CubeWrapper<'a> {
         })
     }
 
-    pub fn destroy(&self) {
+    pub fn _destroy(&self) {
         unsafe {
             UWorld::destroy_actor(self.base.as_ptr() as *const AActor, true, true);
         }
+    }
+
+    pub fn reset(&self) {
+        self.set_color(1.0, 0.016666, 0.03305); // colors used by the base game
+        self.set_scale(1.0);
+        self.set_picked_up(false);
+        self.set_hidden(false);
+    }
+
+    pub fn set_hidden(&self, hidden: bool) {
+        let set_hidden = self.base.class()
+            .find_function("SetActorHiddenInGame")
+            .unwrap();
+
+        let params = set_hidden.create_argument_struct();
+        params.get_field("bNewHidden").unwrap::<BoolValueWrapper>().set(hidden);
+
+        unsafe { set_hidden.call(self.base.as_ptr(), &params); }
+    }
+
+    pub fn is_picked_up(&self) -> bool {
+        self.base.get_field("IsPickedUp").unwrap::<BoolValueWrapper>()._get()
+    }
+
+    pub fn set_picked_up(&self, picked_up: bool) {
+        self.base.get_field("IsPickedUp").unwrap::<BoolValueWrapper>().set(picked_up);
+    }
+
+    pub fn pickup(&self) {
+        self.set_collision(true);
+
+        // Trigger the collision event
+        let trigger_fn = self.class()
+            .find_function("BndEvt__Trigger_K2Node_ComponentBoundEvent_24_ComponentBeginOverlapSignature__DelegateSignature")
+            .unwrap();
+        let params = trigger_fn.create_argument_struct();
+        let movement = unsafe { ObjectWrapper::new(AMyCharacter::get_player().movement() as *mut UObject) };
+        let updated_primitive = movement.get_field("UpdatedPrimitive").unwrap::<ObjectWrapper>();
+        let trigger = self.get_field("Trigger").unwrap::<ObjectWrapper>();
+        params.get_field("OverlappedComponent").set_object(&updated_primitive);
+        params.get_field("OtherComp").set_object(&trigger);
+        params.get_field("OtherActor").set_object(&self);
+        params.get_field("OtherBodyIndex").unwrap::<&Cell<i32>>().set(0);
+        unsafe {
+            trigger_fn.call(self.as_ptr(), &params);
+        }
+
+        self.set_picked_up(true);
+        self.set_hidden(true);
     }
 
     pub fn set_collision(&self, enabled: bool) {

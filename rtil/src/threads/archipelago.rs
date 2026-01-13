@@ -125,6 +125,7 @@ async fn handle_receiver(mut receiver: ArchipelagoClientReceiver, archipelago_re
                 continue;
             }
             Err(e) => {
+                log!("{}", e);
                 archipelago_rebo_tx.send(ArchipelagoToRebo::ConnectionAborted).unwrap();
                 break;
             }
