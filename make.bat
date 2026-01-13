@@ -1,4 +1,7 @@
 echo off
+set "ESC="
+for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
+
 echo Preparing build
 if not exist "build" md build
 if not exist "build\practice-windows" md build\practice-windows
@@ -9,8 +12,11 @@ cargo build --release --target=i686-pc-windows-msvc || exit /b
 cd ..\tool
 cargo build --target=i686-pc-windows-msvc || exit /b
 cd ..
-echo Copying files
+echo Copying files to build folder
 copy rtil\target\i686-pc-windows-msvc\release\rtil.dll build\practice-windows > NUL
+if ERRORLEVEL 1 (
+    echo %ESC%[31m  Error: Could not copy rtil.dll file ^(probably still injected into Refunct^)%ESC%[0m
+)
 copy tool\target\i686-pc-windows-msvc\debug\refunct-tas.exe build\practice-windows > NUL
 copy tool\debug.bat build\practice-windows > NUL
 copy tool\main.re build\practice-windows > NUL
@@ -38,7 +44,8 @@ copy tool\mapeditor.re build\practice-windows > NUL
 copy tool\world_options.re build\practice-windows > NUL
 copy tool\player.re build\practice-windows > NUL
 copy tool\log.re build\practice-windows > NUL
-echo Converting lf to crlf
+
+echo Converting LF to CRLF in Rebo files
 call :convert main.re > NUL
 call :convert prelude.re > NUL
 call :convert component.re > NUL
