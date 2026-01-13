@@ -183,7 +183,7 @@ checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
 [[package]]
 name = "archipelago_rs"
 version = "0.2.0"
-source = "git+https://github.com/nex3/archipelago_rs?rev=12a9385fb9f0df8d863a64750e44352bc1cbbeca#12a9385fb9f0df8d863a64750e44352bc1cbbeca"
+source = "git+https://github.com/nepcore/archipelago_rs?rev=01abcaebcae2ebd6d7dee53d016fe32344c4112e#01abcaebcae2ebd6d7dee53d016fe32344c4112e"
 dependencies = [
  "bimap",
  "bitflags 2.10.0",
