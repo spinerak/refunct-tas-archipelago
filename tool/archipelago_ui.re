@@ -24,18 +24,6 @@ static AP_COLOR_GRAY_BG = Color { red: 0., green: 0., blue: 0., alpha: 0.6 };
 static AP_COLOR_CLEAR   = Color { red: 0., green: 0., blue: 0., alpha: 0.0 };
 
 fn create_archipelago_menu() -> Ui {
-    add_component(AP_LOG_COMPONENT);
-    add_component(ARCHIPELAGO_COMPONENT);
-    press_buttons_until(35); // makes every cluster rise
-//    let cube = Tas::spawn_cube(Location { x: -1850.0, y: -600.0, z: 0.0 });
-//    Tas::set_cube_color(cube, Color { red: 0.0, green: 1.0, blue: 1.0, alpha: 1.0 });
-
-//    for cube in Tas::get_all_cubes() {
-//        Tas::set_cube_color(cube, 0.0, 1.0, 1.0);
-//        Tas::set_cube_scale(cube, 5.0);
-//        Tas::set_cube_collision(cube, false);
-//    }
-
     let elements = List::new();
 
     if !ARCHIPELAGO_STATE.ap_connected {
