@@ -563,10 +563,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                 let key = STATE.lock().unwrap().as_mut().unwrap().ui.key_released(key);
                 on_key_up(vm, key.raw_key_code, key.raw_character_code, repeat)?
             },
-            UeEvent::KeyChar(character, repeat) => {
-                // let key = STATE.lock().unwrap().as_mut().unwrap().ui.key_released(key);
-                on_key_char(vm, character as u32, repeat)?
-            },
+            UeEvent::KeyChar(character, repeat) => on_key_char(vm, character as u32, repeat)?,
             UeEvent::MouseMove(x, y) => {
                 let (absx, absy) = AMyCharacter::get_mouse_position();
                 STATE.lock().unwrap().as_mut().unwrap().ui.mouse_moved(absx as u32, absy as u32);
@@ -631,7 +628,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => panic!("archipelago_rebo_rx became disconnected"),
                 Ok(ArchipelagoToRebo::ConnectionFailed(cause)) => {
-                    ap_log_error(vm, format!("Failed connecting to archipelago server: {}", cause));
+                    ap_log_error(vm, format!("Failed connecting to archipelago server: {}", cause))?;
                     archipelago_disconnected(vm)?
                 },
                 Ok(ArchipelagoToRebo::ConnectionAborted) => {
