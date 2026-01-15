@@ -134,6 +134,11 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             Tas::destroy_platform(p);
         }
 
+        let non_vanilla_platforms = Tas::get_non_vanilla_platforms();
+        for p in non_vanilla_platforms {
+            Tas::destroy_platform(p);
+        }
+
         if ARCHIPELAGO_STATE.gamemode == 4 {
             ARCHIPELAGO_STATE.started = 0;
             Tas::set_level(0);
@@ -607,6 +612,26 @@ fn archipelago_meme_platform_start(){
     let mut j = 0;
     while j < 1 {
         Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000.),10.) ;
+        j += 1;
+    }
+}
+
+fn archipelago_meme_platform_start(){
+    Tas::set_kill_z(-6000.);
+    Tas::archipelago_set_wall_jump_and_ledge_grab(2, 1, false);
+    Tas::archipelago_set_jump_pads(1);
+    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+    ARCHIPELAGO_STATE.started = 2;
+
+    // spawn 500 random cubes using spawn_platform_rando_location(5000.)
+    let mut i = 0;
+    while i < 500 {
+        Tas::spawn_platform_rando_location(3000.);
+        i += 1;
+    }
+    let mut j = 0;
+    while j < 20 {
+        Tas::spawn_cube_rando_location(3000.);
         j += 1;
     }
 }
