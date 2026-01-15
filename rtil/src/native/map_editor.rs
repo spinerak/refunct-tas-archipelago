@@ -99,7 +99,6 @@ impl<'a> LevelWrapper<'a> {
         self.base.get_field("Speed").unwrap::<&Cell<f32>>().set(speed)
     }
 }
-
 #[derive(Debug, Clone)]
 pub struct PlatformWrapper<'a> {
     base: ActorWrapper<'a>,
@@ -134,6 +133,238 @@ impl<'a> PlatformWrapper<'a> {
         assert_eq!(base.class().name(), "BP_IslandChunk_C");
         PlatformWrapper { base }
     }
+
+    pub fn spawn(x: f32, y: f32, z: f32) -> Result<PlatformWrapper<'a>, &'static str> {
+        UeScope::with(|scope| unsafe {
+            let plat_class = scope.iter_global_object_array()
+                .map(|item| item.object())
+                .find(|obj| {
+                    obj.class().name() == "BlueprintGeneratedClass"
+                        && obj.name() == "BP_IslandChunk_C"
+                })
+                .ok_or("Could not find BP_IslandChunk_C class")?;
+
+            let class: ClassWrapper = plat_class.upcast();
+
+            let location = FVector { x, y, z };
+            let rotation = FRotator { pitch: 0.0, yaw: 0.0, roll: 0.0 };
+            let spawn_parameters = FActorSpawnParameters {
+                name: FName::NAME_None,
+                template: ptr::null(),
+                owner: ptr::null(),
+                instigator: ptr::null(),
+                override_level: ptr::null(),
+                spawn_collision_handling_override: ESpawnActorCollisionHandlingMethod::AlwaysSpawn,
+                bitfield: FActorSpawnParameters::B_NO_FAIL,
+                name_node: ESpawnActorNameMode::RequiredFatal,
+                object_flags: 0x00000000,
+            };
+
+            let actor_ptr = UWorld::spawn_actor(
+                class.as_ptr(),
+                &location,
+                &rotation,
+                &spawn_parameters,
+            );
+
+            if actor_ptr.is_null() {
+                return Err("SpawnActor returned null");
+            }
+
+            let plat = PlatformWrapper::new(ActorWrapper::new(actor_ptr));
+            // plat.play_animation();
+
+            // Mark as root to prevent GC
+            let item = scope.object_array().get_item_of_object(&plat);
+            item.mark_as_root_object(true);
+
+            Ok(plat)
+        })
+    }
+
+    pub fn _destroy(&self) {
+        unsafe {
+            UWorld::destroy_actor(self.base.as_ptr() as *const AActor, true, true);
+        }
+    }
+
+    pub fn reset(&self) {
+        self.set_color(1.0, 0.016666, 0.03305);
+        self.set_scale(1.0);
+        self.set_picked_up(false);
+        self.set_hidden(false);
+    }
+
+    pub fn set_hidden(&self, hidden: bool) {
+        let set_hidden = self.base.class()
+            .find_function("SetActorHiddenInGame")
+            .unwrap();
+
+        let params = set_hidden.create_argument_struct();
+        params.get_field("bNewHidden").unwrap::<BoolValueWrapper>().set(hidden);
+
+        unsafe { set_hidden.call(self.base.as_ptr(), &params); }
+    }
+
+    pub fn is_picked_up(&self) -> bool {
+        self.base.get_field("IsPickedUp").unwrap::<BoolValueWrapper>()._get()
+    }
+
+    pub fn set_picked_up(&self, picked_up: bool) {
+        self.base.get_field("IsPickedUp").unwrap::<BoolValueWrapper>().set(picked_up);
+    }
+
+    pub fn destroy(&self) {
+        unsafe {
+            UWorld::destroy_actor(self.base.as_ptr() as *const AActor, true, true);
+        }
+    }
+
+    pub fn pickup(&self) {
+        self.set_collision(true);
+
+        let trigger_fn = self.class()
+            .find_function("BndEvt__Trigger_K2Node_ComponentBoundEvent_24_ComponentBeginOverlapSignature__DelegateSignature")
+            .unwrap();
+        let params = trigger_fn.create_argument_struct();
+        let movement = unsafe { ObjectWrapper::new(AMyCharacter::get_player().movement() as *mut UObject) };
+        let updated_primitive = movement.get_field("UpdatedPrimitive").unwrap::<ObjectWrapper>();
+        let trigger = self.get_field("Trigger").unwrap::<ObjectWrapper>();
+        params.get_field("OverlappedComponent").set_object(&updated_primitive);
+        params.get_field("OtherComp").set_object(&trigger);
+        params.get_field("OtherActor").set_object(&self);
+        params.get_field("OtherBodyIndex").unwrap::<&Cell<i32>>().set(0);
+        unsafe {
+            trigger_fn.call(self.as_ptr(), &params);
+        }
+
+        self.set_picked_up(true);
+        self.set_hidden(true);
+    }
+
+    pub fn set_collision(&self, enabled: bool) {
+        AActor::set_actor_enable_collision(self.base.as_ptr(), enabled);
+    }
+
+    pub fn set_color(&self, r: f32, g: f32, b: f32) {
+        self.set_mesh_color(r, g, b);
+        self.set_light_color(r, g, b);
+    }
+
+    fn set_mesh_color(&self, r: f32, g: f32, b: f32) {
+        let mesh: ObjectWrapper = self.base.get_field("Mesh").unwrap();
+
+        let create_dynamic = mesh.class()
+            .find_function("CreateDynamicMaterialInstance")
+            .unwrap();
+
+        let params = create_dynamic.create_argument_struct();
+        params.get_field("ElementIndex").unwrap::<&Cell<i32>>().set(0);
+        unsafe { create_dynamic.call(mesh.as_ptr(), &params); }
+
+        let dynamic_mat: ObjectWrapper = params.get_field("ReturnValue").unwrap();
+
+        let set_vector = dynamic_mat.class()
+            .find_function("SetVectorParameterValue")
+            .unwrap();
+
+        let arg_struct = set_vector.create_argument_struct();
+
+        let fname = FName::from("GlowColor");
+        unsafe {
+            let base_ptr = arg_struct.as_ptr() as *mut u8;
+            let name_field = arg_struct.get_field("ParameterName");
+            let offset = name_field.prop().offset();
+            let fname_ptr = base_ptr.offset(offset) as *mut FName;
+            ptr::write(fname_ptr, fname);
+        }
+
+        let value: StructValueWrapper = arg_struct.get_field("Value").unwrap();
+        value.get_field("R").unwrap::<&Cell<f32>>().set(r * 20.0);
+        value.get_field("G").unwrap::<&Cell<f32>>().set(g * 20.0);
+        value.get_field("B").unwrap::<&Cell<f32>>().set(b * 20.0);
+        value.get_field("A").unwrap::<&Cell<f32>>().set(1.0);
+
+        unsafe { set_vector.call(dynamic_mat.as_ptr(), &arg_struct); }
+    }
+
+    fn set_light_color(&self, r: f32, g: f32, b: f32) {
+        if let Some(light) = self.base.get_field("PointLight1").unwrap_nullable::<ObjectWrapper>() {
+            let set_light_color = light.class()
+                .find_function("SetLightColor")
+                .unwrap();
+
+            let params = set_light_color.create_argument_struct();
+            let color: StructValueWrapper = params.get_field("NewLightColor").unwrap();
+
+            color.get_field("R").unwrap::<&Cell<f32>>().set(r);
+            color.get_field("G").unwrap::<&Cell<f32>>().set(g);
+            color.get_field("B").unwrap::<&Cell<f32>>().set(b);
+            color.get_field("A").unwrap::<&Cell<f32>>().set(1.0);
+
+            unsafe {
+                set_light_color.call(light.as_ptr(), &params);
+            }
+        } else {
+            log!("Warning: No light component found on platform {}", self.as_ptr().addr());
+        }
+    }
+
+    pub fn set_scale(&self, new_scale: f32) {
+        let old_bounds = self.get_actor_bounds();
+        let old_z = old_bounds.2;
+        let old_h = old_bounds.5;
+
+        let root_component: ObjectWrapper = self.get_field("RootComponent").unwrap();
+        let set_world_scale = root_component.class().find_function("SetRelativeScale3D").unwrap();
+        let params = set_world_scale.create_argument_struct();
+        let s: StructValueWrapper = params.get_field("NewScale3D").unwrap();
+        s.get_field("X").unwrap::<&Cell<f32>>().set(new_scale);
+        s.get_field("Y").unwrap::<&Cell<f32>>().set(new_scale);
+        s.get_field("Z").unwrap::<&Cell<f32>>().set(new_scale);
+
+        unsafe { set_world_scale.call(root_component.as_ptr(), &params); }
+
+        let new_bounds = self.get_actor_bounds();
+        let new_z = new_bounds.2;
+        let new_h = new_bounds.5;
+
+        let loc = self.absolute_location();
+        self.set_location(loc.0, loc.1, loc.2 - (new_z - old_z) + (new_h - old_h)/2.0);
+    }
+
+    pub fn set_location(&self, x: f32, y: f32, z: f32) {
+        let root_component: ObjectWrapper = self.get_field("RootComponent").unwrap();
+        let set_world_location_and_rotation = root_component.class().find_function("K2_SetWorldLocation").unwrap();
+
+        let params = set_world_location_and_rotation.create_argument_struct();
+        let location: StructValueWrapper = params.get_field("NewLocation").unwrap();
+        location.get_field("X").unwrap::<&Cell<f32>>().set(x);
+        location.get_field("Y").unwrap::<&Cell<f32>>().set(y);
+        location.get_field("Z").unwrap::<&Cell<f32>>().set(z);
+        params.get_field("bSweep").unwrap::<BoolValueWrapper>().set(false);
+        params.get_field("bTeleport").unwrap::<BoolValueWrapper>().set(true);
+        unsafe {
+            set_world_location_and_rotation.call(root_component.as_ptr(), &params);
+        }
+    }
+
+    // pub fn play_animation(&self) {
+    //     let timeline: ObjectWrapper = self.base.get_field("MoveAnimation").unwrap();
+
+    //     let the_timeline: StructValueWrapper = timeline.get_field("TheTimeline").unwrap();
+    //     the_timeline.get_field("PlayRate").unwrap::<&Cell<f32>>().set(0.25);
+
+    //     if let Some(play_func) = timeline.class().find_function("Play") {
+    //         let params = play_func.create_argument_struct();
+    //         unsafe {
+    //             play_func.call(timeline.as_ptr(), &params);
+    //         }
+    //         log!("Started MoveAnimation timeline");
+    //     } else {
+    //         log!("Warning: Could not find Play function on timeline");
+    //     }
+    // }
 }
 #[derive(Debug, Clone)]
 pub struct CubeWrapper<'a> {

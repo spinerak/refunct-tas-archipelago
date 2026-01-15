@@ -585,6 +585,13 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
+            label: Text { text: "Meme Platforms!" },
+            onclick: fn(label: Text) { 
+                archipelago_init(5); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
         }),
@@ -624,6 +631,10 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: "Archipelago - OG Randomizer\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Press the buttons!", color: AP_COLOR_CYAN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_OG_randomizer_minigame}", color: COLOR_WHITE },
+            ),
+            5 => List::of(
+                ColorfulText { text: "Archipelago - Meme Platforms\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Collect the cubes!", color: AP_COLOR_CYAN },
             ),
             _ => List::of(
                 ColorfulText { text: "Archipelago\n", color: COLOR_WHITE },

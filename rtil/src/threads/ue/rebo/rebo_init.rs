@@ -13,7 +13,7 @@ use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use websocket::{ClientBuilder, Message, OwnedMessage, WebSocketError};
-use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX, CubeWrapper};
+use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX, CubeWrapper, PlatformWrapper};
 use crate::native::{try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
 use protocol::{Request, Response};
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo, archipelago};
@@ -89,9 +89,14 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(project)
         .add_function(get_viewport_size)
         .add_function(get_text_size)
+        .add_function(spawn_platform)
+        .add_function(spawn_platform_rando_location)
+        .add_function(spawn_cube_rando_location)
+        .add_function(reset_platforms)
         .add_function(spawn_cube)
         .add_function(reset_cubes)
         .add_function(collect_cube)
+        .add_function(destroy_platform)
         .add_function(get_vanilla_cube)
         .add_function(set_cube_collision)
         .add_function(set_cube_color)
@@ -100,6 +105,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_cube_scale)
         .add_function(get_vanilla_cubes)
         .add_function(get_non_vanilla_cubes)
+        .add_function(get_non_vanilla_platforms)
         .add_function(get_all_cubes)
         .add_function(spawn_pawn)
         .add_function(destroy_pawn)
@@ -1241,6 +1247,67 @@ fn get_viewport_size() -> Size {
     Size { width, height }
 }
 
+#[rebo::function("Tas::spawn_platform_rando_location")]
+fn spawn_platform_rando_location(max: f32) -> i32 {
+    let rx = rand::random::<f32>();
+    let ry = rand::random::<f32>();
+    let rz = rand::random::<f32>();
+    let loc = Location { x: (rx-0.5) * 2. * max as f32, y: (ry-0.5) * 2. * max as f32, z: rz * max as f32 };
+    match crate::native::PlatformWrapper::spawn(loc.x, loc.y, loc.z) {
+        Ok(platform) => {
+            let index = platform.internal_index();
+            STATE.lock().unwrap().as_mut().unwrap().extra_platforms.push(index);
+            log!("Successfully spawned platform at {:p} with internal index {}", platform.as_ptr(), index);
+            index
+        }
+        Err(e) => {
+            panic!("Failed to spawn platform: {}", e);
+        }
+    }
+}
+#[rebo::function("Tas::spawn_cube_rando_location")]
+fn spawn_cube_rando_location(max: f32) -> i32 {
+    let rx = rand::random::<f32>();
+    let ry = rand::random::<f32>();
+    let rz = rand::random::<f32>();
+    let loc = Location { x: (rx-0.5) * 2. * max as f32, y: (ry-0.5) * 2. * max as f32, z: rz * max as f32 };
+    match CubeWrapper::spawn(loc.x, loc.y, loc.z) {
+        Ok(cube) => {
+            let index = cube.internal_index();
+            STATE.lock().unwrap().as_mut().unwrap().extra_cubes.push(index);
+            log!("Successfully spawned cube at {:p} with internal index {}", cube.as_ptr(), cube.internal_index());
+            index
+        }
+        Err(e) => {
+            panic!("Failed to spawn cube: {}", e);
+        }
+    }
+}
+
+#[rebo::function("Tas::spawn_platform")]
+fn spawn_platform(loc: Location) -> i32 {
+    match crate::native::PlatformWrapper::spawn(loc.x, loc.y, loc.z) {
+        Ok(platform) => {
+            let index = platform.internal_index();
+            STATE.lock().unwrap().as_mut().unwrap().extra_platforms.push(index);
+            log!("Successfully spawned platform at {:p} with internal index {}", platform.as_ptr(), index);
+            index
+        }
+        Err(e) => {
+            panic!("Failed to spawn platform: {}", e);
+        }
+    }
+}
+
+#[rebo::function("Tas::reset_platforms")]
+fn reset_platforms() {
+    UeScope::with(|scope| {
+        LEVELS.lock().unwrap().iter().for_each(|level| {
+            level.platforms.iter().for_each(|platform| scope.get(platform).reset());
+        });
+    });
+}
+
 #[rebo::function("Tas::spawn_cube")]
 fn spawn_cube(loc: Location) -> i32 {
     match CubeWrapper::spawn(loc.x, loc.y, loc.z) {
@@ -1286,6 +1353,20 @@ fn get_uncollected_extra_cubes() -> Vec<i32> {
         .collect::<Vec<i32>>()
 }
 
+fn get_non_vanilla_platforms_in() -> Vec<i32> {
+    let state = STATE.lock().unwrap();
+
+    state.as_ref().unwrap()
+        .extra_platforms.iter()
+        .filter_map(|&platform_index| {
+            match find_platform_and(platform_index, |_platform| ()) {
+                Ok(_) => Some(platform_index),
+                Err(_) => None,
+            }
+        })
+        .collect::<Vec<i32>>()
+}
+
 #[rebo::function("Tas::reset_cubes")]
 fn reset_cubes() {
     UeScope::with(|scope| {
@@ -1304,7 +1385,10 @@ fn get_vanilla_cubes() -> Vec<i32> {
 fn get_non_vanilla_cubes() -> Vec<i32> {
     get_uncollected_extra_cubes()
 }
-
+#[rebo::function("Tas::get_non_vanilla_platforms")]
+fn get_non_vanilla_platforms() -> Vec<i32> {
+    get_non_vanilla_platforms_in()
+}
 #[rebo::function("Tas::get_all_cubes")]
 fn get_all_cubes() -> Vec<i32> {
     let mut cubes = get_uncollected_vanilla_cubes();
@@ -1321,6 +1405,18 @@ fn find_cube_and<R: 'static, F: FnOnce(&CubeWrapper) -> R>(internal_index: i32, 
         match item.object().try_upcast::<CubeWrapper>() {
             Some(cube) => Ok(f(&cube)),
             None => Err(format!("Failed to find cube {}", internal_index))
+        }
+    })
+}
+
+fn find_platform_and<R: 'static, F: FnOnce(&PlatformWrapper) -> R>(internal_index: i32, f: F) -> Result<R, String> {
+    UeScope::with(|scope| {
+        let item = scope.object_array().try_get(internal_index)
+            .ok_or_else(|| format!("Failed to find platform at index {}", internal_index))?;
+
+        match item.object().try_upcast::<PlatformWrapper>() {
+            Some(platform) => Ok(f(&platform)),
+            None => Err(format!("Failed to find platform {}", internal_index))
         }
     })
 }
@@ -1386,11 +1482,26 @@ fn collect_cube(internal_index: i32) {
     find_cube_and(internal_index, |cube| cube.pickup())
         .unwrap_or_else(|e| log!("Could not pickup cube {:?}: {}", internal_index, e));
 }
+#[rebo::function("Tas::destroy_platform")]
+fn destroy_platform(internal_index: i32) {
+    maybe_remove_extra_platform(internal_index);
+    find_platform_and(internal_index, |platform| platform.destroy());
+}
 
 pub fn maybe_remove_extra_cube(internal_index: i32) -> bool {
     if let Some(state) = STATE.lock().unwrap().as_mut() {
         if let Some(pos) = state.extra_cubes.iter().position(|i| *i == internal_index) {
             state.extra_cubes.remove(pos);
+            return true;
+        }
+    }
+    false
+}
+
+pub fn maybe_remove_extra_platform(internal_index: i32) -> bool {
+    if let Some(state) = STATE.lock().unwrap().as_mut() {
+        if let Some(pos) = state.extra_platforms.iter().position(|i| *i == internal_index) {
+            state.extra_platforms.remove(pos);
             return true;
         }
     }
