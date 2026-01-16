@@ -78,7 +78,7 @@ find! {
     FSLATEAPPLICATION_TICK, "^FSlateApplication::Tick()",
     FSLATEAPPLICATION_ONKEYDOWN, "^FSlateApplication::OnKeyDown(int, unsigned int, bool)",
     FSLATEAPPLICATION_ONKEYUP, "^FSlateApplication::OnKeyUp(int, unsigned int, bool)",
-    FSLATEAPPLICATION_ONKEYCHAR, "^FSlateApplication::OnKeyChar(unsigned int, bool)",
+    FSLATEAPPLICATION_ONKEYCHAR, "^FSlateApplication::OnKeyChar(wchar_t, bool)",
     FSLATEAPPLICATION_ONRAWMOUSEMOVE, "^FSlateApplication::OnRawMouseMove(int, int)",
     FSLATEAPPLICATION_ONMOUSEMOVE, "^FSlateApplication::OnMouseMove()",
     FSLATEAPPLICATION_ONMOUSEDOWN, "^FSlateApplication::OnMouseDown(TSharedPtr<FGenericWindow, (ESPMode)0> const&, EMouseButtons::Type, FVector2D)",
