@@ -4,7 +4,8 @@ struct ArchipelagoLog {
 
 struct ArchipelagoLogMessage {
     texts: List<ColorfulText>,
-    timestamp: int
+    timestamp: int,
+    force: bool
 }
 
 enum ArchipelagoLogDisplay {
@@ -62,19 +63,27 @@ static mut AP_LOG_COMPONENT = Component {
     on_menu_open: fn() {},
 };
 
-fn ap_log(texts: List<ColorfulText>) {
+fn ap_log_internal(texts: List<ColorfulText>, force: bool) {
     // Filter any newlines
     let filtered_texts = List::new();
     for text in texts {
         filtered_texts.push(ColorfulText { text: text.text.replace("\n", ""), color: text.color });
     }
-    AP_LOG.messages.push(ArchipelagoLogMessage { texts: filtered_texts, timestamp: current_time_millis() });
+    AP_LOG.messages.push(ArchipelagoLogMessage { texts: filtered_texts, timestamp: current_time_millis(), force: force });
+}
+
+fn ap_log(texts: List<ColorfulText>) {
+    ap_log_internal(texts, false);
+}
+
+fn ap_log_force(texts: List<ColorfulText>) {
+    ap_log_internal(texts, true);
 }
 
 // Convenience functions
 fn ap_log_info(text: string)    { ap_log(List::of(ColorfulText { text: text, color: COLOR_WHITE })); }
 fn ap_log_warning(text: string) { ap_log(List::of(ColorfulText { text: text, color: AP_COLOR_YELLOW })); }
-fn ap_log_error(text: string)   { ap_log(List::of(ColorfulText { text: text, color: AP_COLOR_RED })); }
+fn ap_log_error(text: string)   { ap_log_force(List::of(ColorfulText { text: text, color: AP_COLOR_RED })); }
 
 fn archipelago_received_death(source: string, cause: string) {
     let mut message = List::new();
@@ -203,7 +212,7 @@ fn archipelago_interpret_json_message_part(
 }
 
 fn draw_ap_log_hud() {
-    if SETTINGS.archipelago_log_display == ArchipelagoLogDisplay::Off { return; }
+    //if SETTINGS.archipelago_log_display == ArchipelagoLogDisplay::Off { return; }
 
     let viewport = Tas::get_viewport_size();
     let w = viewport.width.to_float();
@@ -216,7 +225,12 @@ fn draw_ap_log_hud() {
     let now = current_time_millis();
     while i < AP_LOG.messages.len() {
         let log = AP_LOG.messages.get(i).unwrap();
-        if SETTINGS.archipelago_log_display == ArchipelagoLogDisplay::Temporary
+        if SETTINGS.archipelago_log_display == ArchipelagoLogDisplay::Off && !log.force {
+            i += 1;
+            continue;
+        }
+
+        if (SETTINGS.archipelago_log_display == ArchipelagoLogDisplay::Temporary || SETTINGS.archipelago_log_display == ArchipelagoLogDisplay::Off)
         && (now - log.timestamp) > (SETTINGS.archipelago_log_display_time_sec * 1000 + LOG_FADEOUT_MS) {
             i += 1;
             continue;

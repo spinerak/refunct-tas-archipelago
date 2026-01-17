@@ -2,7 +2,7 @@ use std::time::SystemTime;
 use std::error::Error;
 use std::thread;
 use archipelago_rs::client::{ArchipelagoClient, ArchipelagoClientReceiver, ArchipelagoClientSender, ArchipelagoError};
-use archipelago_rs::protocol::{ClientStatus, ServerMessage, Bounce, BounceData, ClientMessage, DeathLink, ConnectUpdate}; // adjust path if needed
+use archipelago_rs::protocol::{ClientStatus, ServerMessage, Bounce, BounceData, ClientMessage, DeathLink, ConnectUpdate, Connect, network_version}; // adjust path if needed
 use crossbeam_channel::Sender;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::task::AbortHandle;
@@ -43,8 +43,19 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                             match ArchipelagoClient::new(&server_and_port).await {
                                 Ok(mut client) => {
                                     log!("Connected to archipelago server `{server_and_port}`");
-                                    match client.connect(&game, &slot, password.as_deref(), items_handling, tags).await {
-                                        Ok(connected_info) => {
+                                    // manually connecting to ap server to capture ConnectionRefused messages for better error reporting
+                                    client.send(ClientMessage::Connect(Connect {
+                                        game: game.clone(),
+                                        name: slot.clone(),
+                                        password,
+                                        tags,
+                                        items_handling: items_handling.bits(),
+                                        version: network_version(),
+                                        uuid: "".to_string(),
+                                        slot_data: true,
+                                    })).await?;
+                                    match client.recv().await?.ok_or(ArchipelagoError::ConnectionClosed) {
+                                        Ok(ServerMessage::Connected(connected_info)) => {
                                             log!("Connected info: {:?}", connected_info);
                                             archipelago_rebo_tx.send(ArchipelagoToRebo::ServerMessage(ServerMessage::Connected(connected_info))).unwrap();
                                             let (s, mut receiver) = client.split();
@@ -52,9 +63,22 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                                             let join_handle = tokio::spawn(handle_receiver(receiver, archipelago_rebo_tx.clone()));
                                             receiver_abort_handle = Some(join_handle.abort_handle());
                                         },
-                                        Err(err) => {
-                                            handle_ap_err(err)
+                                        // clean up and present errors like invalid slot name or wrong password
+                                        Ok(ServerMessage::ConnectionRefused(errs)) => {
+                                            log!("Archipelago server refused Connect message: {:?}", errs);
+                                            let msg = errs.errors.iter().map(|err| {
+                                                match err.as_str() {
+                                                    "InvalidSlot" => format!("Slot '{}' does not exist", slot.clone()),
+                                                    "InvalidGame" => format!("Slot '{}' isn't playing {}", slot.clone(), game.clone()),
+                                                    "InvalidPassword" => "The provided password was incorrect".to_string(),
+                                                    err => err.to_string(),
+                                                }
+                                            }).collect::<Vec<String>>().join("\n");
+                                            archipelago_rebo_tx.send(ArchipelagoToRebo::ConnectionFailed(msg)).unwrap();
                                         },
+                                        // handle any other unexpected server messages as before
+                                        Ok(wrong_message) => handle_ap_err(ArchipelagoError::IllegalResponse { expected: "Connected", received: wrong_message.type_name() }),
+                                        Err(err) => handle_ap_err(err),
                                     }
                                 },
                                 Err(err) => handle_ap_err(err),

@@ -627,7 +627,10 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => panic!("archipelago_rebo_rx became disconnected"),
                 Ok(ArchipelagoToRebo::ConnectionFailed(cause)) => {
-                    ap_log_error(vm, format!("Failed connecting to archipelago server: {}", cause));
+                    ap_log_error(vm, "Failed connecting to archipelago server:".to_string())?;
+                    for line in cause.split("\n") {
+                        ap_log_error(vm, format!(" - {}", line.trim().to_string()))?;
+                    }
                     archipelago_disconnected(vm)?
                 },
                 Ok(ArchipelagoToRebo::ConnectionAborted) => {
