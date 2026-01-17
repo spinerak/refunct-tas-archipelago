@@ -438,6 +438,7 @@ impl<'a> LiftWrapper<'a> {
         } else {
             self.set_speed(0.0);
             self.set_play_rate(0.0);
+            self.reset_playback_position();
         }
     }
 
@@ -455,6 +456,20 @@ impl<'a> LiftWrapper<'a> {
         params.get_field("NewRate").unwrap::<&Cell<f32>>().set(new_play_rate);
 
         unsafe { set_play_rate.call(lift_mover.as_ptr(), &params); }
+    }
+
+    fn reset_playback_position(&self) {
+        let lift_mover: ObjectWrapper = self.get_field("LiftMover").unwrap();
+        let set_playback_position = lift_mover.class()
+            .find_function("SetPlaybackPosition")
+            .unwrap();
+
+        let params = set_playback_position.create_argument_struct();
+        params.get_field("NewPosition").unwrap::<&Cell<f32>>().set(0.0);
+        params.get_field("bFireEvents").unwrap::<BoolValueWrapper>().set(false);
+        params.get_field("bFireUpdate").unwrap::<BoolValueWrapper>().set(false);
+
+        unsafe { set_playback_position.call(lift_mover.as_ptr(), &params); }
     }
 }
 
