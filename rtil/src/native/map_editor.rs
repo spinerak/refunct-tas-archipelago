@@ -427,6 +427,7 @@ impl<'a> ButtonWrapper<'a> {
 }
 #[derive(Debug, Clone)]
 pub struct LiftWrapper<'a> {
+    original_play_rate: f32,
     base: ActorWrapper<'a>,
 }
 
@@ -434,7 +435,7 @@ impl<'a> LiftWrapper<'a> {
     pub fn set_enabled(&self, enabled: bool) {
         if enabled {
             self.set_speed(1014.6428);
-            self.set_play_rate(0.9019047);
+            self.set_play_rate(self.original_play_rate);
         } else {
             self.set_speed(0.0);
             self.set_play_rate(0.0);
@@ -501,7 +502,14 @@ impl<'a> Pointer for LiftWrapper<'a> {
 impl<'a> LiftWrapper<'a> {
     pub fn new(lift: ActorWrapper<'a>) -> LiftWrapper<'a> {
         assert_eq!(lift.class().name(), "BP_Lift_C");
-        LiftWrapper { base: lift }
+        let original_play_rate = match lift.name().as_str() {
+            "BP_Lift_C_1" => 0.5073214,
+            _ => 0.9019047,
+        };
+        LiftWrapper {
+            original_play_rate,
+            base: lift
+        }
     }
 }
 #[derive(Debug, Clone)]

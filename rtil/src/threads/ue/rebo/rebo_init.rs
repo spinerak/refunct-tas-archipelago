@@ -1419,16 +1419,20 @@ fn set_lifts_enabled(enabled: bool) {
             }
         }
 
-        for item in scope.iter_global_object_array() {
-            let object = item.object();
-            let obj_name = object.name();
-
-            if matches!(obj_name.as_str(), "LiftDownStart_Cue" | "LiftDownStop_Cue" | "LiftUpStart_Cue" | "LiftUpStop_Cue")
-            {
-                let volume = object.get_field("VolumeMultiplier").unwrap::<&Cell<f32>>();
-                volume.set(if enabled { 1.0 } else { 0.0 });
-            }
-        }
+        // TODO: figure out why changing this volume occasionally crashes the game
+        // let new_volume = if enabled { 1.0 } else { 0.0 };
+        // log!("Setting lift sound volume to {}", new_volume);
+        // for item in scope.iter_global_object_array() {
+        //     let object = item.object();
+        //     let obj_name = object.name();
+        //
+        //     if matches!(obj_name.as_str(), "LiftDownStart_Cue" | "LiftDownStop_Cue" | "LiftUpStart_Cue" | "LiftUpStop_Cue")
+        //     {
+        //         let volume = object.get_field("VolumeMultiplier").unwrap::<&Cell<f32>>();
+        //         volume.set(new_volume);
+        //         log!("  Set volume of {} to {new_volume}", obj_name);
+        //     }
+        // }
     });
 }
 
