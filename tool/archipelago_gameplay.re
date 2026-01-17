@@ -4,9 +4,11 @@ struct ArchipelagoState {
     last_level_unlocked: int,
     grass: int,
     wall_jump: int,
-    ledge_grab: int,
-    swim: int,
-    jumppads: int,
+    ledge_grab: bool,
+    swim: bool,
+    jumppads: bool,
+    pipes: bool,
+    lifts: bool,
     required_grass: int,
     final_platform_c: int,
     final_platform_p: int,
@@ -41,7 +43,6 @@ struct ArchipelagoState {
     progress_OG_randomizer_minigame: string,
     og_randomizer_order: List<int>,
     og_randomizer_index: int,
-    og_randomizer_need_another_new_game: bool,
 
     last_platform_c: Option<int>,
     last_platform_p: Option<int>,
@@ -59,9 +60,11 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_level_unlocked: 1,
         grass: 0,
         wall_jump: 0,
-        ledge_grab: 0,
-        swim: 0,
-        jumppads: 0,
+        ledge_grab: false,
+        swim: false,
+        jumppads: false,
+        pipes: false,
+        lifts: false,
         required_grass: 1000,
         final_platform_c: 100,
         final_platform_p: 1,
@@ -96,7 +99,6 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         progress_OG_randomizer_minigame: "0/37",
         og_randomizer_index: -1,
         og_randomizer_order: List::new(),
-        og_randomizer_need_another_new_game: false,
 
         last_platform_c: Option::None,
         last_platform_p: Option::None,
@@ -126,13 +128,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         Tas::reset_cubes();
 
         if ARCHIPELAGO_STATE.gamemode == 4 {
-            ARCHIPELAGO_STATE.og_randomizer_need_another_new_game = false;
             ARCHIPELAGO_STATE.started = 0;
             Tas::set_level(0);
             ARCHIPELAGO_STATE.og_randomizer_index = -1;
         }
 
-        Tas::set_kill_z(-6000.);
+        Tas::abilities_set_swim(true);
         // log("[AP] on_new_game called");
         ARCHIPELAGO_STATE.started = 1;
         ARCHIPELAGO_STATE.triggered_clusters.clear();
@@ -155,9 +156,6 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             ARCHIPELAGO_STATE.last_platform_c = Option::Some(index.cluster_index + 1);
             ARCHIPELAGO_STATE.last_platform_p = Option::Some(index.element_index + 1);
         }
-
-
-
         if ARCHIPELAGO_STATE.started == 0 {
             return;
         }
@@ -283,23 +281,33 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         // log(f"Processing received item index {item_id}");
         if item_id == 9999990 {  // Ledge Grab
             // log("Received Ledge Grab!");
-            ARCHIPELAGO_STATE.ledge_grab += 1;
-            Tas::archipelago_set_wall_jump_and_ledge_grab(-1, 1, true);
+            ARCHIPELAGO_STATE.ledge_grab = true;
+            Tas::abilities_set_ledge_grab(true);
         }
         if item_id == 9999991 {  // Wall Jump
             // log("Received Wall Jump!");
             ARCHIPELAGO_STATE.wall_jump += 1;
-            Tas::archipelago_set_wall_jump_and_ledge_grab(ARCHIPELAGO_STATE.wall_jump, -1, true);
+            Tas::abilities_set_wall_jump(ARCHIPELAGO_STATE.wall_jump, true);
         }
         if item_id == 9999992 {  // Swim
             // log("Received Swim!");
-            ARCHIPELAGO_STATE.swim += 1;
-            Tas::set_kill_z(-6000.);
+            ARCHIPELAGO_STATE.swim = true;
+            Tas::abilities_set_swim(true);
         }
         if item_id == 9999993 {  // Jumppads
             // log("Received Jumppads!");
-            ARCHIPELAGO_STATE.jumppads += 1;
-            Tas::archipelago_set_jump_pads(1);
+            ARCHIPELAGO_STATE.jumppads = true;
+            Tas::abilities_set_jump_pads(true);
+        }
+        if item_id == 9999994 {  // Pipes
+            // log("Received Pipes!");
+            ARCHIPELAGO_STATE.pipes = true;
+            Tas::abilities_set_pipes(true);
+        }
+        if item_id == 9999995 {  // Lifts
+            // log("Received Lifts!");
+            ARCHIPELAGO_STATE.lifts = true;
+            Tas::abilities_set_lifts(true);
         }
         if item_id == 9999997 {  // Final Platform Known
             ARCHIPELAGO_STATE.final_platform_known = true;
@@ -313,31 +321,6 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
                 ARCHIPELAGO_STATE.triggering_clusters.push(clusterindex);
             }
         }
-    }
-
-    // DEBUG items:
-    if item_id >= 20000000 && item_id < 30000000 {
-        log(f"DEBUG set_level {item_id - 20000000}");
-        Tas::set_level(item_id - 20000000);
-    }
-    if item_id >= 30000000 && item_id < 40000000{
-        log(f"DEBUG trigger_element {item_id - 30000000} Button 0");
-        Tas::trigger_element_by_type(item_id - 30000000, "Button", 0);
-    }
-    if item_id == 60000000{
-        Tas::archipelago_set_wall_jump_and_ledge_grab(0, 0, true);
-    }
-    if item_id == 60000001{
-        Tas::archipelago_set_wall_jump_and_ledge_grab(1, -1, true);
-    }
-    if item_id == 60000005{
-        Tas::set_kill_z(-60.);
-    }
-    if item_id == 60000010{
-        Tas::archipelago_set_jump_pads(0);
-    }
-    if item_id == 60000015{
-        Tas::archipelago_trigger_goal_animation();
     }
 
     if starting_index > 0 {
@@ -486,16 +469,19 @@ fn archipelago_main_start(){
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.grass = 0;
     ARCHIPELAGO_STATE.wall_jump = 0;
-    ARCHIPELAGO_STATE.ledge_grab = 0;
-    ARCHIPELAGO_STATE.swim = 0;
-    ARCHIPELAGO_STATE.jumppads = 0;
+    ARCHIPELAGO_STATE.ledge_grab = false;
+    ARCHIPELAGO_STATE.swim = false;
+    ARCHIPELAGO_STATE.jumppads = false;
 
     ARCHIPELAGO_STATE.triggered_clusters = List::new();
     ARCHIPELAGO_STATE.has_goaled = false;
 
-    Tas::set_kill_z(-60.);
-    Tas::archipelago_set_wall_jump_and_ledge_grab(0, 0, true);
-    Tas::archipelago_set_jump_pads(0);
+    Tas::abilities_set_swim(false);
+    Tas::abilities_set_wall_jump(0, true);
+    Tas::abilities_set_ledge_grab(false);
+    Tas::abilities_set_jump_pads(false);
+    Tas::abilities_set_pipes(false);
+    Tas::abilities_set_lifts(false);
 
     archipelago_activate_stepped_on_platforms();
     archipelago_collect_collected_cubes();
@@ -509,17 +495,23 @@ fn archipelago_main_start(){
 }
 
 fn archipelago_vanilla_start(){
-    Tas::set_kill_z(-6000.);
-    Tas::archipelago_set_wall_jump_and_ledge_grab(2, 1, false);
-    Tas::archipelago_set_jump_pads(1);
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
 }
 
 fn archipelago_seeker_start(){
-    Tas::set_kill_z(-6000.);
-    Tas::archipelago_set_wall_jump_and_ledge_grab(2, 1, false);
-    Tas::archipelago_set_jump_pads(1);
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
 
@@ -545,18 +537,23 @@ fn archipelago_seeker_start(){
 }
 
 fn archipelago_button_galore_start(){
-    Tas::set_kill_z(-6000.);
-    Tas::archipelago_set_wall_jump_and_ledge_grab(2, 1, false);
-    Tas::archipelago_set_jump_pads(1);
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
 }
 
 fn archipelago_og_randomizer_start(){
-    Tas::set_level(0);
-    Tas::set_kill_z(-6000.);
-    Tas::archipelago_set_wall_jump_and_ledge_grab(2, 1, false);
-    Tas::archipelago_set_jump_pads(1);
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
 }
