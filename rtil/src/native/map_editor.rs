@@ -429,6 +429,35 @@ impl<'a> ButtonWrapper<'a> {
 pub struct LiftWrapper<'a> {
     base: ActorWrapper<'a>,
 }
+
+impl<'a> LiftWrapper<'a> {
+    pub fn set_enabled(&self, enabled: bool) {
+        if enabled {
+            self.set_speed(1014.6428);
+            self.set_play_rate(0.9019047);
+        } else {
+            self.set_speed(0.0);
+            self.set_play_rate(0.0);
+        }
+    }
+
+    fn set_speed(&self, new_speed: f32) {
+        self.get_field("Speed").unwrap::<&Cell<f32>>().set(new_speed);
+    }
+
+    fn set_play_rate(&self, new_play_rate: f32) {
+        let lift_mover: ObjectWrapper = self.get_field("LiftMover").unwrap();
+        let set_play_rate = lift_mover.class()
+            .find_function("SetPlayRate")
+            .unwrap();
+
+        let params = set_play_rate.create_argument_struct();
+        params.get_field("NewRate").unwrap::<&Cell<f32>>().set(new_play_rate);
+
+        unsafe { set_play_rate.call(lift_mover.as_ptr(), &params); }
+    }
+}
+
 pub enum LiftWrapperType {}
 impl UeObjectWrapperType for LiftWrapperType {
     type UeObjectWrapper<'a> = LiftWrapper<'a>;

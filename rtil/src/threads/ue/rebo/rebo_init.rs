@@ -101,6 +101,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(get_vanilla_cubes)
         .add_function(get_non_vanilla_cubes)
         .add_function(get_all_cubes)
+        .add_function(set_pipes_enabled)
+        .add_function(set_lifts_enabled)
         .add_function(spawn_pawn)
         .add_function(destroy_pawn)
         .add_function(move_pawn)
@@ -1395,6 +1397,39 @@ pub fn maybe_remove_extra_cube(internal_index: i32) -> bool {
         }
     }
     false
+}
+
+#[rebo::function("Tas::set_pipes_enabled")]
+fn set_pipes_enabled(enabled: bool) {
+    UeScope::with(|scope| {
+        for level in LEVELS.lock().unwrap().iter() {
+            for pipe in level.pipes.iter() {
+                scope.get(pipe).set_enabled(enabled);
+            }
+        }
+    });
+}
+
+#[rebo::function("Tas::set_lifts_enabled")]
+fn set_lifts_enabled(enabled: bool) {
+    UeScope::with(|scope| {
+        for level in LEVELS.lock().unwrap().iter() {
+            for lift in level.lifts.iter() {
+                scope.get(lift).set_enabled(enabled);
+            }
+        }
+
+        for item in scope.iter_global_object_array() {
+            let object = item.object();
+            let obj_name = object.name();
+
+            if matches!(obj_name.as_str(), "LiftDownStart_Cue" | "LiftDownStop_Cue" | "LiftUpStart_Cue" | "LiftUpStop_Cue")
+            {
+                let volume = object.get_field("VolumeMultiplier").unwrap::<&Cell<f32>>();
+                volume.set(if enabled { 1.0 } else { 0.0 });
+            }
+        }
+    });
 }
 
 #[rebo::function("Tas::spawn_pawn")]
