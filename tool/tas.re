@@ -223,6 +223,8 @@ static mut TAS_COMPONENT = Component {
         }
     },
     on_key_up_always: fn(key: KeyCode) {},
+    on_key_char: fn(c: string) {},
+    on_key_char_always: fn(c: string) {},
     on_mouse_move: fn(x: int, y: int) {
         TAS_STATE.events.push(InputEvent::MouseMoved(x, y));
     },
