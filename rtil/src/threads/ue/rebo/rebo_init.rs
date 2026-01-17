@@ -1015,6 +1015,7 @@ fn get_location_and_log() {
 }
 #[rebo::function("Tas::set_location")]
 fn set_location(loc: Location) {
+    log!("TELEPORTED to x={}, y={}, z={}", loc.x, loc.y, loc.z);
     AMyCharacter::get_player().set_location(loc.x, loc.y, loc.z);
 }
 #[derive(Debug, Clone, Copy, rebo::ExternalType, Serialize, Deserialize)]
@@ -1967,7 +1968,8 @@ fn abilities_set_jump_pads(enabled: bool) {
 fn abilities_set_wall_jump(wall_jump: i32, change_physics: bool) {
     // 0 is off, 1 is one, 2 is infinite
     // change_physics changes the wall jump angles to make wall jumping not replace ledge grab
-    log!("Archipelago: setting wall jump to {}, change_physics to {}", wall_jump, change_physics);
+    log!("Archipelago: setting wall jump to {}", wall_jump);
+    log!("Archipelago: change_physics to {}", change_physics);
     unsafe {
         let character = ObjectWrapper::new(AMyCharacter::get_player().as_ptr() as *mut UObject);
 
