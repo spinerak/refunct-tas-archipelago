@@ -170,6 +170,10 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     //     log(f"Teleported up by 10000 units");
     // }
 
+    if key.to_small() == KEY_J.to_small() {
+        Tas::dash();
+    }
+
     match UI_STACK.last() {
         Option::Some(ui) => ui.onkey(key, chr),
         Option::None => (),

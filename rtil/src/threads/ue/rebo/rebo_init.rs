@@ -131,6 +131,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(abilities_set_pipes)
         .add_function(abilities_set_lifts)
         .add_function(abilities_set_swim)
+        .add_function(dash)
         .add_function(set_start_seconds)
         .add_function(set_start_partial_seconds)
         .add_function(set_end_seconds)
@@ -1452,6 +1453,40 @@ fn abilities_set_swim(enabled: bool) {
     }else{
         UWorld::set_kill_z(-60.);
     }
+}
+
+#[rebo::function("Tas::dash")]
+fn dash() {
+    let dash_velocity = 1500.0;
+    let rot = AMyCharacter::get_player().rotation();
+    // let mut pitch = rot.0;
+    let yaw = rot.1;
+    let roll = rot.2;
+
+    let pitch: f32 = 55.0;
+    
+    let pitch_rad = pitch.to_radians();
+    let yaw_rad = yaw.to_radians();
+    let roll_rad = roll.to_radians();
+    let dash_x = dash_velocity * pitch_rad.cos() * yaw_rad.cos();
+    let dash_y = dash_velocity * pitch_rad.cos() * yaw_rad.sin();
+    let dash_z = dash_velocity * pitch_rad.sin();
+
+
+    log!("Player rotation pitch={}, yaw={}, roll={}", pitch, yaw, roll);
+    log!("Player rotation pitch_rad={}, yaw_rad={}, roll_rad={}", pitch_rad, yaw_rad, roll_rad);
+    log!("Dash vector x={}, y={}, z={}", dash_x, dash_y, dash_z);
+
+    let current_location = AMyCharacter::get_player().location();
+    AMyCharacter::get_player().set_location(
+        current_location.0,
+        current_location.1,
+        current_location.2 + 1.,
+    );
+    
+    // AMyCharacter::get_player().set_velocity(0.0, 0.0, 0.0); // reset current velocity before dashing
+    // AMyCharacter::get_player().set_acceleration(0.0, 0.0, 0.0); // reset current velocity before dashing
+    AMyCharacter::get_player().set_velocity(dash_x, dash_y, dash_z);
 }
 
 #[rebo::function("Tas::spawn_pawn")]
