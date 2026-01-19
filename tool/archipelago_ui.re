@@ -155,7 +155,6 @@ fn create_archipelago_connection_details_menu() -> Ui {
                 SETTINGS.archipelago_last_port = ARCHIPELAGO_CONNECTION_DETAILS.port;
                 SETTINGS.archipelago_last_slot = ARCHIPELAGO_CONNECTION_DETAILS.slot;
                 SETTINGS.store();
-                add_component(ARCHIPELAGO_COMPONENT);
                 leave_ui(); leave_ui(); // Now we're two levels deep
             },
         }));
@@ -592,7 +591,7 @@ fn create_archipelago_gamemodes_menu() -> Ui {
 }
 
 fn get_status_text_lines() -> List<ColorfulText> {
-    let lines = match ARCHIPELAGO_STATE.started {
+    let modelines = match ARCHIPELAGO_STATE.started {
         0 => List::of(
             ColorfulText { text: "Archipelago Randomizer\n", color: COLOR_WHITE },
             ColorfulText { text: "Press new game (in Refunct menu).", color: AP_COLOR_CYAN },
@@ -631,6 +630,25 @@ fn get_status_text_lines() -> List<ColorfulText> {
             ),
         }
     };
+    let lines = List::new();
+    if INPUT_MODE_IS_UI_ONLY {
+        lines.push(ColorfulText { text: "Movement input disabled\n", color: AP_COLOR_RED });
+        lines.push(ColorfulText { text: "Press F1 to enable movement input", color: AP_COLOR_RED });
+        if ARCHIPELAGO_STATE.ap_connected {
+            lines.push(ColorfulText { text: "\n\n", color: AP_COLOR_RED });
+        }
+    }
+
+    if !ARCHIPELAGO_STATE.ap_connected && !INPUT_MODE_IS_UI_ONLY {
+        lines.push(ColorfulText { text: "If you have issues with background input\n", color: COLOR_WHITE });
+        lines.push(ColorfulText { text: "hit F1 to disable movement input", color: COLOR_WHITE });
+    }
+
+    if !ARCHIPELAGO_STATE.ap_connected {
+        return lines;
+    }
+
+    List::extend(lines, modelines);
     if ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version {
         lines.push(ColorfulText {
             text:  "\n\nVERSION MISMATCH",
