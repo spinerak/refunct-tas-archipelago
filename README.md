@@ -14,7 +14,7 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 ## Here's how to play Refunct in Archipelago.
 - You need to own the original game Refunct (via Steam for example).
 - Download the `practice-windows.zip` or `practice-linux.zip` from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest). Unzip the contents into any folder.
-- **\[Linux only]** Change the launch command for Refunct in Steam to `LD_PRELOAD=/path/to/practice-linux/librtil.so:libssl.so.3:libcrypto.so.3 %command%` (replace `/path/to/practice-linux` with the path to the unpacked `practice-linux` folder)
+- **\[Linux only]** Change the launch command for Refunct in Steam to `LD_PRELOAD="/path/to/practice-linux/librtil.so:libssl.so.3:libcrypto.so.3" %command%` (replace `/path/to/practice-linux` with the path to the unpacked `practice-linux` folder)
 - Do the usual [Archipelago custom games things](https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds): get your yaml and apworld from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest), generate and host.
 - Open Refunct.
 - Once it's loaded, double-click `refunct-tas.exe` on Windows or `refunct-tas` on Linux (note: it may crash, just try again a couple of times, or check troubleshooting at the very bottom).
