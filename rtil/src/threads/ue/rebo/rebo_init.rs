@@ -13,6 +13,7 @@ use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use websocket::{ClientBuilder, Message, OwnedMessage, WebSocketError};
+use crate::log;
 use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX, CubeWrapper};
 use crate::native::{try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
 use protocol::{Request, Response};
@@ -286,7 +287,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_register_game_location)
         .add_required_rebo_function(archipelago_print_json_message)
         .add_required_rebo_function(archipelago_received_death)
-        .add_required_rebo_function(archipelago_trigger_one_cluster_now)
+        .add_required_rebo_function(archipelago_tick)
         .add_required_rebo_function(archipelago_init)
         .add_required_rebo_function(archipelago_set_own_id)
         .add_required_rebo_function(ap_log_error)
@@ -793,7 +794,9 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
 
         // get current timestamp in milliseconds:
         let before = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
-        let _ = archipelago_trigger_one_cluster_now(vm, before)?;
+        let _ = archipelago_tick(vm, before)?;
+
+        archipelago_update_flying_speed(get_last_frame_delta_in() as f32);
 
         match to_be_returned {
             Some(ret) => {
@@ -841,7 +844,7 @@ extern "rebo" {
     fn archipelago_register_game_location(game_name: String, location_name: String, location_id: String);
     fn archipelago_print_json_message(json_message: ReboPrintJSONMessage);
     fn archipelago_received_death(source: String, cause: String);
-    fn archipelago_trigger_one_cluster_now(time: u64);
+    fn archipelago_tick(time: u64);
     fn ap_log_error(message: String);
 }
 
@@ -983,6 +986,13 @@ fn move_mouse(x: i32, y: i32) {
 }
 #[rebo::function("Tas::get_last_frame_delta")]
 fn get_last_frame_delta() -> f64 {
+    let delta = STATE.lock().unwrap().as_mut().unwrap().delta;
+    match delta {
+        Some(delta) => delta,
+        None => FApp::delta(),
+    }
+}
+fn get_last_frame_delta_in() -> f64 {
     let delta = STATE.lock().unwrap().as_mut().unwrap().delta;
     match delta {
         Some(delta) => delta,
@@ -1251,6 +1261,9 @@ fn get_viewport_size() -> Size {
 
 #[rebo::function("Tas::spawn_cube")]
 fn spawn_cube(loc: Location) -> i32 {
+    spawn_cube_in(loc)
+}
+fn spawn_cube_in(loc: Location) -> i32 {
     match CubeWrapper::spawn(loc.x, loc.y, loc.z) {
         Ok(cube) => {
             let index = cube.internal_index();
@@ -1384,6 +1397,9 @@ fn set_cube_location(internal_index: i32, loc: Location) {
 
 #[rebo::function("Tas::set_cube_scale")]
 fn set_cube_scale(internal_index: i32, s: f32) {
+    set_cube_scale_in(internal_index, s);
+}
+fn set_cube_scale_in(internal_index: i32, s: f32) {
     find_cube_and(internal_index, |cube| cube.set_scale(s))
         .unwrap_or_else(|e| log!("Could not set scale for cube {:?}: {}", internal_index, e));
 }
@@ -2023,6 +2039,59 @@ fn archipelago_trigger_goal_animation() {
             fun.call(jump6.as_ptr(), &params);
         }
     })
+}
+
+fn archipelago_update_flying_speed(delta: f32) {
+    let current_speed = STATE.lock().unwrap().as_mut().unwrap().flying_speed + 10.;
+
+    if current_speed == 9. {
+        set_cube_scale_in(spawn_cube_in(Location { x: 1000., y: 1000., z: 1000. }), 10.);
+        set_cube_scale_in(spawn_cube_in(Location { x: -2000., y: 2000., z: 2000. }), 10.);
+        set_cube_scale_in(spawn_cube_in(Location { x: -3000., y: -3000., z: 3000. }), 10.);
+        set_cube_scale_in(spawn_cube_in(Location { x: 4000., y: -4000., z: 4000. }), 10.);
+        set_cube_scale_in(spawn_cube_in(Location { x: 5000., y: 5000., z: 5000. }), 10.);
+        set_cube_scale_in(spawn_cube_in(Location { x: -6000., y: 6000., z: 6000. }), 10.);
+        set_cube_scale_in(spawn_cube_in(Location { x: -7000., y: -7000., z: 7000. }), 10.);
+        set_cube_scale_in(spawn_cube_in(Location { x: 8000., y: -8000., z: 8000. }), 10.);
+        set_cube_scale_in(spawn_cube_in(Location { x: 9000., y: 9000., z: 9000. }), 10.);
+        set_cube_scale_in(spawn_cube_in(Location { x: -10000., y: 10000., z: 10000. }), 10.);
+    }
+
+    log!("Info: current_speed before = {}", current_speed);
+
+    // get camera rotation (degrees)
+    let (pitch, yaw, roll) = AMyCharacter::get_player().rotation();
+
+    let pr = (pitch + 10.).to_radians();
+    let yr = yaw.to_radians();
+
+    // gravity
+    let g = 9.8;
+
+    // vertical component of velocity
+    let vertical_speed = current_speed * pr.sin();
+
+    // estimate height gained from current vertical velocity
+    let height_difference = 1. * vertical_speed * delta;
+
+    // new speed from remaining kinetic energy
+    let new_speed = current_speed - height_difference;
+    let new_speed = new_speed.max(0.);
+    let new_speed = new_speed.min(10000.);
+
+    //store this new_speed:
+    STATE.lock().unwrap().as_mut().unwrap().flying_speed = new_speed;
+
+
+    log!("Info: current_speed = {}, pitch = {}, vertical_speed = {}, height_difference = {}, new_speed = {}", current_speed,  pitch, vertical_speed, height_difference, new_speed);
+
+    // forward vector from pitch/yaw
+    let cosp = pr.cos();
+    let vx = new_speed * cosp * yr.cos();
+    let vy = new_speed * cosp * yr.sin();
+    let vz = new_speed * pr.sin();
+    // apply velocity to player
+    AMyCharacter::get_player().set_velocity(vx, vy, vz);
 }
 #[rebo::function("Tas::set_start_seconds")]
 fn set_start_seconds(start_seconds: i32) {
