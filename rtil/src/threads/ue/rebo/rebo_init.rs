@@ -2072,12 +2072,12 @@ fn archipelago_update_flying_speed(delta: f32) {
     let vertical_speed = current_speed * pr.sin();
 
     // estimate height gained from current vertical velocity
-    let height_difference = 1. * vertical_speed * delta;
+    let height_difference = 0.4 * vertical_speed * delta;
 
     // new speed from remaining kinetic energy
     let new_speed = current_speed - height_difference;
     let new_speed = new_speed.max(0.);
-    let new_speed = new_speed.min(10000.);
+    let new_speed = new_speed.min(5000.);
 
     //store this new_speed:
     STATE.lock().unwrap().as_mut().unwrap().flying_speed = new_speed;
