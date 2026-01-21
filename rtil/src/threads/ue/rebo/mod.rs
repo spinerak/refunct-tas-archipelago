@@ -57,6 +57,7 @@ struct State {
     player_minimap_textures: HashMap<Rgba<u8>, UTexture2D>,
 
     flying_speed: f32,
+    spawned_test_cubes: bool,
 }
 
 pub(super) fn poll(event: UeEvent) {
@@ -180,7 +181,8 @@ pub fn init(
         player_minimap_image,
         player_minimap_textures: HashMap::new(),
 
-        flying_speed: -1.,
+        flying_speed: 0.,
+        spawned_test_cubes: false,
     });
 }
 

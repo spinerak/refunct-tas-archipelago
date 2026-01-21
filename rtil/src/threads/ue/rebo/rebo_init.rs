@@ -2042,9 +2042,9 @@ fn archipelago_trigger_goal_animation() {
 }
 
 fn archipelago_update_flying_speed(delta: f32) {
-    let current_speed = STATE.lock().unwrap().as_mut().unwrap().flying_speed + 10.;
+    let current_speed = STATE.lock().unwrap().as_mut().unwrap().flying_speed;
 
-    if current_speed == 9. {
+    if STATE.lock().unwrap().as_mut().unwrap().spawned_test_cubes == false {
         set_cube_scale_in(spawn_cube_in(Location { x: 1000., y: 1000., z: 1000. }), 10.);
         set_cube_scale_in(spawn_cube_in(Location { x: -2000., y: 2000., z: 2000. }), 10.);
         set_cube_scale_in(spawn_cube_in(Location { x: -3000., y: -3000., z: 3000. }), 10.);
@@ -2055,6 +2055,7 @@ fn archipelago_update_flying_speed(delta: f32) {
         set_cube_scale_in(spawn_cube_in(Location { x: 8000., y: -8000., z: 8000. }), 10.);
         set_cube_scale_in(spawn_cube_in(Location { x: 9000., y: 9000., z: 9000. }), 10.);
         set_cube_scale_in(spawn_cube_in(Location { x: -10000., y: 10000., z: 10000. }), 10.);
+        STATE.lock().unwrap().as_mut().unwrap().spawned_test_cubes = true;
     }
 
     log!("Info: current_speed before = {}", current_speed);
@@ -2071,8 +2072,16 @@ fn archipelago_update_flying_speed(delta: f32) {
     // vertical component of velocity
     let vertical_speed = current_speed * pr.sin();
 
+    let height_difference: f32;
     // estimate height gained from current vertical velocity
-    let height_difference = 0.4 * vertical_speed * delta;
+    if vertical_speed <= 0. {
+        height_difference = 1.0 * (vertical_speed - 10.) * delta;
+    }else{
+        height_difference = 0.1 * vertical_speed * delta; // up
+    }
+
+    log!("Info: vertical_speed = {}, height_difference = {}", vertical_speed, height_difference);
+    
 
     // new speed from remaining kinetic energy
     let new_speed = current_speed - height_difference;
