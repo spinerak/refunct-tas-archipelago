@@ -483,6 +483,8 @@ fn archipelago_main_start(){
     Tas::abilities_set_pipes(false);
     Tas::abilities_set_lifts(false);
 
+    Tas::archipelago_deactivate_buttons_ap();
+
     archipelago_activate_stepped_on_platforms();
     archipelago_collect_collected_cubes();
 

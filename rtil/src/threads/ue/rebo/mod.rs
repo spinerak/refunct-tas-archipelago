@@ -55,6 +55,8 @@ struct State {
     player_minimap_image: RgbaImage,
     // will keep textures forever, even if the player doesn't exist anymore, but each texture is only a few MB
     player_minimap_textures: HashMap<Rgba<u8>, UTexture2D>,
+
+    archipelago_checks_sent: HashSet<i64>,
 }
 
 pub(super) fn poll(event: UeEvent) {
@@ -177,6 +179,8 @@ pub fn init(
         minimap_image,
         player_minimap_image,
         player_minimap_textures: HashMap::new(),
+
+        archipelago_checks_sent: HashSet::new(),
     });
 }
 

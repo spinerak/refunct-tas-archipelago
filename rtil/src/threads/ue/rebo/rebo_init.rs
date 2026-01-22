@@ -122,6 +122,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(trigger_element)
         .add_function(trigger_element_by_type)
         .add_function(archipelago_activate_buttons_ap)
+        .add_function(archipelago_deactivate_buttons_ap)
         .add_function(archipelago_gather_all_buttons)
         .add_function(archipelago_trigger_goal_animation)
         .add_function(archipelago_raise_cluster)
@@ -675,6 +676,9 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                         archipelago_checked_location(vm,
                             value as usize,
                         )?;
+                        let mut state = STATE.lock().unwrap();
+                        let state = state.as_mut().unwrap();
+                        state.archipelago_checks_sent.insert(value);
                     }
 
                     for (key, value) in info.slot_data.as_object().unwrap() {
@@ -732,6 +736,9 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     for loc in info.checked_locations.unwrap_or_default() {
                         let value: i64 = loc;
                         archipelago_checked_location(vm, value as usize)?;
+                        let mut state = STATE.lock().unwrap();
+                        let state = state.as_mut().unwrap();
+                        state.archipelago_checks_sent.insert(value);
                     }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::Print(text))) => {
@@ -1662,12 +1669,21 @@ fn archipelago_send_death() {
 }
 #[rebo::function(raw("Tas::archipelago_send_check"))]
 fn archipelago_send_check(location_id: i64) {
-    // let msg = format!("Archipelago: sending location check for {}", location_id);
-    // log!("{}", msg);
-    // STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
-    STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx
-        .send(ReboToArchipelago::LocationChecks { locations: vec![location_id] })
-        .unwrap();
+    // if location_id is already in STATE.checked_locations, do nothing
+    if !STATE.lock().unwrap().as_ref().unwrap().archipelago_checks_sent.contains(&location_id) {
+        log!("Current checked locations: {:?}", STATE.lock().unwrap().as_ref().unwrap().archipelago_checks_sent);
+        STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx
+            .send(ReboToArchipelago::LocationChecks { locations: vec![location_id] })
+            .unwrap();
+
+        // add location_id to STATE.checked_locations
+        let mut state = STATE.lock().unwrap();
+        let state = state.as_mut().unwrap();
+        state.archipelago_checks_sent.insert(location_id);
+
+        log!("Archipelago: sent check for location {}", location_id);
+    }
+
 }
 #[rebo::function(raw("Tas::archipelago_goal"))]
 fn archipelago_goal() {
@@ -1735,6 +1751,10 @@ fn archipelago_gather_all_buttons() {
 #[rebo::function("Tas::archipelago_activate_buttons_ap")]
 fn archipelago_activate_buttons_ap() {
     archipelago_activate_buttons(-1);
+}
+#[rebo::function("Tas::archipelago_deactivate_buttons_ap")]
+fn archipelago_deactivate_buttons_ap() {
+    archipelago_deactivate_buttons(-1);
 }
 
 fn archipelago_activate_buttons(index: i32) {
