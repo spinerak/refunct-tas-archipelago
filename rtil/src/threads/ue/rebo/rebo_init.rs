@@ -89,24 +89,28 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(project)
         .add_function(get_viewport_size)
         .add_function(get_text_size)
+
         .add_function(spawn_platform)
         .add_function(spawn_platform_rando_location)
         .add_function(spawn_cube_rando_location)
-        .add_function(reset_platforms)
+        .add_function(destroy_platforms)
+        .add_function(destroy_platform_rebo)
+
         .add_function(spawn_cube)
         .add_function(reset_cubes)
+        .add_function(destroy_cubes)
         .add_function(collect_cube)
-        .add_function(destroy_platform)
         .add_function(get_vanilla_cube)
         .add_function(set_cube_collision)
-        .add_function(set_cube_color)
+        .add_function(set_cube_color_rebo)
         .add_function(set_cube_color_random)
         .add_function(set_cube_location)
         .add_function(set_cube_scale)
         .add_function(get_vanilla_cubes)
         .add_function(get_non_vanilla_cubes)
-        .add_function(get_non_vanilla_platforms)
+        .add_function(get_non_vanilla_platforms_rebo)
         .add_function(get_all_cubes)
+
         .add_function(spawn_pawn)
         .add_function(destroy_pawn)
         .add_function(move_pawn)
@@ -118,20 +122,22 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(move_on_server)
         .add_function(press_platform_on_server)
         .add_function(press_button_on_server)
+
         .add_function(archipelago_connect)
         .add_function(archipelago_disconnect)
         .add_function(archipelago_send_check)
         .add_function(archipelago_goal)
         .add_function(new_game_pressed)
         .add_function(get_level)
-        .add_function(set_level)
+        .add_function(set_level_rebo)
         .add_function(trigger_element)
-        .add_function(trigger_element_by_type)
+        .add_function(trigger_element_by_type_rebo)
         .add_function(archipelago_activate_buttons_ap)
         .add_function(archipelago_deactivate_buttons_ap)
         .add_function(archipelago_gather_all_buttons)
         .add_function(archipelago_trigger_goal_animation)
-        .add_function(archipelago_raise_cluster)
+        .add_function(archipelago_raise_cluster_rebo)
+
         .add_function(abilities_set_wall_jump)
         .add_function(abilities_set_ledge_grab)
         .add_function(abilities_set_jump_pads)
@@ -1314,13 +1320,17 @@ fn spawn_platform(loc: Location) -> i32 {
     }
 }
 
-#[rebo::function("Tas::reset_platforms")]
-fn reset_platforms() {
-    UeScope::with(|scope| {
-        LEVELS.lock().unwrap().iter().for_each(|level| {
-            level.platforms.iter().for_each(|platform| scope.get(platform).reset());
-        });
-    });
+#[rebo::function("Tas::destroy_platforms")]
+fn destroy_platforms(vanilla: bool, extra: bool) {
+    if vanilla {
+        // don't :)
+    }
+    if extra {
+        let non_vanilla_platforms = get_non_vanilla_platforms();
+        for p in non_vanilla_platforms {
+            destroy_platform(p);
+        }
+    }
 }
 
 #[rebo::function("Tas::spawn_cube")]
@@ -1368,7 +1378,7 @@ fn get_uncollected_extra_cubes() -> Vec<i32> {
         .collect::<Vec<i32>>()
 }
 
-fn get_non_vanilla_platforms_in() -> Vec<i32> {
+fn get_non_vanilla_platforms() -> Vec<i32> {
     let state = STATE.lock().unwrap();
 
     state.as_ref().unwrap()
@@ -1383,12 +1393,47 @@ fn get_non_vanilla_platforms_in() -> Vec<i32> {
 }
 
 #[rebo::function("Tas::reset_cubes")]
-fn reset_cubes() {
-    UeScope::with(|scope| {
-        LEVELS.lock().unwrap().iter().for_each(|level| {
-            level.cubes.iter().for_each(|cube| scope.get(cube).reset());
+fn reset_cubes(vanilla: bool, extra: bool) {
+    if vanilla {
+        UeScope::with(|scope| {
+            LEVELS.lock().unwrap().iter().for_each(|level| {
+                level.cubes.iter().for_each(|cube| scope.get(cube).reset());
+            });
         });
-    });
+    }
+    if extra {
+        let extra_cubes = get_uncollected_extra_cubes();
+        log!("Resetting extra cubes: {:?}", extra_cubes);
+        for c in extra_cubes {
+            maybe_remove_extra_cube(c);
+            find_cube_and(c, |cube| cube.reset())
+                .unwrap_or_else(|e| log!("Could not reset cube {:?}: {}", c, e));
+        }
+    }
+}
+
+#[rebo::function("Tas::destroy_cubes")]
+fn destroy_cubes(vanilla: bool, extra: bool) {
+    if vanilla {
+        UeScope::with(|scope| {
+            LEVELS.lock().unwrap().iter().for_each(|level| {
+                level.cubes.iter().for_each(|cube| {
+                    let cube = scope.get(cube);
+                    cube.pickup();
+                    cube.set_color(0., 0., 0.);
+                });
+            });
+        });
+    }
+    if extra {
+        let extra_cubes = get_uncollected_extra_cubes();
+        log!("Destroying extra cubes: {:?}", extra_cubes);
+        for c in extra_cubes {
+            maybe_remove_extra_cube(c);
+            find_cube_and(c, |cube| cube._destroy())
+                .unwrap_or_else(|e| log!("Could not reset cube {:?}: {}", c, e));
+        }
+    }
 }
 
 #[rebo::function("Tas::get_vanilla_cubes")]
@@ -1401,8 +1446,8 @@ fn get_non_vanilla_cubes() -> Vec<i32> {
     get_uncollected_extra_cubes()
 }
 #[rebo::function("Tas::get_non_vanilla_platforms")]
-fn get_non_vanilla_platforms() -> Vec<i32> {
-    get_non_vanilla_platforms_in()
+fn get_non_vanilla_platforms_rebo() -> Vec<i32> {
+    get_non_vanilla_platforms()
 }
 #[rebo::function("Tas::get_all_cubes")]
 fn get_all_cubes() -> Vec<i32> {
@@ -1458,6 +1503,10 @@ fn set_cube_collision(internal_index: i32, collision_enabled: bool) {
 }
 
 #[rebo::function("Tas::set_cube_color")]
+fn set_cube_color_rebo(internal_index: i32, c: Color) {
+    set_cube_color(internal_index, c);
+}
+
 fn set_cube_color(internal_index: i32, c: Color) {
     // Sadly alpha seems to be ignored, so we're just going to silently drop it
     find_cube_and(internal_index, |cube| cube.set_color(c.red, c.green, c.blue))
@@ -1498,6 +1547,10 @@ fn collect_cube(internal_index: i32) {
         .unwrap_or_else(|e| log!("Could not pickup cube {:?}: {}", internal_index, e));
 }
 #[rebo::function("Tas::destroy_platform")]
+fn destroy_platform_rebo(internal_index: i32) {
+    destroy_platform(internal_index);
+}
+
 fn destroy_platform(internal_index: i32) {
     maybe_remove_extra_platform(internal_index);
     find_platform_and(internal_index, |platform| platform.destroy());
@@ -1814,10 +1867,10 @@ fn get_level() -> i32 {
     LevelState::get_level()
 }
 #[rebo::function("Tas::set_level")]
-fn set_level(level: i32) {
-    set_level_in(level);
+fn set_level_rebo(level: i32) {
+    set_level(level);
 }
-fn set_level_in(level: i32) {
+fn set_level(level: i32) {
     LevelState::set_level(level);
 }
 
@@ -1931,62 +1984,32 @@ fn archipelago_deactivate_buttons(index: i32) {
 
 
 #[rebo::function("Tas::archipelago_raise_cluster")]
-fn archipelago_raise_cluster(cluster_index: i32, last_unlocked: usize) {
-    archipelago_raise_cluster_in(cluster_index, last_unlocked);
+fn archipelago_raise_cluster_rebo(cluster_index: i32, last_unlocked: usize) {
+    archipelago_raise_cluster(cluster_index, last_unlocked);
 }
 
-fn archipelago_raise_cluster_in(cluster_index: i32, last_unlocked: usize) {
-    set_level_in(cluster_index);
+fn archipelago_raise_cluster(cluster_index: i32, last_unlocked: usize) {
+    set_level(cluster_index);
     if last_unlocked == 6 {
-        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 1);
+        trigger_element_by_type(last_unlocked, "Button".to_string(), 1);
     }
     if last_unlocked == 9 {
-        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 1);
+        trigger_element_by_type(last_unlocked, "Button".to_string(), 1);
     }
     if last_unlocked == 17 {
-        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 1);
+        trigger_element_by_type(last_unlocked, "Button".to_string(), 1);
     }
     if last_unlocked == 25 {
-        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 1);
-        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 2);
+        trigger_element_by_type(last_unlocked, "Button".to_string(), 1);
+        trigger_element_by_type(last_unlocked, "Button".to_string(), 2);
     }
     if last_unlocked == 27 {
-        trigger_element_by_type_here(last_unlocked, "Button".to_string(), 1);
+        trigger_element_by_type(last_unlocked, "Button".to_string(), 1);
     }
-    trigger_element_by_type_here(last_unlocked, "Button".to_string(), 0);
+    trigger_element_by_type(last_unlocked, "Button".to_string(), 0);
 }
 
 
-// #[rebo::function("Tas::archipelago_yeet_all_buttons")]
-// fn archipelago_yeet_all_buttons() {
-//     // Press and release all buttons in the game immediately
-//     log!("Gonna yeet all buttons");
-
-//     fn set_element(scope: &UeScope, levels: &[Level], index: ElementIndex) {
-//         let actor = get_indexed_actor(scope, levels, index);
-//         let target_location = FVector { x: 10000. + index.element_index as f32 * 10., y: 10000., z: 10000. };
-//         let target_rotation = FRotator { pitch: 0., yaw: 0., roll: 0. };
-//         USceneComponent::set_world_location_and_rotation(target_location, target_rotation, &actor);
-//     }
-
-//     UeScope::with(|scope| {
-//         let levels = LEVELS.lock().unwrap();
-        
-//         for (cluster_index, (level, cluster)) in levels.iter().zip(&ORIGINAL_MAP.clusters).enumerate() {
-//             let level_wrapper = scope.get(level.level);
-//             let (rx, ry, _) = level_wrapper.source_location();
-//             level_wrapper.set_source_location(rx, ry, cluster.z);
-//             level_wrapper.set_speed(cluster.rise_speed);
-//             level.buttons.iter().zip(&cluster.buttons).enumerate().map(|i| (i.0, ElementType::Button))
-//                 .for_each(|(element_index, element_type)| {
-//                     let index = ElementIndex { cluster_index, element_type, element_index };
-//                     set_element(scope, &levels, index);
-//                 });
-//         }
-//     });
-
-//     log!("Done yeeting buttons");
-// }
 #[rebo::function("Tas::trigger_element")]
 fn trigger_element(index: ElementIndex) {
     fn add_remove_based_character(actor: &ActorWrapper<'_>) {
@@ -2028,22 +2051,23 @@ fn trigger_element(index: ElementIndex) {
         }
     });
 }
-fn trigger_element_by_type_here(cluster_index: usize, element_type: String, element_index: usize) {
+
+fn trigger_element_by_type(cluster_index: usize, element_type: String, element_index: usize) {
     if element_type == "Button" {
         archipelago_activate_buttons(-1);
     }
-    trigger_element_by_type_in(cluster_index, element_type.clone(), element_index);
+    trigger_element_by_type_details(cluster_index, element_type.clone(), element_index);
     if element_type == "Button" {
         archipelago_deactivate_buttons(-1);
     }
 }
 
 #[rebo::function("Tas::trigger_element_by_type")]
-fn trigger_element_by_type(cluster_index: usize, element_type: String, element_index: usize) {
-    trigger_element_by_type_here(cluster_index, element_type, element_index);
+fn trigger_element_by_type_rebo(cluster_index: usize, element_type: String, element_index: usize) {
+    trigger_element_by_type(cluster_index, element_type, element_index);
 } 
 
-fn trigger_element_by_type_in(cluster_index: usize, element_type: String, element_index: usize) {
+fn trigger_element_by_type_details(cluster_index: usize, element_type: String, element_index: usize) {
     let element_type = element_type.as_str();
     fn add_remove_based_character(actor: &ActorWrapper<'_>) {
         let state = STATE.lock().unwrap();
