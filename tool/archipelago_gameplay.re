@@ -44,6 +44,9 @@ struct ArchipelagoState {
     og_randomizer_order: List<int>,
     og_randomizer_index: int,
 
+    progress_meme_platforms_minigame: string,
+    cubes_collected_in_meme_platforms: int,
+
     last_platform_c: Option<int>,
     last_platform_p: Option<int>,
     checked_locations: List<int>,
@@ -100,6 +103,9 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         og_randomizer_index: -1,
         og_randomizer_order: List::new(),
 
+        progress_meme_platforms_minigame: "0/20",
+        cubes_collected_in_meme_platforms: 0,
+
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
@@ -125,7 +131,6 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     draw_hud_text: archipelago_hud_text,
     draw_hud_always: archipelago_hud_color_coded,
     on_new_game: fn() {
-        log("[AP] on_new_game called");
         Tas::destroy_cubes(true, true);
         Tas::destroy_platforms(true, true);
 
@@ -154,6 +159,11 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     },
     on_reset: fn(old: int, new: int) {},
     on_element_pressed: fn(index: ElementIndex) {
+        if index.cluster_index == 9999 {
+            ARCHIPELAGO_STATE.cubes_collected_in_meme_platforms += 1;
+            ARCHIPELAGO_STATE.progress_meme_platforms_minigame = f"{ARCHIPELAGO_STATE.cubes_collected_in_meme_platforms}/20";
+        }
+        
         if index.element_type == ElementType::Platform {
             ARCHIPELAGO_STATE.last_platform_c = Option::Some(index.cluster_index + 1);
             ARCHIPELAGO_STATE.last_platform_p = Option::Some(index.element_index + 1);
@@ -567,41 +577,26 @@ fn archipelago_og_randomizer_start(){
 }
 
 fn archipelago_meme_platform_start(){
-    Tas::set_kill_z(-6000.);
-    Tas::archipelago_set_wall_jump_and_ledge_grab(2, 1, false);
-    Tas::archipelago_set_jump_pads(1);
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    Tas::archipelago_deactivate_buttons_ap();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
+    ARCHIPELAGO_STATE.cubes_collected_in_meme_platforms = 0;
+    ARCHIPELAGO_STATE.progress_meme_platforms_minigame = f"{ARCHIPELAGO_STATE.cubes_collected_in_meme_platforms}/20";
 
-    // spawn 500 random cubes using spawn_platform_rando_location(5000.)
     let mut i = 0;
-    while i < 100 {
+    while i < 200 {
         Tas::spawn_platform_rando_location(3000.);
         i += 1;
     }
     let mut j = 0;
     while j < 20 {
-        Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000.),2.) ;
-        j += 1;
-    }
-}
-
-fn archipelago_meme_platform_start(){
-    Tas::set_kill_z(-6000.);
-    Tas::archipelago_set_wall_jump_and_ledge_grab(2, 1, false);
-    Tas::archipelago_set_jump_pads(1);
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
-    ARCHIPELAGO_STATE.started = 2;
-
-    // spawn 500 random cubes using spawn_platform_rando_location(5000.)
-    let mut i = 0;
-    while i < 1 {
-        Tas::spawn_platform_rando_location(3000.);
-        i += 1;
-    }
-    let mut j = 0;
-    while j < 1 {
-        Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000.),10.) ;
+        Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., true),2.) ;
         j += 1;
     }
 }

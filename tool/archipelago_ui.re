@@ -635,6 +635,7 @@ fn get_status_text_lines() -> List<ColorfulText> {
             5 => List::of(
                 ColorfulText { text: "Archipelago - Meme Platforms\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Collect the cubes!", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_meme_platforms_minigame}", color: COLOR_WHITE },
             ),
             _ => List::of(
                 ColorfulText { text: "Archipelago\n", color: COLOR_WHITE },
