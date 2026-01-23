@@ -100,7 +100,6 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(reset_cubes)
         .add_function(destroy_cubes)
         .add_function(collect_cube)
-        .add_function(destroy_platform)
         .add_function(get_vanilla_cube)
         .add_function(set_cube_collision)
         .add_function(set_cube_color_rebo)
