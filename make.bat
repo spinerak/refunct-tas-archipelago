@@ -1,4 +1,4 @@
-echo off
+@echo off
 set "ESC="
 for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
 

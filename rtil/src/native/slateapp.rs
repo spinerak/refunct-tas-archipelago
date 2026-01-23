@@ -138,6 +138,8 @@ fn on_key_up_hook<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut FSlateApplicationUE, 
 #[cfg(windows)]
 mod windows_utf16 {
     use super::*;
+    use std::sync::Mutex;
+    use std::ops::RangeInclusive;
     static SURROGATE_BUFFER: Mutex<Option<u16>> = Mutex::new(None);
     const SURROGATES:      RangeInclusive<u16> = 0xD800..=0xDFFF;
     const HIGH_SURROGATES: RangeInclusive<u16> = 0xD800..=0xDBFF;
@@ -177,8 +179,6 @@ fn on_key_char_hook<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut FSlateApplicationUE
 
     #[cfg(unix)]
     let ch = char::from_u32(character);
-
-    log!("Got ch: {:?}", ch);
 
     if let Some(ch) = ch {
         // Only process printable characters
