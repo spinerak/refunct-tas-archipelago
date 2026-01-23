@@ -142,7 +142,7 @@ unsafe impl IsaAbi for I686_MSVC_Thiscall {
         a.mov(ecx, hook_struct_addr as u32).unwrap();
         a.mov(edx, esp).unwrap();
         // call interceptor
-        a.mov(eax, abi_fixer::<T> as u32).unwrap();
+        a.mov(eax, abi_fixer::<T> as *const () as u32).unwrap();
         a.call(eax).unwrap();
         // restore callee-saved registers
         // xmm0-7 may or may not be callee-saved according to different sources; just restore them

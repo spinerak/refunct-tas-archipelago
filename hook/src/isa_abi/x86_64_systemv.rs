@@ -120,7 +120,7 @@ unsafe impl IsaAbi for X86_64_SystemV {
         a.mov(rdi, hook_struct_addr as u64).unwrap();
         a.mov(rsi, rsp).unwrap();
         // call interceptor
-        a.mov(rax, abi_fixer::<T> as u64).unwrap();
+        a.mov(rax, abi_fixer::<T> as *const () as u64).unwrap();
         // no stack alignment needed; ret-addr + 13 registers + 0x80 xmm
         // a.sub(rsp, 0x8).unwrap();
         a.call(rax).unwrap();

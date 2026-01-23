@@ -196,8 +196,8 @@ fn on_key_up(key_code: int, character_code: int, is_repeat: bool) {
     }
 }
 
-fn on_key_char(c: int, is_repeat: bool) {
-    let character = string::from_char(c);
+fn on_key_char(character: string, is_repeat: bool) {
+    print(f"Got character '{character}'");
     match UI_STACK.last() {
         Option::Some(ui) => ui.onchar(character),
         Option::None => (),

@@ -1,5 +1,3 @@
-use std::ops::RangeInclusive;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use hook::{ArgsRef, IsaAbi, RawHook, TypedHook};
 use crate::native::{AACTOR_RECEIVEACTORBEGINOVERLAP, FSLATEAPPLICATION_TICK, FSLATEAPPLICATION_ONKEYDOWN, FSLATEAPPLICATION_ONKEYUP, FSLATEAPPLICATION_ONKEYCHAR, FSLATEAPPLICATION_ONRAWMOUSEMOVE, REBO_DOESNT_START_SEMAPHORE, RefunctIsaAbi, FSLATEAPPLICATION_ONMOUSEDOUBLECLICK, FSLATEAPPLICATION_ONMOUSEDOWN, FSLATEAPPLICATION_ONMOUSEMOVE, FSLATEAPPLICATION_ONMOUSEUP, FSLATEAPPLICATION_ONMOUSEWHEEL, AActor};
@@ -179,6 +177,8 @@ fn on_key_char_hook<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut FSlateApplicationUE
 
     #[cfg(unix)]
     let ch = char::from_u32(character);
+
+    log!("Got ch: {:?}", ch);
 
     if let Some(ch) = ch {
         // Only process printable characters
