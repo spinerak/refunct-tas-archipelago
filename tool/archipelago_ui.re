@@ -764,7 +764,7 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
         });
         added_minigame_header = true;
     }
-    log("test");
+    
     if ARCHIPELAGO_STATE.score_block_brawl_reds < ARCHIPELAGO_STATE.in_logic_block_brawl_reds ||
        ARCHIPELAGO_STATE.score_block_brawl_blues < ARCHIPELAGO_STATE.in_logic_block_brawl_blues ||
        ARCHIPELAGO_STATE.score_block_brawl_greens < ARCHIPELAGO_STATE.in_logic_block_brawl_greens ||
