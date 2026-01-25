@@ -155,6 +155,8 @@ static MOVEMENT_COMPONENT = Component {
             MOVEMENT_STATE.fly_state = FlyState::None;
         }
     },
+    on_key_char: fn(c: string) {},
+    on_key_char_always: fn(c: string) {},
     on_mouse_move: fn(x: int, y: int) {},
     on_component_enter: fn() {},
     on_component_exit: fn() { MOVEMENT_STATE.enable_fly = false; },

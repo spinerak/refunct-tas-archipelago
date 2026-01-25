@@ -56,6 +56,8 @@ pub struct UeTexture {
     pub texture: UTexture2D,
     pub interaction: Interaction,
 }
+
+#[allow(unused)]
 pub struct ReboUi {
     ue_texture: Arc<Mutex<UeTexture>>,
     windows_tx: watch::Sender<Vec<IcedWindow>>,
@@ -66,6 +68,8 @@ pub struct ReboUi {
 fn transparent_texture(width: u32, height: u32) -> UTexture2D {
     UTexture2D::create_with_pixelformat(&vec![0; width as usize * height as usize * 4], width.try_into().unwrap(), height.try_into().unwrap(), UiBackend::PIXEL_FORMAT)
 }
+
+#[allow(unused)]
 impl ReboUi {
     pub fn start() -> Self {
         const DEFAULT_WIDTH: u32 = 1920;

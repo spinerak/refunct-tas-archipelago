@@ -86,6 +86,8 @@ static TIMER_COMPONENT = Component {
     on_key_down_always: fn(key: KeyCode, is_repeat: bool) {},
     on_key_up: fn(key_code: KeyCode) {},
     on_key_up_always: fn(key: KeyCode) {},
+    on_key_char: fn(c: string) {},
+    on_key_char_always: fn(c: string) {},
     on_mouse_move: fn(x: int, y: int) {},
     on_component_enter: fn() {},
     on_component_exit: fn() {},

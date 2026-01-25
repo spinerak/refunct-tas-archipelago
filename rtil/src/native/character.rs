@@ -214,7 +214,7 @@ impl AMyCharacter {
         unsafe { DEATH_HOOK = None; }
     }
     pub fn has_death_hook() -> bool {
-        unsafe { (&DEATH_HOOK).is_some().clone() }
+        unsafe { (*&raw const DEATH_HOOK).is_some() }
     }
     pub fn camera_mode() -> u8 {
         UeScope::with(|scope| {
@@ -238,6 +238,7 @@ impl AMyCharacter {
             = unsafe { ::std::mem::transmute(APLAYERCONTROLLER_FLUSHPRESSEDKEYS.load(Ordering::SeqCst)) };
         fun(AMyCharacter::get_player().controller());
     }
+    #[allow(unused)]
     pub fn set_mouse_cursor(cursor: EMouseCursorType) {
         let controller = unsafe { ObjectWrapper::new(AMyCharacter::get_player().controller() as *mut UObject) };
         controller.get_field("CurrentMouseCursor").unwrap::<&Cell<u8>>().set(cursor as u8);

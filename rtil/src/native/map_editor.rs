@@ -3,7 +3,7 @@ use std::fmt::{Formatter, Pointer};
 use std::ops::Deref;
 use std::sync::Mutex;
 use std::ptr;
-use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld, DynamicValue, BoolValueWrapper, DerefToObjectWrapper, AMyCharacter, BoolPropertyWrapper};
+use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld, BoolValueWrapper, AMyCharacter};
 use crate::native::reflection::{AActor, ActorWrapper, UeObjectWrapper};
 use crate::native::ue::{FRotator, FVector, FName};
 use crate::native::uworld::{ESpawnActorCollisionHandlingMethod, ESpawnActorNameMode, FActorSpawnParameters};
@@ -749,6 +749,7 @@ pub struct PipeWrapper<'a> {
 }
 
 impl<'a> PipeWrapper<'a> {
+    #[allow(unused)]
     pub fn is_enabled(&self) -> bool {
         let start_trigger: ObjectWrapper = self.get_field("StartTrigger").unwrap();
 

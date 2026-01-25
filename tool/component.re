@@ -42,6 +42,9 @@ struct Component {
     on_key_up: fn(KeyCode),
     /// triggered even when in the menu
     on_key_up_always: fn(KeyCode),
+    on_key_char: fn(string),
+    /// triggered even when in the menu
+    on_key_char_always: fn(string),
     on_mouse_move: fn(int, int),
     on_component_enter: fn(),
     on_component_exit: fn(),

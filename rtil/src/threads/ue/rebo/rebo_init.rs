@@ -16,7 +16,7 @@ use websocket::{ClientBuilder, Message, OwnedMessage, WebSocketError};
 use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX, CubeWrapper, PlatformWrapper};
 use crate::native::{try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
 use protocol::{Request, Response};
-use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo, archipelago};
+use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo};
 use super::{STATE, livesplit::{Game, NewGameGlitch, SplitsSaveError, SplitsLoadError}};
 use serde::{Serialize, Deserialize};
 use crate::threads::ue::{Suspend, UeEvent, rebo::YIELDER};
@@ -29,7 +29,7 @@ use crate::threads::ue::iced_ui::rebo_elements::{IcedButton, IcedColumn, IcedEle
 
 use crate::native::{BoolValueWrapper};
 use crate::native::reflection::DerefToObjectWrapper;
-use std::time::SystemTime;
+use crate::native::font::replace_unrenderable_chars;
 
 pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
     let mut cfg = ReboConfig::new()
@@ -278,6 +278,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(element_released)
         .add_required_rebo_function(on_key_down)
         .add_required_rebo_function(on_key_up)
+        .add_required_rebo_function(on_key_char)
         .add_required_rebo_function(on_mouse_move)
         .add_required_rebo_function(draw_hud)
         .add_required_rebo_function(player_joined_multiplayer_room)
@@ -580,6 +581,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                 let key = STATE.lock().unwrap().as_mut().unwrap().ui.key_released(key);
                 on_key_up(vm, key.raw_key_code, key.raw_character_code, repeat)?
             },
+            UeEvent::KeyChar(character, repeat) => on_key_char(vm, character.to_string(), repeat)?,
             UeEvent::MouseMove(x, y) => {
                 let (absx, absy) = AMyCharacter::get_mouse_position();
                 STATE.lock().unwrap().as_mut().unwrap().ui.mouse_moved(absx as u32, absy as u32);
@@ -639,7 +641,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
 
         // check archipelago
         loop {
-            let mut res = STATE.lock().unwrap().as_mut().unwrap().archipelago_rebo_rx.try_recv();
+            let res = STATE.lock().unwrap().as_mut().unwrap().archipelago_rebo_rx.try_recv();
             match res {
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => panic!("archipelago_rebo_rx became disconnected"),
@@ -828,6 +830,7 @@ extern "rebo" {
     fn element_released(index: ElementIndex);
     fn on_key_down(key_code: i32, character_code: u32, is_repeat: bool);
     fn on_key_up(key_code: i32, character_code: u32, is_repeat: bool);
+    fn on_key_char(character: String, is_repeat: bool);
     fn on_mouse_move(x: i32, y: i32);
     fn draw_hud();
     fn player_joined_multiplayer_room(id: u32, name: String, col: Color, loc: Location, rot: Rotation);
@@ -1163,7 +1166,8 @@ struct DrawText {
 #[rebo::function("Tas::draw_text")]
 fn draw_text(text: DrawText) {
     let color = (text.color.red, text.color.green, text.color.blue, text.color.alpha);
-    AMyHud::draw_text(text.text, color, text.x, text.y, text.scale, text.scale_position);
+    let render_text = replace_unrenderable_chars(text.text);
+    AMyHud::draw_text(render_text, color, text.x, text.y, text.scale, text.scale_position);
 }
 #[rebo::function("Tas::draw_rect")]
 fn draw_rect(color: Color, x: f32, y: f32, width: f32, height: f32) {
@@ -1883,11 +1887,6 @@ fn archipelago_gather_all_buttons() {
             if class_name == "BP_Button_C" && name != "Default__BP_Button_C" {
                 vec.push(object.as_ptr() as usize);
             }
-            if class_name == "AudioComponent" {
-                let object = unsafe { ObjectWrapper::new(object.as_ptr() as *mut UObject) };
-                // ???
-            }
-
         }
     });
 

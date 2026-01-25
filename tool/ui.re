@@ -97,16 +97,6 @@ fn leave_ui() {
 }
 
 fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
-    let chr = if character_code >= 0x20 && character_code <= 0x7e {
-        let chr = string::from_char(character_code);
-        Option::Some(if LSHIFT_PRESSED || RSHIFT_PRESSED {
-            chr.to_uppercase()
-        } else {
-            chr.to_lowercase()
-        })
-    } else {
-        Option::None
-    };
     let key = KeyCode::from_large(key_code);
     if key.to_small() == KEY_LEFT_SHIFT.to_small() {
         LSHIFT_PRESSED = true;
@@ -171,7 +161,7 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     // }
 
     match UI_STACK.last() {
-        Option::Some(ui) => ui.onkey(key, chr),
+        Option::Some(ui) => ui.onkey(key),
         Option::None => (),
     }
     for comp in CURRENT_COMPONENTS {
@@ -205,6 +195,25 @@ fn on_key_up(key_code: int, character_code: int, is_repeat: bool) {
         }
     }
 }
+
+fn on_key_char(character: string, is_repeat: bool) {
+    match UI_STACK.last() {
+        Option::Some(ui) => ui.onchar(character),
+        Option::None => (),
+    }
+
+    for comp in CURRENT_COMPONENTS {
+        let on_key_char_always = comp.on_key_char_always;
+        on_key_char_always(character);
+
+        // don't trigger key events while in the menu
+        if UI_STACK.len() == 1 {
+            let on_key_char = comp.on_key_char;
+            on_key_char(character);
+        }
+    }
+}
+
 fn on_mouse_move(x: int, y: int) {
     for comp in CURRENT_COMPONENTS {
         let on_mouse_move = comp.on_mouse_move;
@@ -255,7 +264,7 @@ impl Ui {
             Option::None => (),
         }
     }
-    fn onkey(mut self, key: KeyCode, chr: Option<string>) {
+    fn onkey(mut self, key: KeyCode) {
         if key.to_small() == KEY_RETURN.to_small() {
             self.onclick();
         } else if key.to_small() == KEY_DOWN.to_small() {
@@ -272,10 +281,18 @@ impl Ui {
             };
         }
         match self.elements.get(self.selected) {
-            Option::Some(element) => element.onkey(key, chr),
+            Option::Some(element) => element.onkey(key),
             Option::None => (),
         }
     }
+
+    fn onchar(self, character: string) {
+        match self.elements.get(self.selected) {
+            Option::Some(element) => element.onchar(character),
+            Option::None => (),
+        }
+    }
+
     fn draw(self) {
         // This padding dictates how much space there will be between elements. Got no clue why it's done like this.
         let padding = 48.;
@@ -343,13 +360,22 @@ impl UiElement {
             UiElement::Chooser(chooser) => (),
         }
     }
-    fn onkey(self, key: KeyCode, chr: Option<string>) {
+    fn onkey(self, key: KeyCode) {
         match self {
             UiElement::Button(button) => (),
-            UiElement::Input(input) => input.onkey(key, chr),
-            UiElement::FloatInput(input) => input.onkey(key, chr),
-            UiElement::Slider(slider) => slider.onkey(key, chr),
-            UiElement::Chooser(chooser) => chooser.onkey(key, chr),
+            UiElement::Input(input) => input.onkey(key),
+            UiElement::FloatInput(input) => input.onkey(key),
+            UiElement::Slider(slider) => slider.onkey(key),
+            UiElement::Chooser(chooser) => chooser.onkey(key),
+        }
+    }
+    fn onchar(self, c: string) {
+        match self {
+            UiElement::Button(button) => (),
+            UiElement::Input(input) => input.onchar(c),
+            UiElement::FloatInput(input) => input.onchar(c),
+            UiElement::Slider(slider) => (),
+            UiElement::Chooser(chooser) => (),
         }
     }
     fn draw(self, y: float, color: Color) {
@@ -384,19 +410,19 @@ impl Input {
         let f = self.onclick;
         f(self.input);
     }
-    fn onkey(mut self, key: KeyCode, chr: Option<string>) {
+    fn onkey(mut self, key: KeyCode) {
         if key.to_small() == KEY_BACKSPACE.to_small() {
             self.input = self.input.slice(0, -1);
         } else if key.to_small() == KEY_V.to_small() && (LCTRL_PRESSED || RCTRL_PRESSED) {
             self.input = f"{self.input}{Tas::get_clipboard()}";
         } else if key.to_small() == KEY_D.to_small() && (LCTRL_PRESSED || RCTRL_PRESSED) {
             self.input = "";
-        } else {
-            match chr {
-                Option::Some(s) => self.input = f"{self.input}{s}",
-                Option::None => (),
-            }
         }
+        let onchange = self.onchange;
+        onchange(self.input);
+    }
+    fn onchar(mut self, c: string) {
+        self.input = f"{self.input}{c}";
         let onchange = self.onchange;
         onchange(self.input);
     }
@@ -411,47 +437,31 @@ impl Input {
         })
     }
 }
+
+static FLOAT_CHARS = List::of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", ".");
+
 impl FloatInput {
     fn onclick(self) {
         let f = self.onclick;
         f(self.input);
     }
-    fn onkey(mut self, key: KeyCode, chr: Option<string>) {
-        let mut input = self.input;
+    fn onkey(mut self, key: KeyCode) {
         if key.to_small() == KEY_BACKSPACE.to_small() {
-            input = self.input.slice(0, -1);
+            self.input = self.input.slice(0, -1);
         } else if key.to_small() == KEY_V.to_small() && (LCTRL_PRESSED || RCTRL_PRESSED) {
-            input = f"{self.input}{Tas::get_clipboard()}";
+            self.input = f"{self.input}{Tas::get_clipboard()}";
         } else if key.to_small() == KEY_D.to_small() && (LCTRL_PRESSED || RCTRL_PRESSED) {
-            input = "";
-        } else {
-            match chr {
-                Option::Some(s) => input = f"{self.input}{s}",
-                Option::None => (),
-            }
+            self.input = "";
         }
-        self.input = "";
-        let mut i = 0;
-        while i < input.len_utf8() {
-            let chr = match input.slice(i, i+1) {
-                "0" => "0",
-                "1" => "1",
-                "2" => "2",
-                "3" => "3",
-                "4" => "4",
-                "5" => "5",
-                "6" => "6",
-                "7" => "7",
-                "8" => "8",
-                "9" => "9",
-                "+" => "+",
-                "-" => "-",
-                "." => ".",
-                _ => "",
-            };
-            self.input = f"{self.input}{chr}";
-            i += 1;
+
+        let onchange = self.onchange;
+        onchange(self.input);
+    }
+    fn onchar(mut self, c: string) {
+        if FLOAT_CHARS.contains(c) {
+            self.input = f"{self.input}{c}";
         }
+
         let onchange = self.onchange;
         onchange(self.input);
     }
@@ -466,8 +476,9 @@ impl FloatInput {
         })
     }
 }
+
 impl Slider {
-    fn onkey(self, key: KeyCode, chr: Option<string>) {
+    fn onkey(self, key: KeyCode) {
         if key.to_small() == KEY_LEFT.to_small() {
             let f = self.onleft;
             f();
@@ -487,8 +498,9 @@ impl Slider {
         })
     }
 }
+
 impl Chooser {
-    fn onkey(mut self, key: KeyCode, chr: Option<string>) {
+    fn onkey(mut self, key: KeyCode) {
         if key.to_small() == KEY_RIGHT.to_small() {
             self.selected = if self.selected  == self.options.len()-1 {
                 0

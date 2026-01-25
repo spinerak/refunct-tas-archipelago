@@ -19,6 +19,7 @@ enum UeEvent {
     NewGame,
     KeyDown(Key, bool),
     KeyUp(Key, bool),
+    KeyChar(char, bool),
     MouseMove(i32, i32),
     MouseButtonDown(EMouseButtonsType),
     MouseButtonUp(EMouseButtonsType),
@@ -84,6 +85,10 @@ pub fn key_down(key_code: i32, character_code: u32, is_repeat: bool) {
 }
 pub fn key_up(key_code: i32, character_code: u32, is_repeat: bool) {
     handle(UeEvent::KeyUp(codes_to_key(key_code, character_code), is_repeat));
+}
+
+pub fn key_char(character: char, is_repeat: bool) {
+    handle(UeEvent::KeyChar(character, is_repeat));
 }
 
 pub fn mouse_move(x: i32, y: i32) {

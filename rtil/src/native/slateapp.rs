@@ -1,6 +1,7 @@
 use std::sync::atomic::{AtomicPtr, Ordering};
 use hook::{ArgsRef, IsaAbi, RawHook, TypedHook};
-use crate::native::{AACTOR_RECEIVEACTORBEGINOVERLAP, FSLATEAPPLICATION_TICK, FSLATEAPPLICATION_ONKEYDOWN, FSLATEAPPLICATION_ONKEYUP, FSLATEAPPLICATION_ONRAWMOUSEMOVE, REBO_DOESNT_START_SEMAPHORE, RefunctIsaAbi, FSLATEAPPLICATION_ONMOUSEDOUBLECLICK, FSLATEAPPLICATION_ONMOUSEDOWN, FSLATEAPPLICATION_ONMOUSEMOVE, FSLATEAPPLICATION_ONMOUSEUP, FSLATEAPPLICATION_ONMOUSEWHEEL, AActor};
+use crate::native::{AACTOR_RECEIVEACTORBEGINOVERLAP, FSLATEAPPLICATION_TICK, FSLATEAPPLICATION_ONKEYDOWN, FSLATEAPPLICATION_ONKEYUP, FSLATEAPPLICATION_ONKEYCHAR, FSLATEAPPLICATION_ONRAWMOUSEMOVE, REBO_DOESNT_START_SEMAPHORE, RefunctIsaAbi, FSLATEAPPLICATION_ONMOUSEDOUBLECLICK, FSLATEAPPLICATION_ONMOUSEDOWN, FSLATEAPPLICATION_ONMOUSEMOVE, FSLATEAPPLICATION_ONMOUSEUP, FSLATEAPPLICATION_ONMOUSEWHEEL, AActor};
+use crate::native::ue::TCHAR;
 
 static SLATEAPP: AtomicPtr<FSlateApplicationUE> = AtomicPtr::new(std::ptr::null_mut());
 
@@ -43,6 +44,7 @@ pub struct FSlateApplication {
     _tick: &'static TypedHook<RefunctIsaAbi, fn(*mut FSlateApplicationUE), ()>,
     onkeydown: &'static TypedHook<RefunctIsaAbi, fn(*mut FSlateApplicationUE, i32, u32, bool), ()>,
     onkeyup: &'static TypedHook<RefunctIsaAbi, fn(*mut FSlateApplicationUE, i32, u32, bool), ()>,
+    _onkeychar: &'static TypedHook<RefunctIsaAbi, fn(*mut FSlateApplicationUE, TCHAR, bool), ()>,
     onrawmousemove: &'static TypedHook<RefunctIsaAbi, fn(*mut FSlateApplicationUE, i32, i32), ()>,
     _onmousemove: &'static RawHook<RefunctIsaAbi, ()>,
     _onmousedown: &'static RawHook<RefunctIsaAbi, ()>,
@@ -50,7 +52,7 @@ pub struct FSlateApplication {
     _onmouseup: &'static RawHook<RefunctIsaAbi, ()>,
     _onmousewheel: &'static RawHook<RefunctIsaAbi, ()>,
 
-    on_aactor_receive_begin_overlap: &'static TypedHook<RefunctIsaAbi, fn(*mut AActor, *mut AActor), ()>,
+    _on_aactor_receive_begin_overlap: &'static TypedHook<RefunctIsaAbi, fn(*mut AActor, *mut AActor), ()>,
 }
 
 impl FSlateApplication {
@@ -60,6 +62,7 @@ impl FSlateApplication {
                 _tick: TypedHook::create(FSLATEAPPLICATION_TICK.load(Ordering::Relaxed), tick_hook).enabled(),
                 onkeydown: TypedHook::create(FSLATEAPPLICATION_ONKEYDOWN.load(Ordering::Relaxed), on_key_down_hook).enabled(),
                 onkeyup: TypedHook::create(FSLATEAPPLICATION_ONKEYUP.load(Ordering::Relaxed), on_key_up_hook).enabled(),
+                _onkeychar: TypedHook::create(FSLATEAPPLICATION_ONKEYCHAR.load(Ordering::Relaxed), on_key_char_hook).enabled(),
                 onrawmousemove: TypedHook::create(FSLATEAPPLICATION_ONRAWMOUSEMOVE.load(Ordering::Relaxed), on_raw_mouse_move_hook).enabled(),
                 _onmousemove: RawHook::create(FSLATEAPPLICATION_ONMOUSEMOVE.load(Ordering::Relaxed), on_mouse_move_hook).enabled(),
                 _onmousedown: RawHook::create(FSLATEAPPLICATION_ONMOUSEDOWN.load(Ordering::Relaxed), on_mouse_down_hook).enabled(),
@@ -67,7 +70,7 @@ impl FSlateApplication {
                 _onmouseup: RawHook::create(FSLATEAPPLICATION_ONMOUSEUP.load(Ordering::Relaxed), on_mouse_up_hook).enabled(),
                 _onmousewheel: RawHook::create(FSLATEAPPLICATION_ONMOUSEWHEEL.load(Ordering::Relaxed), on_mouse_wheel_hook).enabled(),
 
-                on_aactor_receive_begin_overlap: TypedHook::create(AACTOR_RECEIVEACTORBEGINOVERLAP.load(Ordering::Relaxed), on_aactor_receive_begin_overlap).enabled(),
+                _on_aactor_receive_begin_overlap: TypedHook::create(AACTOR_RECEIVEACTORBEGINOVERLAP.load(Ordering::Relaxed), on_aactor_receive_begin_overlap).enabled(),
             }
         }
     }
@@ -130,6 +133,60 @@ fn on_key_up_hook<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut FSlateApplicationUE, 
         crate::threads::ue::key_up(key_code, character_code, is_repeat);
     }
     unsafe { hook.call_original_function((this, key_code, character_code, is_repeat)); }
+}
+
+#[cfg(windows)]
+mod windows_utf16 {
+    use super::*;
+    use std::sync::Mutex;
+    use std::ops::RangeInclusive;
+    static SURROGATE_BUFFER: Mutex<Option<u16>> = Mutex::new(None);
+    const SURROGATES:      RangeInclusive<u16> = 0xD800..=0xDFFF;
+    const HIGH_SURROGATES: RangeInclusive<u16> = 0xD800..=0xDBFF;
+    const LOW_SURROGATES:  RangeInclusive<u16> = 0xDC00..=0xDFFF;
+    const HIGH_SURROGATE_OFFSET: u16 = 0xD800;
+    const LOW_SURROGATE_OFFSET: u16  = 0xDC00;
+
+    // This is probably overkill, as we will almost surely never come across surrogate pairs.
+    // But anything worth doing is worth doing right!
+    pub fn tchar_to_char(character: TCHAR) -> Option<char> {
+        let mut buffer = SURROGATE_BUFFER.lock().unwrap();
+
+        if SURROGATES.contains(&character) {
+            if let Some(high_surrogate) = *buffer {
+                *buffer = None; // reset high surrogate
+
+                if LOW_SURROGATES.contains(&character) {
+                    let high = (high_surrogate - HIGH_SURROGATE_OFFSET) as u32;
+                    let low  = (character - LOW_SURROGATE_OFFSET) as u32;
+                    return char::from_u32(0x10000 + (high << 10) + low);
+                }
+            } else if HIGH_SURROGATES.contains(&character) {
+                *buffer = Some(character);
+            }
+
+            return None;
+        }
+
+        char::from_u32(character as u32)
+    }
+}
+
+fn on_key_char_hook<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut FSlateApplicationUE, TCHAR, bool), ()>, this: *mut FSlateApplicationUE, character: TCHAR, is_repeat: bool) {
+    #[cfg(windows)]
+    let ch = windows_utf16::tchar_to_char(character);
+
+    #[cfg(unix)]
+    let ch = char::from_u32(character);
+
+    if let Some(ch) = ch {
+        // Only process printable characters
+        if !ch.is_control() {
+            crate::threads::ue::key_char(ch, is_repeat);
+        }
+    }
+
+    unsafe { hook.call_original_function((this, character, is_repeat)); }
 }
 
 fn on_raw_mouse_move_hook<IA: IsaAbi>(hook: &TypedHook<IA, fn(*mut FSlateApplicationUE, i32, i32), ()>, this: *mut FSlateApplicationUE, x: i32, y: i32) {

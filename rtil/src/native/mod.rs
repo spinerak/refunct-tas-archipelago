@@ -20,6 +20,7 @@ macro_rules! extern_fn {
 #[cfg(unix)] mod linux;
 #[cfg(windows)] mod windows;
 pub(crate) mod ue;
+pub(crate) mod font;
 pub(crate) mod character;
 mod newgame;
 mod slateapp;
@@ -37,7 +38,6 @@ pub mod reflection;
 mod map_editor;
 mod kismet_system_library;
 mod engine;
-mod font;
 
 use std::sync::atomic::Ordering;
 use hook::{RawHook, TypedHook};

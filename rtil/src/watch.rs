@@ -2,6 +2,7 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 pub struct Sender<T> {
+    #[allow(unused)]
     shared: Arc<Shared<T>>,
 }
 pub struct Receiver<T> {
@@ -26,6 +27,7 @@ pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
 }
 
 impl<T> Sender<T> {
+    #[allow(unused)]
     pub fn send(&self, element: T) -> Result<(), T> {
         if self.shared.rx_closed.load(Ordering::Relaxed) {
             return Err(element);
