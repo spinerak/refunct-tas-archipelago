@@ -128,6 +128,8 @@ impl<'a> Pointer for PlatformWrapper<'a> {
         Pointer::fmt(&self.base, f)
     }
 }
+
+#[allow(dead_code)]
 impl<'a> PlatformWrapper<'a> {
     pub fn new(base: ActorWrapper<'a>) -> PlatformWrapper<'a> {
         assert_eq!(base.class().name(), "BP_IslandChunk_C");

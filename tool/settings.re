@@ -260,7 +260,7 @@ impl Settings {
                 pos => panic(f"unknown/invalid archipelago display position: {pos}"),
             },
             platform_display_enabled: get_bool("platform_display_enabled", true),
-            platform_display_position: match get_string("platform_display_position", "BottomCenter") {
+            platform_display_position: match get_string("platform_display_position", "TopCenter") {
                 "TopLeft"      => Anchor::TopLeft,
                 "TopCenter"    => Anchor::TopCenter,
                 "TopRight"     => Anchor::TopRight,

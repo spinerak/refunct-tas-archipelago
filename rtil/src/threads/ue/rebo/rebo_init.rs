@@ -1535,10 +1535,11 @@ fn set_cube_scale(internal_index: i32, s: f32) -> i32 {
 }
 
 #[rebo::function("Tas::collect_cube")]
-fn collect_cube(internal_index: i32) {
+fn collect_cube(internal_index: i32) -> i32 {
     maybe_remove_extra_cube(internal_index);
     find_cube_and(internal_index, |cube| cube.pickup())
         .unwrap_or_else(|e| log!("Could not pickup cube {:?}: {}", internal_index, e));
+    internal_index 
 }
 #[rebo::function("Tas::destroy_platform")]
 fn destroy_platform_rebo(internal_index: i32) {
@@ -1547,7 +1548,7 @@ fn destroy_platform_rebo(internal_index: i32) {
 
 fn destroy_platform(internal_index: i32) {
     maybe_remove_extra_platform(internal_index);
-    find_platform_and(internal_index, |platform| platform.destroy());
+    let _ = find_platform_and(internal_index, |platform| platform.destroy());
 }
 
 pub fn maybe_remove_extra_cube(internal_index: i32) -> bool {
@@ -1832,10 +1833,6 @@ fn archipelago_send_check(location_id: i64) {
     STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx
         .send(ReboToArchipelago::LocationChecks { locations: vec![location_id] })
         .unwrap();
-
-    // add location_id to STATE.checked_locations
-    let mut state = STATE.lock().unwrap();
-    let state = state.as_mut().unwrap();
 }
 #[rebo::function(raw("Tas::archipelago_goal"))]
 fn archipelago_goal() {

@@ -54,6 +54,7 @@ struct ArchipelagoState {
     in_logic_block_brawl_yellows: int,
     score_for_next_block: int,
     block_brawl_cubes_collected: int,
+    block_brawl_cubes_total: int,
     unlock_block_brawl_reds: bool,
     unlock_block_brawl_blues: bool,
     unlock_block_brawl_greens: bool,
@@ -62,6 +63,8 @@ struct ArchipelagoState {
     block_brawl_blue_ids: List<int>,
     block_brawl_green_ids: List<int>,
     block_brawl_yellow_ids: List<int>,
+    done_block_brawl_minigame: bool,
+    block_brawl_check_in_logic: int,
 
     last_platform_c: Option<int>,
     last_platform_p: Option<int>,
@@ -129,6 +132,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         in_logic_block_brawl_yellows: 0,
         score_for_next_block: 1,
         block_brawl_cubes_collected: 0,
+        block_brawl_cubes_total: 0,
         unlock_block_brawl_reds: false,
         unlock_block_brawl_blues: false,
         unlock_block_brawl_greens: false,
@@ -137,6 +141,8 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         block_brawl_blue_ids: List::new(),
         block_brawl_green_ids: List::new(),
         block_brawl_yellow_ids: List::new(),
+        done_block_brawl_minigame: false,
+        block_brawl_check_in_logic: 0,
 
         last_platform_c: Option::None,
         last_platform_p: Option::None,
@@ -178,6 +184,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         ARCHIPELAGO_STATE.triggered_clusters.clear();
 
         ARCHIPELAGO_STATE.og_randomizer_index = -1;
+
+        update_block_brawl_in_logic_counts();
     },
     on_level_change: ap_on_level_change_function,
     on_buttons_change: fn(old: int, new: int) {
@@ -489,6 +497,9 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
 }
 
 fn update_block_brawl_in_logic_counts(){
+    if ARCHIPELAGO_STATE.done_block_brawl_minigame {
+        return;
+    }
     let mut number_of_colors = 0;
     if ARCHIPELAGO_STATE.unlock_block_brawl_reds {
         number_of_colors += 1;
@@ -519,6 +530,61 @@ fn update_block_brawl_in_logic_counts(){
     if ARCHIPELAGO_STATE.unlock_block_brawl_yellows {
         ARCHIPELAGO_STATE.in_logic_block_brawl_yellows = scores_in_logic.get(number_of_colors).unwrap();
     }
+
+    let block_brawl_locations = List::of( 
+        10071001,10071003,10071006,10071010,10071015,10071018,10071021,10071024,10071027,10071030,10071036,10071042,10071048,10071054,10071060,10071072,10071084,10071096,10071108,10071120,
+        10072001,10072003,10072006,10072010,10072015,10072018,10072021,10072024,10072027,10072030,10072036,10072042,10072048,10072054,10072060,10072072,10072084,10072096,10072108,10072120,
+        10073001,10073003,10073006,10073010,10073015,10073018,10073021,10073024,10073027,10073030,10073036,10073042,10073048,10073054,10073060,10073072,10073084,10073096,10073108,10073120,
+        10074001,10074003,10074006,10074010,10074015,10074018,10074021,10074024,10074027,10074030,10074036,10074042,10074048,10074054,10074060,10074072,10074084,10074096,10074108,10074120,
+    );
+    let mut block_brawl_locations_in_logic = List::new();
+
+    let mut ncolors = 0;
+    if ARCHIPELAGO_STATE.unlock_block_brawl_reds {
+        ncolors += 1;
+    }
+    if ARCHIPELAGO_STATE.unlock_block_brawl_blues {
+        ncolors += 1;
+    }
+    if ARCHIPELAGO_STATE.unlock_block_brawl_greens {
+        ncolors += 1;
+    }
+    if ARCHIPELAGO_STATE.unlock_block_brawl_yellows {
+        ncolors += 1;
+    }
+    let check_points = List::of(0,15,30,60,120);
+    let max_in_logic = check_points.get(ncolors).unwrap();
+
+    for lid in block_brawl_locations {
+        let color = (lid-10070000)/1000;
+        let score = lid % 1000;
+        if (color == 1 && ARCHIPELAGO_STATE.unlock_block_brawl_reds) ||
+              (color == 2 && ARCHIPELAGO_STATE.unlock_block_brawl_blues) ||
+              (color == 3 && ARCHIPELAGO_STATE.unlock_block_brawl_greens) ||
+              (color == 4 && ARCHIPELAGO_STATE.unlock_block_brawl_yellows) {
+                if score <= max_in_logic {
+                    block_brawl_locations_in_logic.push(lid);
+                }
+          }
+    }
+
+    let mut number_pressed = 0;
+    let mut number_pressed_in_logic = 0;
+    for lid in block_brawl_locations {
+        if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+            number_pressed += 1;
+            if block_brawl_locations_in_logic.contains(lid) {
+                number_pressed_in_logic += 1;
+            }
+        }
+    }
+    if number_pressed == block_brawl_locations.len() {
+        ARCHIPELAGO_STATE.done_block_brawl_minigame = true;
+        ap_log(List::of(ColorfulText { text:"Completed Block Brawl Minigame!", color: AP_COLOR_GREEN }));
+    }
+
+    ARCHIPELAGO_STATE.block_brawl_check_in_logic = block_brawl_locations_in_logic.len() - number_pressed_in_logic;
+
 }
 
 fn archipelago_got_grass(){
@@ -675,6 +741,7 @@ fn archipelago_block_brawl_start(){
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
     ARCHIPELAGO_STATE.block_brawl_cubes_collected = 0;
+    ARCHIPELAGO_STATE.block_brawl_cubes_total = 0;
 
     ARCHIPELAGO_STATE.block_brawl_red_ids.clear();
     ARCHIPELAGO_STATE.block_brawl_blue_ids.clear();
@@ -699,6 +766,7 @@ fn archipelago_block_brawl_start(){
             ARCHIPELAGO_STATE.block_brawl_red_ids.push(id);
             j += 1;
         }
+        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
     }
     j = 0;
     if ARCHIPELAGO_STATE.unlock_block_brawl_greens {
@@ -708,6 +776,7 @@ fn archipelago_block_brawl_start(){
             ARCHIPELAGO_STATE.block_brawl_green_ids.push(id);
             j += 1;
         }
+        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
     }
     j = 0;
     if ARCHIPELAGO_STATE.unlock_block_brawl_blues {
@@ -717,6 +786,7 @@ fn archipelago_block_brawl_start(){
             ARCHIPELAGO_STATE.block_brawl_blue_ids.push(id);
             j += 1;
         }
+        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
     }
     j = 0;
     if ARCHIPELAGO_STATE.unlock_block_brawl_yellows {
@@ -726,6 +796,7 @@ fn archipelago_block_brawl_start(){
             ARCHIPELAGO_STATE.block_brawl_yellow_ids.push(id);
             j += 1;
         }
+        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
     }
 }
 
@@ -863,6 +934,15 @@ fn archipelago_checked_location(id: int){
             ap_log(List::of(ColorfulText { text:"Completed OG Randomizer Minigame!", color: AP_COLOR_GREEN }));
         }
         ARCHIPELAGO_STATE.progress_OG_randomizer_minigame = f"{number_pressed}/{og_randomizer_locations.len()}";
+    }    
+    let block_brawl_locations = List::of( 
+        10071001,10071003,10071006,10071010,10071015,10071018,10071021,10071024,10071027,10071030,10071036,10071042,10071048,10071054,10071060,10071072,10071084,10071096,10071108,10071120,
+        10072001,10072003,10072006,10072010,10072015,10072018,10072021,10072024,10072027,10072030,10072036,10072042,10072048,10072054,10072060,10072072,10072084,10072096,10072108,10072120,
+        10073001,10073003,10073006,10073010,10073015,10073018,10073021,10073024,10073027,10073030,10073036,10073042,10073048,10073054,10073060,10073072,10073084,10073096,10073108,10073120,
+        10074001,10074003,10074006,10074010,10074015,10074018,10074021,10074024,10074027,10074030,10074036,10074042,10074048,10074054,10074060,10074072,10074084,10074096,10074108,10074120,
+    );
+    if block_brawl_locations.contains(id) {
+        update_block_brawl_in_logic_counts();
     }
 }
 fn archipelago_send_check(id: int){
@@ -884,7 +964,7 @@ fn archipelago_collect_collected_cubes(){
     if ARCHIPELAGO_STATE.cubes_options == 9{
         let all_cubes = Tas::get_vanilla_cubes();
         for cube in all_cubes {
-            Tas::collect_cube(cube);
+            Tas::set_cube_color(Tas::collect_cube(cube), Color { red: 0., green: 0., blue: 0., alpha: 1. } );
         }
     }else{
         for id in ARCHIPELAGO_STATE.collected_cubes {
@@ -892,7 +972,7 @@ fn archipelago_collect_collected_cubes(){
             let plat = (id - 10060000) % 100;
 
             match Tas::get_vanilla_cube(cluster-1, plat-1) {
-                Option::Some(cube) => Tas::collect_cube(cube),
+                Option::Some(cube) => { Tas::set_cube_color(Tas::collect_cube(cube), Color { red: 0., green: 0., blue: 0., alpha: 1. }); },
                 Option::None => {}
             }
         }
