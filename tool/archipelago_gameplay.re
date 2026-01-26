@@ -326,7 +326,6 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 
 fn archipelago_disconnected() {
     ap_log_error("Disconnected from Archipelago server");
-    remove_component(ARCHIPELAGO_COMPONENT);
     ARCHIPELAGO_STATE.ap_connected = false;
 };
 
