@@ -136,7 +136,7 @@ impl<'a> PlatformWrapper<'a> {
         PlatformWrapper { base }
     }
 
-    pub fn spawn(x: f32, y: f32, z: f32) -> Result<PlatformWrapper<'a>, &'static str> {
+    pub fn spawn(x: f32, y: f32, z: f32, pi: f32, ya: f32, ro: f32) -> Result<PlatformWrapper<'a>, &'static str> {
         UeScope::with(|scope| unsafe {
             let plat_class = scope.iter_global_object_array()
                 .map(|item| item.object())
@@ -149,7 +149,7 @@ impl<'a> PlatformWrapper<'a> {
             let class: ClassWrapper = plat_class.upcast();
 
             let location = FVector { x, y, z };
-            let rotation = FRotator { pitch: 0.0, yaw: 0.0, roll: 0.0 };
+            let rotation = FRotator { pitch: pi, yaw: ya, roll: ro };
             let spawn_parameters = FActorSpawnParameters {
                 name: FName::NAME_None,
                 template: ptr::null(),
@@ -351,22 +351,9 @@ impl<'a> PlatformWrapper<'a> {
         }
     }
 
-    // pub fn play_animation(&self) {
-    //     let timeline: ObjectWrapper = self.base.get_field("MoveAnimation").unwrap();
+        
+        
 
-    //     let the_timeline: StructValueWrapper = timeline.get_field("TheTimeline").unwrap();
-    //     the_timeline.get_field("PlayRate").unwrap::<&Cell<f32>>().set(0.25);
-
-    //     if let Some(play_func) = timeline.class().find_function("Play") {
-    //         let params = play_func.create_argument_struct();
-    //         unsafe {
-    //             play_func.call(timeline.as_ptr(), &params);
-    //         }
-    //         log!("Started MoveAnimation timeline");
-    //     } else {
-    //         log!("Warning: Could not find Play function on timeline");
-    //     }
-    // }
 }
 #[derive(Debug, Clone)]
 pub struct CubeWrapper<'a> {

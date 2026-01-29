@@ -752,7 +752,7 @@ fn archipelago_block_brawl_start(){
 
     let mut i = 0;
     while i < 200 {
-        Tas::spawn_platform_rando_location(3000.);
+        Tas::spawn_platform_rando_location(3000., 10.);
         i += 1;
     }
 
