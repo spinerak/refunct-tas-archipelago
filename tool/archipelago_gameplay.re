@@ -864,6 +864,7 @@ fn got_extra_cube_ap(element_index: int){
 }
 
 fn archipelago_vanilla_start(){
+    Tas::set_all_cluster_speeds(10000.0);
     Tas::abilities_set_swim(true);
     Tas::abilities_set_wall_jump(2, false);
     Tas::abilities_set_ledge_grab(true);

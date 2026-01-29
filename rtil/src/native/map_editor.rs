@@ -3,7 +3,7 @@ use std::fmt::{Formatter, Pointer};
 use std::ops::Deref;
 use std::sync::Mutex;
 use std::ptr;
-use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld, BoolValueWrapper, AMyCharacter};
+use crate::native::{AMyCharacter, ArrayWrapper, BoolPropertyWrapper, BoolValueWrapper, ClassWrapper, ObjectIndex, ObjectWrapper, StructValueWrapper, UObject, UWorld, UeObjectWrapperType, UeScope};
 use crate::native::reflection::{AActor, ActorWrapper, UeObjectWrapper};
 use crate::native::ue::{FRotator, FVector, FName};
 use crate::native::uworld::{ESpawnActorCollisionHandlingMethod, ESpawnActorNameMode, FActorSpawnParameters};
@@ -96,7 +96,24 @@ impl<'a> LevelWrapper<'a> {
         self.base.get_field("Speed").unwrap()
     }
     pub fn set_speed(&self, speed: f32) {
-        self.base.get_field("Speed").unwrap::<&Cell<f32>>().set(speed)
+
+        if let Some(source_position) = self.base.get_field("SourcePosition").unwrap_nullable::<StructValueWrapper>() {
+            // Set the X, Y, and Z components of SourcePosition
+            // Example: Move the source position +1000 units along the X-axis
+            let x_cell = source_position.get_field("X").unwrap::<&Cell<f32>>();
+            let y_cell = source_position.get_field("Y").unwrap::<&Cell<f32>>();
+            let z_cell = source_position.get_field("Z").unwrap::<&Cell<f32>>();
+
+            let new_x = x_cell.get() + 1000.0;
+            let new_y = y_cell.get() + 1000.0;
+            let new_z = z_cell.get() + 1000.0;
+
+            x_cell.set(new_x);
+            y_cell.set(new_y);
+            z_cell.set(new_z);
+
+            println!("Set SourcePosition to (1000, 0, 0)");
+        }
     }
 }
 #[derive(Debug, Clone)]
