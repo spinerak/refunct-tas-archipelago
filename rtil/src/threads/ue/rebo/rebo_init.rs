@@ -1267,12 +1267,17 @@ fn get_viewport_size() -> Size {
 }
 
 #[rebo::function("Tas::spawn_platform_rando_location")]
-fn spawn_platform_rando_location(max: f32) -> i32 {
+fn spawn_platform_rando_location(max_loc: f32, max_rot: f32) -> i32 {
     let rx = rand::random::<f32>();
     let ry = rand::random::<f32>();
     let rz = rand::random::<f32>();
-    let loc = Location { x: (rx-0.5) * 2. * max as f32, y: (ry-0.5) * 2. * max as f32, z: rz * max as f32 };
-    spawn_platform(loc)
+    let loc = Location { x: (rx-0.5) * 2. * max_loc as f32, y: (ry-0.5) * 2. * max_loc as f32, z: rz * max_loc as f32 };
+    let rot = Rotation {
+        pitch: (rand::random::<f32>() -0.5) * 2. * max_rot as f32,
+        yaw: (rand::random::<f32>() - 0.5) * 2. * max_rot as f32,
+        roll: (rand::random::<f32>() - 0.5) * 2. * max_rot as f32,
+    };
+    spawn_platform(loc, rot)
 }
 #[rebo::function("Tas::spawn_cube_rando_location")]
 fn spawn_cube_rando_location(max: f32, spawn_platform_below: bool) -> i32 {
@@ -1285,17 +1290,17 @@ fn spawn_cube_rando_location(max: f32, spawn_platform_below: bool) -> i32 {
         platform_loc.x -= 125.;
         platform_loc.y -= 125.;
         platform_loc.z -= 250.;
-        spawn_platform(platform_loc); // this id won't be returned
+        spawn_platform(platform_loc, Rotation { pitch: 0., yaw: 0., roll: 0. }); // this id won't be returned
     }
     spawn_cube(loc)
 }
 
 #[rebo::function("Tas::spawn_platform")]
-fn spawn_platform_rebo(loc: Location) -> i32 {
-    spawn_platform(loc)
+fn spawn_platform_rebo(loc: Location, rot: Rotation) -> i32 {
+    spawn_platform(loc, rot)
 }
-fn spawn_platform(loc: Location) -> i32 {
-    match crate::native::PlatformWrapper::spawn(loc.x, loc.y, loc.z) {
+fn spawn_platform(loc: Location, rot: Rotation) -> i32 {
+    match crate::native::PlatformWrapper::spawn(loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll) {
         Ok(platform) => {
             let index = platform.internal_index();
             STATE.lock().unwrap().as_mut().unwrap().extra_platforms.push(index);
