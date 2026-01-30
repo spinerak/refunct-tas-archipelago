@@ -191,6 +191,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     on_new_game: fn() {
         Tas::destroy_cubes(true, true);
         Tas::destroy_platforms(true, true);
+        ARCHIPELAGO_STATE.extra_cubes_locs.clear();
+        ARCHIPELAGO_STATE.extra_cubes_int_ids.clear();
 
         if ARCHIPELAGO_STATE.gamemode == 4 {
             ARCHIPELAGO_STATE.started = 0;
@@ -710,6 +712,8 @@ fn archipelago_main_start(){
     Tas::archipelago_deactivate_buttons_ap();
 
     Tas::reset_cubes(true, true);
+
+
     spawn_extra_cubes();
 
     
