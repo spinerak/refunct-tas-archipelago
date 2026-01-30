@@ -1,7 +1,6 @@
 
 struct ArchipelagoState {
     ap_connected: bool,
-    own_slot_id: int,
 
     last_level_unlocked: int,
     grass: int,
@@ -84,7 +83,6 @@ struct ArchipelagoState {
 fn fresh_archipelago_state() -> ArchipelagoState {
     ArchipelagoState {
         ap_connected: false,
-        own_slot_id: -1,
 
         last_level_unlocked: 1,
         grass: 0,
