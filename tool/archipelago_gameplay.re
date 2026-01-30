@@ -23,6 +23,9 @@ struct ArchipelagoState {
     has_goaled: bool,
     gamemode: int,
 
+    extra_cubes_locs: List<int>,
+    extra_cubes_int_ids: List<int>,
+
     unlock_vanilla_minigame: bool,
     done_vanilla_minigame: bool,
     progress_vanilla_minigame: string,
@@ -100,6 +103,9 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         highest_index_received: -1,
         has_goaled: false,
         gamemode: 0,
+
+        extra_cubes_locs: List::new(),
+        extra_cubes_int_ids: List::new(),
 
         unlock_vanilla_minigame: false,
         done_vanilla_minigame: false,
@@ -201,6 +207,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     on_element_pressed: fn(index: ElementIndex) {
         if index.cluster_index == 9999 {
             got_cube_block_brawl(index.element_index);
+            got_extra_cube_ap(index.element_index);
             return;
         }
         
@@ -655,14 +662,84 @@ fn archipelago_main_start(){
     Tas::archipelago_deactivate_buttons_ap();
 
     Tas::reset_cubes(true, true);
+    
+    let cubes_to_spawn_locs = List::of(
+        -4562.5,  -875.,  1375.,  
+        -1985.,  -2262.5,  2090.,  
+        -5062.5,  -3312.5,  62.5,  
+        -3237.5,  -3744.,  35.,  
+        625.,  1625.,  800.,  
+        1415.,  2625.,  215.,  
+        6.3806667,  2880.,  965.,  
+        1250.,  -3750.,  62.5,  
+        1695.,  4636.,  2000.,  
+        2187.5,  6375.,  62.5
+    );
+
+    let cubes_to_spawn_ids = List::of(
+        10080501,
+        10080602,
+        10080702,
+        10080803,
+        10081302,
+        10081402,
+        10081403,
+        10081901,
+        10082501,
+        10082601
+    );
+
+    let mut i = 0;
+    while i < cubes_to_spawn_ids.len() {
+        let x = cubes_to_spawn_locs.get(i*3).unwrap();
+        let y = cubes_to_spawn_locs.get(i*3 + 1).unwrap();
+        let z = cubes_to_spawn_locs.get(i*3 + 2).unwrap();
+        let loc_id = cubes_to_spawn_ids.get(i).unwrap();
+
+        if ARCHIPELAGO_STATE.checked_locations.contains(loc_id) {
+            i += 1;
+            continue;
+        }
+
+        let id = Tas::set_cube_scale(Tas::set_cube_color(Tas::spawn_cube(Location { x: x, y: y, z: z - 162.5 }), Color { red: 0., green: 1., blue: 0., alpha: 1. }), 1.0);
+        ARCHIPELAGO_STATE.extra_cubes_int_ids.push(id);
+        ARCHIPELAGO_STATE.extra_cubes_locs.push(loc_id);
+
+        i += 1;
+    }
+    
+
+
+
     archipelago_activate_stepped_on_platforms();
     archipelago_collect_collected_cubes();
+
+
 
     ARCHIPELAGO_STATE.started = 2;
     let mut i = 0;
     for item in ARCHIPELAGO_STATE.received_items {
         archipelago_process_item(item, 0, i);
         i += 1;
+    }
+}
+
+fn got_extra_cube_ap(element_index: int){
+    let mut found_index = Option::None;
+    let mut i = 0;
+    for id in ARCHIPELAGO_STATE.extra_cubes_int_ids {
+        if id == element_index {
+            found_index = Option::Some(i);
+            break;
+        }
+        i += 1;
+    }
+    match found_index {
+        Option::Some(pos) => {
+            let loc = ARCHIPELAGO_STATE.extra_cubes_locs.get(pos).unwrap();
+            archipelago_send_check(loc);
+        },
+        Option::None => {}
     }
 }
 
@@ -673,6 +750,7 @@ fn archipelago_vanilla_start(){
     Tas::abilities_set_jump_pads(true);
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
 }
@@ -684,6 +762,7 @@ fn archipelago_seeker_start(){
     Tas::abilities_set_jump_pads(true);
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
 
@@ -715,6 +794,7 @@ fn archipelago_button_galore_start(){
     Tas::abilities_set_jump_pads(true);
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
 }
@@ -726,6 +806,7 @@ fn archipelago_og_randomizer_start(){
     Tas::abilities_set_jump_pads(true);
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
 }
@@ -738,6 +819,7 @@ fn archipelago_block_brawl_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     Tas::archipelago_deactivate_buttons_ap();
+    collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
     ARCHIPELAGO_STATE.block_brawl_cubes_collected = 0;
@@ -960,26 +1042,29 @@ fn archipelago_activate_stepped_on_platforms(){
         Tas::trigger_element_by_type(cluster-1, "Platform", plat-1);
     }
 }
+fn collect_all_vanilla_cubes(){
+    let all_cubes = Tas::get_vanilla_cubes();
+    for cube in all_cubes {
+        Tas::collect_cube(cube);
+    }
+}
 fn archipelago_collect_collected_cubes(){
     if ARCHIPELAGO_STATE.cubes_options == 9{
-        let all_cubes = Tas::get_vanilla_cubes();
-        for cube in all_cubes {
-            Tas::set_cube_color(Tas::collect_cube(cube), Color { red: 0., green: 0., blue: 0., alpha: 1. } );
-        }
+        collect_all_vanilla_cubes();
     }else{
         for id in ARCHIPELAGO_STATE.collected_cubes {
             let cluster = (id - 10060000) / 100;
             let plat = (id - 10060000) % 100;
 
             match Tas::get_vanilla_cube(cluster-1, plat-1) {
-                Option::Some(cube) => { Tas::set_cube_color(Tas::collect_cube(cube), Color { red: 0., green: 0., blue: 0., alpha: 1. }); },
+                Option::Some(cube) => { Tas::collect_cube(cube); },
                 Option::None => {}
             }
         }
 
         let all_cubes = Tas::get_vanilla_cubes();
         for cube in all_cubes {
-            Tas::set_cube_color_random(cube);
+            Tas::set_cube_color(cube, Color { red: 1., green: 0., blue: 0., alpha: 1. });
             Tas::set_cube_scale(cube, 2.0);
         }
     }

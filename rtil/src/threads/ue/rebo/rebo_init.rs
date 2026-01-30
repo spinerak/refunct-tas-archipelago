@@ -1544,7 +1544,7 @@ fn collect_cube(internal_index: i32) -> i32 {
     maybe_remove_extra_cube(internal_index);
     find_cube_and(internal_index, |cube| cube.pickup())
         .unwrap_or_else(|e| log!("Could not pickup cube {:?}: {}", internal_index, e));
-    internal_index 
+    set_cube_color(internal_index, Color { red: 0., green: 0., blue: 0., alpha: 1. })
 }
 #[rebo::function("Tas::destroy_platform")]
 fn destroy_platform_rebo(internal_index: i32) {
