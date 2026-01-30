@@ -6,7 +6,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::sync::Arc;
-use archipelago_rs::protocol::{ClientMessage, ServerMessage, BounceData, DeathLink, GetDataPackage, RichPrint, RichMessageColor, RichMessagePart, NetworkItem, ItemsHandlingFlags};
+use archipelago_rs::protocol::{BounceData, ClientMessage, DataStorageOperation, DeathLink, Get, GetDataPackage, ItemsHandlingFlags, NetworkItem, RichMessageColor, RichMessagePart, RichPrint, ServerMessage, Set};
 use crossbeam_channel::{Sender, TryRecvError};
 use image::Rgba;
 use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span, Stdlib, Value, VmContext};
@@ -127,6 +127,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(archipelago_disconnect)
         .add_function(archipelago_send_check)
         .add_function(archipelago_goal)
+        .add_function(archipelago_ds_get)
+        .add_function(archipelago_ds_set_max)
         .add_function(new_game_pressed)
         .add_function(get_level)
         .add_function(set_level_rebo)
@@ -298,6 +300,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_register_player)
         .add_required_rebo_function(archipelago_register_game_item)
         .add_required_rebo_function(archipelago_register_game_location)
+        .add_required_rebo_function(archipelago_retrieved)
         .add_required_rebo_function(archipelago_print_json_message)
         .add_required_rebo_function(archipelago_received_death)
         .add_required_rebo_function(archipelago_trigger_one_cluster_now)
@@ -797,6 +800,15 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     log!("Retrieved message");
                     let msg = format!("Archipelago ServerMessage::Retrieved: {:?}", info);
                     log!("{}", msg);
+                    for (key, value) in info.keys.as_object().unwrap() {
+                        if value.is_null() {
+                            continue;
+                        }
+                        match serde_json::to_string(value) {
+                            Ok(s) => archipelago_retrieved(vm, key.clone(), s)?,
+                            Err(e) => log!("Failed to serialize archipelago key {} value: {}", key, e),
+                        }
+                    }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::SetReply(reply))) => {
                     log!("SetReply message");
@@ -856,6 +868,7 @@ extern "rebo" {
     fn archipelago_register_game_item(game_name: String, item_name: String, item_id: String);
     fn archipelago_register_game_location(game_name: String, location_name: String, location_id: String);
     fn archipelago_print_json_message(json_message: ReboPrintJSONMessage);
+    fn archipelago_retrieved(key: String, value: String);
     fn archipelago_received_death(source: String, cause: String);
     fn archipelago_trigger_one_cluster_now(time: u64);
     fn ap_log_error(message: String);
@@ -1843,6 +1856,48 @@ fn archipelago_goal() {
         .send(ReboToArchipelago::Goal)
         .unwrap();
 }
+fn archipelago_ds_set<T>(key: String, default: &T, operations: Vec<DataStorageOperation>) -> Result<(), serde_json::Error> where T: ?Sized + Serialize {
+  return Ok(STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(
+    ReboToArchipelago::ClientMessage(ClientMessage::Set(Set {
+      key,
+      default: serde_json::to_value(default)?,
+      want_reply: true, // if adding SetNotify this makes updates also cause the get handling
+                        // to trigger to make things consistent with the servers view
+                        // otherwise it'd still cause a confirmation for the Set to be logged
+      operations
+    }))
+  ).unwrap());
+}
+#[rebo::function("Tas::archipelago_ds_set_max")]
+fn archipelago_ds_set_max(
+    key: String,
+    default: i64,
+    new_value: i64
+) {
+    let value = match serde_json::to_value(new_value) {
+        Ok(v) => v,
+        Err(e) => {
+            log!("archipelago_ds_set_max failed: {}", e);
+            return;
+        }
+    };
+    if let Err(e) = archipelago_ds_set(
+        key,
+        &default,
+        vec![DataStorageOperation::Max(value)],
+    ) {
+        log!("archipelago_ds_set_max failed: {}", e);
+    }
+}
+#[rebo::function("Tas::archipelago_ds_get")]
+fn archipelago_ds_get(key: String) {
+    STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(
+        ReboToArchipelago::ClientMessage(ClientMessage::Get(Get {
+            keys: vec![key], // Request a single key
+        })),
+    ).unwrap();
+}
+
 
 
 #[rebo::function("Tas::get_level")]
