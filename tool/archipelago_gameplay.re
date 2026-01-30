@@ -20,9 +20,15 @@ struct ArchipelagoState {
     stepped_on_platforms: List<int>,
     collected_cubes: List<int>,
     cubes_options: int,
+    extra_cubes_options: int,
+    
     highest_index_received: int,
     has_goaled: bool,
     gamemode: int,
+
+    red_cubes_bag: bool,
+    green_cubes_bag: bool,
+    blue_cubes_bag: bool,
 
     extra_cubes_locs: List<int>,
     extra_cubes_int_ids: List<int>,
@@ -102,9 +108,15 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         stepped_on_platforms: List::new(),
         collected_cubes: List::new(),
         cubes_options: -1,
+        extra_cubes_options: -1,
+        
         highest_index_received: -1,
         has_goaled: false,
         gamemode: 0,
+
+        red_cubes_bag: false,
+        green_cubes_bag: false,
+        blue_cubes_bag: false,
 
         extra_cubes_locs: List::new(),
         extra_cubes_int_ids: List::new(),
@@ -378,6 +390,39 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         if item_id == 9999999 {  // Grass
             archipelago_got_grass();
         }
+
+        if item_id == 9999989 && !ARCHIPELAGO_STATE.red_cubes_bag {  // Red Cubes Bag
+            ARCHIPELAGO_STATE.red_cubes_bag = true;
+            if ARCHIPELAGO_STATE.gamemode == 0 {
+                if ARCHIPELAGO_STATE.cubes_options == 1 {  // red
+                    for cube in Tas::get_vanilla_cubes() {
+                        Tas::set_cube_collision(cube, true);
+                        Tas::set_cube_color(cube, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+                    }
+                }
+                if ARCHIPELAGO_STATE.extra_cubes_options == 1 {
+                    for cube in ARCHIPELAGO_STATE.extra_cubes_int_ids {
+                        Tas::set_cube_collision(cube, true);
+                        Tas::set_cube_color(cube, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+                    }
+                }
+            }
+        }
+        if item_id == 9999988 && !ARCHIPELAGO_STATE.green_cubes_bag {  // Green Cubes Bag
+            ARCHIPELAGO_STATE.green_cubes_bag = true;
+            if ARCHIPELAGO_STATE.gamemode == 0 {
+                if ARCHIPELAGO_STATE.extra_cubes_options == 2 {
+                    for cube in ARCHIPELAGO_STATE.extra_cubes_int_ids {
+                        Tas::set_cube_collision(cube, true);
+                        Tas::set_cube_color(cube, Color { red: 0., green: 1., blue: 0., alpha: 1. });
+                    }
+                }
+            }
+        }
+        if item_id == 9999987 && !ARCHIPELAGO_STATE.blue_cubes_bag {  // Blue Cubes Bag
+            ARCHIPELAGO_STATE.blue_cubes_bag = true;
+        }
+
         let clusterindex = item_id - 10000000;
         if clusterindex >= 2 && clusterindex < 32 {
             if !ARCHIPELAGO_STATE.triggered_clusters.contains(clusterindex) {
@@ -665,7 +710,26 @@ fn archipelago_main_start(){
     Tas::archipelago_deactivate_buttons_ap();
 
     Tas::reset_cubes(true, true);
+    spawn_extra_cubes();
+
     
+    archipelago_activate_stepped_on_platforms();
+    archipelago_collect_collected_cubes();
+
+
+
+    ARCHIPELAGO_STATE.started = 2;
+    let mut i = 0;
+    for item in ARCHIPELAGO_STATE.received_items {
+        archipelago_process_item(item, 0, i);
+        i += 1;
+    }
+}
+
+fn spawn_extra_cubes(){    
+    if ARCHIPELAGO_STATE.extra_cubes_options == 9{
+        return;
+    }
     let cubes_to_spawn_locs = List::of(
         -4562.5,  -875.,  1375.,  
         -1985.,  -2262.5,  2090.,  
@@ -704,28 +768,45 @@ fn archipelago_main_start(){
             continue;
         }
 
-        let id = Tas::set_cube_scale(Tas::set_cube_color(Tas::spawn_cube(Location { x: x, y: y, z: z - 162.5 }), Color { red: 0., green: 1., blue: 0., alpha: 1. }), 1.0);
+        let mut col = Color { red: 1., green: 0., blue: 0., alpha: 1. };
+        let mut ready = true;
+        if ARCHIPELAGO_STATE.extra_cubes_options == 1 {
+            if ARCHIPELAGO_STATE.red_cubes_bag {
+                col.red = 1.;
+                col.green = 0.;
+                col.blue = 0.;
+            }else{
+                col.red = 0.;
+                col.green = 0.;
+                col.blue = 0.;
+                ready = false;
+            }
+        }
+        if ARCHIPELAGO_STATE.extra_cubes_options == 2 {
+            if ARCHIPELAGO_STATE.green_cubes_bag {
+                col.red = 0.;
+                col.green = 1.;
+                col.blue = 0.;
+            }else{
+                col.red = 0.;
+                col.green = 0.;
+                col.blue = 0.;
+                ready = false;
+            }
+        }
+        let id = Tas::set_cube_scale(Tas::set_cube_color(Tas::spawn_cube(Location { x: x, y: y, z: z - 162.5 }), col), 1.0);
+        if !ready {
+            Tas::set_cube_collision(id, false);
+        }
         ARCHIPELAGO_STATE.extra_cubes_int_ids.push(id);
         ARCHIPELAGO_STATE.extra_cubes_locs.push(loc_id);
 
         i += 1;
     }
     
-
-
-
-    archipelago_activate_stepped_on_platforms();
-    archipelago_collect_collected_cubes();
-
-
-
-    ARCHIPELAGO_STATE.started = 2;
-    let mut i = 0;
-    for item in ARCHIPELAGO_STATE.received_items {
-        archipelago_process_item(item, 0, i);
-        i += 1;
-    }
 }
+
+
 
 fn got_extra_cube_ap(element_index: int){
     let mut found_index = Option::None;
@@ -1106,6 +1187,14 @@ fn archipelago_collect_collected_cubes(){
             Tas::set_cube_color(cube, Color { red: 1., green: 0., blue: 0., alpha: 1. });
             Tas::set_cube_scale(cube, 2.0);
         }
+
+        if ARCHIPELAGO_STATE.cubes_options == 1 && !ARCHIPELAGO_STATE.red_cubes_bag {  // red
+            for cube in all_cubes {
+                Tas::set_cube_color(cube, Color { red: 0., green: 0., blue: 0., alpha: 1. });
+                Tas::set_cube_collision(cube, false);
+            }
+        }
+        
     }
 }
 
@@ -1155,5 +1244,8 @@ fn archipelago_received_slot_data(key: string, value: string){
 
     if key == "cubes" {
         ARCHIPELAGO_STATE.cubes_options = value.parse_int().unwrap();
+    }
+    if key == "extra_cubes" {
+        ARCHIPELAGO_STATE.extra_cubes_options = value.parse_int().unwrap();
     }
 }
