@@ -1,6 +1,8 @@
 
 struct ArchipelagoState {
     ap_connected: bool,
+    own_slot_id: int,
+
     last_level_unlocked: int,
     grass: int,
     wall_jump: int,
@@ -82,6 +84,8 @@ struct ArchipelagoState {
 fn fresh_archipelago_state() -> ArchipelagoState {
     ArchipelagoState {
         ap_connected: false,
+        own_slot_id: -1,
+
         last_level_unlocked: 1,
         grass: 0,
         wall_jump: 0,
@@ -612,6 +616,7 @@ fn archipelago_init(gamemode: int){
     }
 
     Tas::archipelago_gather_all_buttons();
+
 }
 
 fn archipelago_start(){
@@ -832,6 +837,11 @@ fn archipelago_block_brawl_start(){
     ARCHIPELAGO_STATE.block_brawl_cubes_collected = 0;
     ARCHIPELAGO_STATE.score_for_next_block = 1;
 
+    Tas::archipelago_ds_get(f"RFBB_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
+    Tas::archipelago_ds_get(f"RFBB_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
+    Tas::archipelago_ds_get(f"RFBB_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
+    Tas::archipelago_ds_get(f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
+
     let mut i = 0;
     while i < 200 {
         Tas::spawn_platform_rando_location(3000., 10.);
@@ -895,6 +905,7 @@ fn got_cube_block_brawl(id: int){
                 Tas::archipelago_send_check(10071000 + cp);
             }
         }
+        Tas::archipelago_ds_set_max(f"RFBB_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_brawl_reds);
     }
     if ARCHIPELAGO_STATE.block_brawl_blue_ids.contains(id) {
         ARCHIPELAGO_STATE.block_brawl_blue_ids.remove(id);
@@ -904,6 +915,7 @@ fn got_cube_block_brawl(id: int){
                 Tas::archipelago_send_check(10072000 + cp);
             }
         }
+        Tas::archipelago_ds_set_max(f"RFBB_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_brawl_blues);
     }
     if ARCHIPELAGO_STATE.block_brawl_green_ids.contains(id) {
         ARCHIPELAGO_STATE.block_brawl_green_ids.remove(id);
@@ -913,6 +925,7 @@ fn got_cube_block_brawl(id: int){
                 Tas::archipelago_send_check(10073000 + cp);
             }
         }
+        Tas::archipelago_ds_set_max(f"RFBB_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_brawl_greens);
     }
     if ARCHIPELAGO_STATE.block_brawl_yellow_ids.contains(id) {
         ARCHIPELAGO_STATE.block_brawl_yellow_ids.remove(id);
@@ -922,6 +935,7 @@ fn got_cube_block_brawl(id: int){
                 Tas::archipelago_send_check(10074000 + cp);
             }
         }
+        Tas::archipelago_ds_set_max(f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_brawl_yellows);
     }
     ARCHIPELAGO_STATE.block_brawl_cubes_collected += 1;
     let next_score = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_brawl_cubes_collected).unwrap_or(1);
@@ -1027,6 +1041,33 @@ fn archipelago_checked_location(id: int){
         update_block_brawl_in_logic_counts();
     }
 }
+fn archipelago_retrieved(key: string, value: string){
+    if key == f"RFBB_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}" {
+        let v = value.parse_int().unwrap();
+        if v > ARCHIPELAGO_STATE.score_block_brawl_reds {
+            ARCHIPELAGO_STATE.score_block_brawl_reds = v;
+        }
+    }
+    if key == f"RFBB_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}" {
+        let v = value.parse_int().unwrap();
+        if v > ARCHIPELAGO_STATE.score_block_brawl_blues {
+            ARCHIPELAGO_STATE.score_block_brawl_blues = v;
+        }
+    }
+    if key == f"RFBB_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}" {
+        let v = value.parse_int().unwrap();
+        if v > ARCHIPELAGO_STATE.score_block_brawl_greens {
+            ARCHIPELAGO_STATE.score_block_brawl_greens = v;
+        }
+    }
+    if key == f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}" {
+        let v = value.parse_int().unwrap();
+        if v > ARCHIPELAGO_STATE.score_block_brawl_yellows {
+            ARCHIPELAGO_STATE.score_block_brawl_yellows = v;
+        }
+    }
+}
+
 fn archipelago_send_check(id: int){
     if ARCHIPELAGO_STATE.checked_locations.contains(id) {
         return;
