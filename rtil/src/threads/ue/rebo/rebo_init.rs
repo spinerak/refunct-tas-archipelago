@@ -1629,14 +1629,12 @@ fn abilities_set_lifts(enabled: bool) {
 }
 
 #[rebo::function("Tas::abilities_set_swim")]
-fn abilities_set_swim(swim: i32) {
-    log!("Archipelago: setting swim to {}", swim);
-    if swim == 0 {
-        UWorld::set_kill_z(-60.);
-    }else if swim == 1 {
-        UWorld::set_kill_z(-170.);
-    }else{
+fn abilities_set_swim(enabled: bool) {
+    log!("Archipelago: setting swim to {}", enabled);
+    if enabled {
         UWorld::set_kill_z(-6000.);
+    }else{
+        UWorld::set_kill_z(-60.);
     }
 }
 

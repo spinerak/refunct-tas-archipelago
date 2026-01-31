@@ -139,7 +139,7 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     //     log(f"Wall Jump set to {ARCHIPELAGO_STATE.wall_jump}");
     // }
     // if key.to_small() == KEY_4.to_small(){
-    //     ARCHIPELAGO_STATE.swim = (ARCHIPELAGO_STATE.swim + 1) % 3;
+    //     ARCHIPELAGO_STATE.swim = !ARCHIPELAGO_STATE.swim;
     //     Tas::abilities_set_swim(ARCHIPELAGO_STATE.swim);
     //     log(f"Swim set to {ARCHIPELAGO_STATE.swim}");
     // }
