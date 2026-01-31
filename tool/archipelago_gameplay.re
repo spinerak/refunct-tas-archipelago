@@ -704,7 +704,7 @@ fn archipelago_main_start(){
     ARCHIPELAGO_STATE.triggered_clusters = List::new();
     ARCHIPELAGO_STATE.has_goaled = false;
 
-    Tas::abilities_set_swim(false);
+    Tas::abilities_set_swim(0);
     Tas::abilities_set_wall_jump(0, true);
     Tas::abilities_set_ledge_grab(false);
     Tas::abilities_set_jump_pads(false);
