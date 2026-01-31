@@ -92,6 +92,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
 
         .add_function(spawn_platform_rebo)
         .add_function(spawn_platform_rando_location)
+        .add_function(spawn_platform_rando_location_2)
         .add_function(spawn_cube_rando_location)
         .add_function(destroy_platforms)
         .add_function(destroy_platform_rebo)
@@ -1292,6 +1293,21 @@ fn spawn_platform_rando_location(max_loc: f32, max_rot: f32) -> i32 {
     };
     spawn_platform(loc, rot)
 }
+#[rebo::function("Tas::spawn_platform_rando_location_2")]
+fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32) -> Location {
+    let rx = lx + 700. * (rand::random::<f32>()-0.4);
+    let ry = ly + 600. * (rand::random::<f32>()-0.4);
+    let rz = lz + 500. * (rand::random::<f32>()-0.5 + i / 1000.);
+    let loc = Location { x: rx, y: ry, z: rz};
+    let rot = Rotation {
+        pitch: 0.0,
+        yaw: 0.0,
+        roll: 0.0,
+    };
+    spawn_platform(loc, rot);
+    Location { x: rx, y: ry, z: rz }
+}
+
 #[rebo::function("Tas::spawn_cube_rando_location")]
 fn spawn_cube_rando_location(max: f32, spawn_platform_below: bool) -> i32 {
     let rx = rand::random::<f32>();

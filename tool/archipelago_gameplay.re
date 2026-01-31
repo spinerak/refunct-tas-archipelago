@@ -689,6 +689,10 @@ fn archipelago_start(){
         // log("Starting Block Brawl Minigame gamemode");
         archipelago_block_brawl_start();
     }
+    if ARCHIPELAGO_STATE.gamemode == 6 {
+        // log("Starting Leap Minigame gamemode");
+        archipelago_leap_start();
+    }
 }
 
 fn archipelago_main_start(){
@@ -1024,6 +1028,30 @@ fn got_cube_block_brawl(id: int){
     let next_score = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_brawl_cubes_collected).unwrap_or(1);
     ARCHIPELAGO_STATE.score_for_next_block = next_score;
 
+}
+
+fn archipelago_leap_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
+    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+    ARCHIPELAGO_STATE.started = 2;
+
+    let mut i:float = -1.;
+    let mut xs = -500.00146;
+    let mut ys = -573.4705;
+    let mut zs = 0.;
+    while i < 200. {
+        let loc = Tas::spawn_platform_rando_location_2(xs, ys, zs, i);
+        i += 1.;
+        xs = loc.x;
+        ys = loc.y;
+        zs = loc.z;
+    }
 }
 
 fn ap_on_level_change_function(old: int, new: int) {
