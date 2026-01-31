@@ -467,7 +467,7 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
 
 }
 
-fn archipelago_trigger_one_cluster_now(time: int) {
+fn archipelago_tick(time: int) {
     if time - ARCHIPELAGO_STATE.triggering_clusters_counter < 400 {
         return;
     }

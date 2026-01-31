@@ -502,6 +502,63 @@ fn create_archipelago_settings_menu() -> Ui {
     ))
 }
 
+fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
+    let lines = List::new();
+    let mut added_minigame_header = false;
+    if ARCHIPELAGO_STATE.unlock_vanilla_minigame && !ARCHIPELAGO_STATE.done_vanilla_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nVanilla",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+    if ARCHIPELAGO_STATE.unlock_seeker_minigame && !ARCHIPELAGO_STATE.done_seeker_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nSeeker",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+    if ARCHIPELAGO_STATE.unlock_button_galore_minigame && !ARCHIPELAGO_STATE.done_button_galore_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nButton Galore",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+    if ARCHIPELAGO_STATE.unlock_OG_randomizer && !ARCHIPELAGO_STATE.done_OG_randomizer_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nOG Randomizer",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+
+    if ARCHIPELAGO_STATE.block_brawl_check_in_logic > 0 {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  f"\nBlock Brawl: {ARCHIPELAGO_STATE.block_brawl_check_in_logic} in logic",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+    lines
+}
+
 fn create_archipelago_gamemodes_menu() -> Ui {
     Ui::new("Select Game Mode:", List::of(
         UiElement::Button(UiButton {
@@ -658,6 +715,17 @@ fn get_status_text_lines() -> List<ColorfulText> {
             ),
         }
     };
+    let mut txt = "Checks in:";
+    if ARCHIPELAGO_STATE.gamemode == 0 {
+        txt = "\n\nMinigames with checks:";
+    }
+    if ARCHIPELAGO_STATE.gamemode != 0 || ARCHIPELAGO_STATE.started == 0 {
+        lines.push(ColorfulText {
+            text:  f"\n\n[Grass {ARCHIPELAGO_STATE.grass}/{ARCHIPELAGO_STATE.required_grass}] ",
+            color: if ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass { AP_COLOR_GREEN } else { AP_COLOR_CYAN }
+        });
+    }
+    lines.extend(create_list_of_minigames_with_checks(txt));
     if ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version {
         lines.push(ColorfulText {
             text:  "\n\nVERSION MISMATCH",
@@ -726,58 +794,6 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
             color: if ARCHIPELAGO_STATE.pipes { AP_COLOR_GREEN } else { AP_COLOR_RED }
         },
     );
-    let mut added_minigame_header = false;
-    if ARCHIPELAGO_STATE.unlock_vanilla_minigame && !ARCHIPELAGO_STATE.done_vanilla_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: "\n\nMinigames with Checks", color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nVanilla",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
-    }
-    if ARCHIPELAGO_STATE.unlock_seeker_minigame && !ARCHIPELAGO_STATE.done_seeker_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: "\n\nMinigames with Checks", color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nSeeker",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
-    }
-    if ARCHIPELAGO_STATE.unlock_button_galore_minigame && !ARCHIPELAGO_STATE.done_button_galore_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: "\n\nMinigames with Checks", color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nButton Galore",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
-    }
-    if ARCHIPELAGO_STATE.unlock_OG_randomizer && !ARCHIPELAGO_STATE.done_OG_randomizer_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: "\n\nMinigames with Checks", color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nOG Randomizer",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
-    }
-
-    if ARCHIPELAGO_STATE.block_brawl_check_in_logic > 0 {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: "\n\nMinigames with Checks", color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  f"\nBlock Brawl: {ARCHIPELAGO_STATE.block_brawl_check_in_logic} in logic",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
-    }
     lines
 }
 
