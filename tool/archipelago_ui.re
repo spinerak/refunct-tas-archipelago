@@ -751,7 +751,7 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
     let ledge_grab_state = if ARCHIPELAGO_STATE.ledge_grab { "✔" } else { "✖" };
     let wall_jump_state = if ARCHIPELAGO_STATE.wall_jump >= 2 { "∞" } else if ARCHIPELAGO_STATE.wall_jump == 1 { "1" } else { "✖" };
     let jump_pads_state = if ARCHIPELAGO_STATE.jump_pads { "✔" } else { "✖" };
-    let swim_state = if ARCHIPELAGO_STATE.swim { "✔" } else { "✖" };
+    let swim_state = if ARCHIPELAGO_STATE.swim >= 2 { "✔" } else if ARCHIPELAGO_STATE.swim == 1 { "✱" } else { "✖" };
     let lifts_state = if ARCHIPELAGO_STATE.lifts { "✔" } else { "✖" };
     let pipes_state = if ARCHIPELAGO_STATE.pipes { "✔" } else { "✖" };
 
@@ -782,8 +782,8 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
             color: if ARCHIPELAGO_STATE.wall_jump >= 2 { AP_COLOR_GREEN } else if ARCHIPELAGO_STATE.wall_jump == 1 { AP_COLOR_YELLOW } else { AP_COLOR_RED }
         },
         ColorfulText {
-            text:  f"{swim_state} Swim\n",
-            color: if ARCHIPELAGO_STATE.swim { AP_COLOR_GREEN } else { AP_COLOR_RED }
+            text:  if ARCHIPELAGO_STATE.swim >= 2 { f"{swim_state} Dive\n" } else { f"{swim_state} Swim\n" },
+            color: if ARCHIPELAGO_STATE.swim >= 2 { AP_COLOR_GREEN } else if ARCHIPELAGO_STATE.swim == 1 { AP_COLOR_YELLOW } else { AP_COLOR_RED }
         },
         ColorfulText {
             text:  f"{lifts_state} Lifts       ",
