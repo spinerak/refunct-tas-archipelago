@@ -970,11 +970,32 @@ fn archipelago_disconnected_info_hud() {
     let lines = List::new();
     if INPUT_MODE_IS_UI_ONLY {
         lines.push(ColorfulText { text: "Movement input disabled\n", color: AP_COLOR_RED });
-        lines.push(ColorfulText { text: "Press F1 to enable movement input", color: AP_COLOR_RED });
-    } else {
-        lines.push(ColorfulText { text: "If you have issues with background input\n", color: COLOR_WHITE });
-        lines.push(ColorfulText { text: "hit F1 to disable movement input", color: COLOR_WHITE });
-    }
+        lines.push(ColorfulText { text: "Press F1 to enable movement input\n\n", color: AP_COLOR_RED });
+    } 
+
+    lines.push(ColorfulText { text: "Archipelago Randomizer\n\n", color: COLOR_WHITE });
+
+    lines.push(ColorfulText { text: "Not connected to an Archipelago server yet,\nuse the menu to ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "log in\n\n", color: AP_COLOR_YELLOW });
+
+    lines.push(ColorfulText { text: "Once logged in, use ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "Change gamemode ", color: AP_COLOR_YELLOW });
+    lines.push(ColorfulText { text: "to switch\nbetween the ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "main rando ", color: AP_COLOR_YELLOW });
+    lines.push(ColorfulText { text: "and the ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "minigames\n\n", color: AP_COLOR_YELLOW });
+
+    lines.push(ColorfulText { text: "Visit settings to change ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "UI layout,\n", color: AP_COLOR_YELLOW });
+    lines.push(ColorfulText { text: "show the ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "minimap ", color: AP_COLOR_YELLOW });
+    lines.push(ColorfulText { text: "or adjust ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "logs\n\n", color: AP_COLOR_YELLOW });
+
+    lines.push(ColorfulText { text: "If you have issues with background input,\n", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "hit F1 to ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "enable/disable movement input", color: AP_COLOR_YELLOW });
+    
     let anchor = SETTINGS.archipelago_display_position;
     match anchor {
         Anchor::TopLeft => {
