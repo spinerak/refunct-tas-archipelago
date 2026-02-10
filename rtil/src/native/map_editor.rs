@@ -357,6 +357,8 @@ impl<'a> PlatformWrapper<'a> {
         }
     }
    
+    // when this function is called, the desired path is stored, and the index is moved to a list
+    // so that movement_tick is called every tick to update the position of the platform
     pub fn set_movement_path(&self, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) {
         // end_behavior:
         // 1 => stop moving
@@ -376,6 +378,7 @@ impl<'a> PlatformWrapper<'a> {
         }
     }
 
+    // this function is called every tick and is responsible for moving platforms according to their movement paths
     pub fn movement_tick(&self, delta_seconds: f32) {
         let map = MOVEMENT_MAP.get_or_init(|| Mutex::new(HashMap::new()));
 

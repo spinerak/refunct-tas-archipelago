@@ -829,7 +829,6 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
         let _ = archipelago_tick(vm, before)?;
 
         // call all platforms movement_tick(&self, delta_seconds: f32) for all platforms in PLATFORMS_TO_TICK
-
         let mut guard = PLATFORMS_TO_TICK.lock().unwrap();
         let mut i = 0;
         while i < guard.len() {
@@ -1649,6 +1648,8 @@ fn set_platform_location(internal_index: i32, loc: Location) {
 
 static PLATFORMS_TO_TICK: Lazy<std::sync::Mutex<Vec<i32>>> = Lazy::new(|| std::sync::Mutex::new(Vec::new()));
 
+// function to call when setting a movement path for a platform, which stores the intended path
+// it also registers the platform for per-tick updates, which will be used to move the platform along the path
 #[rebo::function("Tas::set_platform_movement_path")]
 fn set_platform_movement_path_rebo(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) {
     set_platform_movement_path(internal_index, speed, locations, end_behavior);
