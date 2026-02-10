@@ -958,7 +958,7 @@ fn archipelago_block_brawl_start(){
     Tas::archipelago_ds_get(f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
 
     let mut i = 0;
-    while i < 200 {
+    while i < 5 {
         Tas::spawn_platform_rando_location(3000., 10.);
         i += 1;
     }

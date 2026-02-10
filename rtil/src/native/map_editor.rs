@@ -135,12 +135,6 @@ type Entry = (f32, Vec<Vec<f32>>, usize, u8, bool);
 
 static MOVEMENT_MAP: OnceLock<Mutex<HashMap<usize, Entry>>> = OnceLock::new();
 
-#[derive(Debug, Clone, Copy, rebo::ExternalType)]
-struct Location {
-    x: f32,
-    y: f32,
-    z: f32,
-}
 #[allow(dead_code)]
 impl<'a> PlatformWrapper<'a> {
     pub fn new(base: ActorWrapper<'a>) -> PlatformWrapper<'a> {
