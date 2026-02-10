@@ -890,6 +890,11 @@ fn archipelago_vanilla_start(){
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
+
+    Tas::set_platform_movement_path(
+        Tas::spawn_platform(Location { x: 100., y: 100., z: 100. }, Rotation {pitch : 0., yaw: 0., roll: 0. }),
+        1., List::of(List::of(100., 100., 100.), List::of(200., 200., 200.), List::of(300., 100., 0.)), 3
+    );
 }
 
 fn archipelago_seeker_start(){

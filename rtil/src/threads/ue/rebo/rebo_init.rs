@@ -96,6 +96,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(spawn_platform_rando_location_3)
         .add_function(spawn_platform_rando_location_4)
         .add_function(spawn_cube_rando_location)
+        .add_function(set_platform_location)
+        .add_function(set_platform_movement_path)
         .add_function(destroy_platforms)
         .add_function(destroy_platform_rebo)
 
@@ -108,6 +110,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_cube_color_rebo)
         .add_function(set_cube_color_random)
         .add_function(set_cube_location)
+        .add_function(set_cube_rando_location)
         .add_function(set_cube_scale)
         .add_function(get_vanilla_cubes)
         .add_function(get_non_vanilla_cubes)
@@ -824,6 +827,22 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
         // get current timestamp in milliseconds:
         let before = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
         let _ = archipelago_tick(vm, before)?;
+
+        // call all platforms movement_tick(&self, delta_seconds: f32) for all platforms in PLATFORMS_TO_TICK
+
+        let mut guard = PLATFORMS_TO_TICK.lock().unwrap();
+        let platforms = guard.clone();
+        for platform_id in platforms {
+            match find_platform_and(platform_id, |platform| platform.movement_tick(1.)) {
+                Ok(_) => (),
+                Err(e) => {
+                    log!("Could not find platform {}: {}; removing from PLATFORMS_TO_TICK", platform_id, e);
+                    if let Some(pos) = guard.iter().position(|&id| id == platform_id) {
+                        guard.remove(pos);
+                    }
+                }
+            }
+        }
 
         match to_be_returned {
             Some(ret) => {
@@ -1592,6 +1611,35 @@ fn set_cube_color_random(internal_index: i32) {
 #[rebo::function("Tas::set_cube_location")]
 fn set_cube_location(internal_index: i32, loc: Location) {
     find_cube_and(internal_index, |cube| cube.set_location(loc.x, loc.y, loc.z))
+        .unwrap_or_else(|e| log!("Could not set location for cube {:?}: {}", internal_index, e));
+}
+
+#[rebo::function("Tas::set_platform_location")]
+fn set_platform_location(internal_index: i32, loc: Location) {
+    find_platform_and(internal_index, |platform| platform.set_location(loc.x, loc.y, loc.z))
+        .unwrap_or_else(|e| log!("Could not set location for platform {:?}: {}", internal_index, e));
+}
+
+static PLATFORMS_TO_TICK: Lazy<std::sync::Mutex<Vec<i32>>> = Lazy::new(|| std::sync::Mutex::new(Vec::new()));
+
+#[rebo::function("Tas::set_platform_movement_path")]
+fn set_platform_movement_path(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) {
+    find_platform_and(internal_index, |platform| platform.set_movement_path(speed, locations, end_behavior))
+        .unwrap_or_else(|e| log!("Could not set movement path for platform {:?}: {}", internal_index, e));
+
+    // register platform for per-tick movement updates
+    let mut guard = PLATFORMS_TO_TICK.lock().unwrap();
+    if !guard.contains(&internal_index) {
+        guard.push(internal_index);
+    }
+}
+
+#[rebo::function("Tas::set_cube_rando_location")]
+fn set_cube_rando_location(internal_index: i32, max: f32) {
+    let rx = (rand::random::<f32>()-0.5) * 2. * max;
+    let ry = (rand::random::<f32>()-0.5) * 2. * max;
+    let rz = (rand::random::<f32>()-0.5) * 2. * max;
+    find_cube_and(internal_index, |cube| cube.set_location(rx, ry, rz))
         .unwrap_or_else(|e| log!("Could not set location for cube {:?}: {}", internal_index, e));
 }
 
