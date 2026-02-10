@@ -97,7 +97,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(spawn_platform_rando_location_4)
         .add_function(spawn_cube_rando_location)
         .add_function(set_platform_location)
-        .add_function(set_platform_movement_path)
+        .add_function(set_platform_movement_path_rebo)
         .add_function(destroy_platforms)
         .add_function(destroy_platform_rebo)
 
@@ -831,15 +831,14 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
         // call all platforms movement_tick(&self, delta_seconds: f32) for all platforms in PLATFORMS_TO_TICK
 
         let mut guard = PLATFORMS_TO_TICK.lock().unwrap();
-        let platforms = guard.clone();
-        for platform_id in platforms {
+        let mut i = 0;
+        while i < guard.len() {
+            let platform_id = guard[i];
             match find_platform_and(platform_id, |platform| platform.movement_tick(1.)) {
-                Ok(_) => (),
+                Ok(_) => i += 1,
                 Err(e) => {
-                    log!("Could not find platform {}: {}; removing from PLATFORMS_TO_TICK", platform_id, e);
-                    if let Some(pos) = guard.iter().position(|&id| id == platform_id) {
-                        guard.remove(pos);
-                    }
+                    log!("Could not find platform {}: {}; removing", platform_id, e);
+                    guard.remove(i);
                 }
             }
         }
@@ -1306,13 +1305,19 @@ fn spawn_platform_rando_location(max_loc: f32, max_rot: f32) -> i32 {
     let rx = rand::random::<f32>();
     let ry = rand::random::<f32>();
     let rz = rand::random::<f32>();
+    let sz = 1000. + rand::random::<f32>() * 5000.;
     let loc = Location { x: (rx-0.5) * 2. * max_loc as f32, y: (ry-0.5) * 2. * max_loc as f32, z: rz * max_loc as f32 };
     let rot = Rotation {
         pitch: (rand::random::<f32>() -0.5) * 2. * max_rot as f32,
         yaw: (rand::random::<f32>() - 0.5) * 2. * max_rot as f32,
         roll: (rand::random::<f32>() - 0.5) * 2. * max_rot as f32,
     };
-    spawn_platform(loc, rot)
+    let id = spawn_platform(loc, rot);
+    set_platform_movement_path(id, 2., vec![
+        vec![loc.x, loc.y, loc.z],
+        vec![loc.x, loc.y, loc.z + sz],
+    ], 3);
+    id
 }
 #[rebo::function("Tas::spawn_platform_rando_location_2")]
 fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32) -> Location {
@@ -1548,13 +1553,35 @@ fn find_cube_and<R: 'static, F: FnOnce(&CubeWrapper) -> R>(internal_index: i32, 
     })
 }
 
+static PLATFORM_PTR_CACHE: Lazy<std::sync::Mutex<HashMap<i32, usize>>> = Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
+
 fn find_platform_and<R: 'static, F: FnOnce(&PlatformWrapper) -> R>(internal_index: i32, f: F) -> Result<R, String> {
+    // try cached pointer first (do not hold the lock while calling into UE)
+    if let Some(ptr) = {
+        let cache = PLATFORM_PTR_CACHE.lock().unwrap();
+        cache.get(&internal_index).copied()
+    } {
+        let object = unsafe { ObjectWrapper::new(ptr as *mut UObject) };
+        if !object.is_null() {
+            if let Some(platform) = object.try_upcast::<PlatformWrapper>() {
+                return Ok(f(&platform));
+            }
+        }
+        // stale entry -> remove it
+        PLATFORM_PTR_CACHE.lock().unwrap().remove(&internal_index);
+    }
+
+    // fallback to expensive lookup and populate cache
     UeScope::with(|scope| {
         let item = scope.object_array().try_get(internal_index)
             .ok_or_else(|| format!("Failed to find platform at index {}", internal_index))?;
 
         match item.object().try_upcast::<PlatformWrapper>() {
-            Some(platform) => Ok(f(&platform)),
+            Some(platform) => {
+                let ptr = platform.as_ptr() as usize;
+                PLATFORM_PTR_CACHE.lock().unwrap().insert(internal_index, ptr);
+                Ok(f(&platform))
+            }
             None => Err(format!("Failed to find platform {}", internal_index))
         }
     })
@@ -1623,6 +1650,9 @@ fn set_platform_location(internal_index: i32, loc: Location) {
 static PLATFORMS_TO_TICK: Lazy<std::sync::Mutex<Vec<i32>>> = Lazy::new(|| std::sync::Mutex::new(Vec::new()));
 
 #[rebo::function("Tas::set_platform_movement_path")]
+fn set_platform_movement_path_rebo(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) {
+    set_platform_movement_path(internal_index, speed, locations, end_behavior);
+}
 fn set_platform_movement_path(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) {
     find_platform_and(internal_index, |platform| platform.set_movement_path(speed, locations, end_behavior))
         .unwrap_or_else(|e| log!("Could not set movement path for platform {:?}: {}", internal_index, e));
