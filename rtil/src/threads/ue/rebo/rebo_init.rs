@@ -1668,6 +1668,7 @@ struct PlatformMovement {
 }
 
 struct PlatformTickEntry {
+    platform_id: i32,
     ptr: *mut UObject,
     movement: PlatformMovement,
 }
@@ -1706,6 +1707,7 @@ fn set_platform_movement_path(
 
     PLATFORMS_TO_TICK.with(|list| {
         list.borrow_mut().push(PlatformTickEntry {
+            platform_id: internal_index,
             ptr,
             movement: PlatformMovement {
                 speed,
@@ -1858,6 +1860,11 @@ fn destroy_platform_rebo(internal_index: i32) {
 fn destroy_platform(internal_index: i32) {
     maybe_remove_extra_platform(internal_index);
     let _ = find_platform_and(internal_index, |platform| platform.destroy());
+    //look through     PLATFORMS_TO_TICK and remove any entries for this platform, so we don't keep trying to tick it after it's destroyed
+    PLATFORMS_TO_TICK.with(|list| {
+        let mut platforms = list.borrow_mut();
+        platforms.retain(|entry| entry.platform_id != internal_index);
+    });
 }
 
 pub fn maybe_remove_extra_cube(internal_index: i32) -> bool {
