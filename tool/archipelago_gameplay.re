@@ -874,8 +874,8 @@ fn archipelago_vanilla_start(){
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
 
     Tas::set_platform_movement_path(
-        Tas::spawn_platform(Location { x: 100., y: 100., z: 100. }, Rotation {pitch : 0., yaw: 0., roll: 0. }),
-        1., List::of(List::of(100., 100., 100.), List::of(200., 200., 200.), List::of(300., 100., 0.)), 3
+        Tas::spawn_platform(Location { x: 1000., y: 1000., z: 1000. }, Rotation {pitch : 0., yaw: 0., roll: 0. }),
+        500., List::of(List::of(1000., 1000., 1000.), List::of(500., -500., -100.), List::of(300., 100., -200.)), 3
     );
 }
 
@@ -958,7 +958,7 @@ fn archipelago_block_brawl_start(){
     Tas::archipelago_ds_get(f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
 
     let mut i = 0;
-    while i < 5 {
+    while i < 50 {
         Tas::spawn_platform_rando_location(3000., 10.);
         i += 1;
     }
