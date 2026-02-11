@@ -7,8 +7,6 @@ use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapp
 use crate::native::reflection::{AActor, ActorWrapper, UeObjectWrapper};
 use crate::native::ue::{FRotator, FVector, FName};
 use crate::native::uworld::{ESpawnActorCollisionHandlingMethod, ESpawnActorNameMode, FActorSpawnParameters};
-use std::collections::HashMap;
-use std::sync::OnceLock;
 
 pub static LEVELS: Mutex<Vec<Level>> = Mutex::new(Vec::new());
 
@@ -130,10 +128,6 @@ impl<'a> Pointer for PlatformWrapper<'a> {
         Pointer::fmt(&self.base, f)
     }
 }
-
-type Entry = (f32, Vec<Vec<f32>>, usize, u8, bool);
-
-static MOVEMENT_MAP: OnceLock<Mutex<HashMap<usize, Entry>>> = OnceLock::new();
 
 #[allow(dead_code)]
 impl<'a> PlatformWrapper<'a> {
@@ -355,129 +349,7 @@ impl<'a> PlatformWrapper<'a> {
         unsafe {
             set_world_location_and_rotation.call(root_component.as_ptr(), &params);
         }
-    }
-   
-    // when this function is called, the desired path is stored, and the index is moved to a list
-    // so that movement_tick is called every tick to update the position of the platform
-    pub fn set_movement_path(&self, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) {
-        // end_behavior:
-        // 1 => stop moving
-        // 2 => ping-pong (go back through points, reverse at ends)
-        // 3 => loop (go from last to first and continue)
-
-        let map = MOVEMENT_MAP.get_or_init(|| Mutex::new(HashMap::new()));
-
-        let key = self.as_ptr() as usize;
-        let mut guard = map.lock().unwrap();
-
-        if locations.is_empty() {
-            guard.remove(&key);
-        } else {
-            // start targeting the first location in the list, direction = forward (true)
-            guard.insert(key, (speed, locations, 0, end_behavior, true));
-        }
-    }
-
-    // this function is called every tick and is responsible for moving platforms according to their movement paths
-    pub fn movement_tick(&self, delta_seconds: f32) {
-        let map = MOVEMENT_MAP.get_or_init(|| Mutex::new(HashMap::new()));
-
-        let key = self.as_ptr() as usize;
-        let mut guard = map.lock().unwrap();
-
-        let entry = match guard.get_mut(&key) {
-            Some(e) => e,
-            None => return,
-        };
-
-        let speed = &entry.0;
-        let path = &entry.1;
-        let idx = &mut entry.2;
-        let mode = &entry.3;
-        let dir = &mut entry.4;
-        if *idx >= path.len() {
-            guard.remove(&key);
-            return;
-        }
-
-        let target = &path[*idx];
-        let (cx, cy, cz) = self.absolute_location();
-        let tx = target[0];
-        let ty = target[1];
-        let tz = target[2];
-
-        let dx = tx - cx;
-        let dy = ty - cy;
-        let dz = tz - cz;
-        let dist_sq = dx*dx + dy*dy + dz*dz;
-
-        // Values to apply after releasing the lock
-        let mut next_pos: Option<(f32, f32, f32)> = None;
-        let mut remove = false;
-
-        if dist_sq <= (*speed * delta_seconds).powi(2) || dist_sq <= f32::EPSILON {
-            // Snap to target
-            next_pos = Some((tx, ty, tz));
-
-            match *mode {
-                1 => {
-                    remove = true;
-                }
-                2 => {
-                    if path.len() <= 1 {
-                        remove = true;
-                    } else if *dir {
-                        if *idx + 1 >= path.len() {
-                            *dir = false;
-                            if *idx > 0 { *idx -= 1; }
-                        } else {
-                            *idx += 1;
-                        }
-                    } else {
-                        if *idx == 0 {
-                            *dir = true;
-                            if path.len() > 1 { *idx = 1; }
-                        } else {
-                            *idx -= 1;
-                        }
-                    }
-                }
-                3 => {
-                    if path.len() <= 1 {
-                        remove = true;
-                    } else {
-                        *idx += 1;
-                        if *idx >= path.len() {
-                            *idx = 0;
-                        }
-                    }
-                }
-                _ => {
-                    remove = true;
-                }
-            }
-        } else {
-            let dist = dist_sq.sqrt();
-            if dist > 0.0 {
-                let move_dist = *speed * delta_seconds;
-                let nx = cx + dx / dist * move_dist;
-                let ny = cy + dy / dist * move_dist;
-                let nz = cz + dz / dist * move_dist;
-                next_pos = Some((nx, ny, nz));
-            }
-        }
-
-        if remove {
-            guard.remove(&key);
-        }
-
-        drop(guard); // Explicitly release the lock
-
-        if let Some((x, y, z)) = next_pos {
-            self.set_location(x, y, z);
-        }
-    }
-        
+    }        
 
 }
 #[derive(Debug, Clone)]

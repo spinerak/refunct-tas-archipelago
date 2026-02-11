@@ -26,6 +26,8 @@ use chrono::{DateTime, Local};
 use crate::threads::ue::rebo::livesplit;
 use crate::threads::ue::iced_ui::Clipboard;
 use crate::threads::ue::iced_ui::rebo_elements::{IcedButton, IcedColumn, IcedElement, IcedRow, IcedText, IcedWindow};
+use std::cell::RefCell;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::native::{BoolValueWrapper};
 use crate::native::reflection::DerefToObjectWrapper;
@@ -826,21 +828,12 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
 
         // get current timestamp in milliseconds:
         let before = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
+        
         let _ = archipelago_tick(vm, before)?;
 
-        // call all platforms movement_tick(&self, delta_seconds: f32) for all platforms in PLATFORMS_TO_TICK
-        let mut guard = PLATFORMS_TO_TICK.lock().unwrap();
-        let mut i = 0;
-        while i < guard.len() {
-            let platform_id = guard[i];
-            match find_platform_and(platform_id, |platform| platform.movement_tick(1.)) {
-                Ok(_) => i += 1,
-                Err(e) => {
-                    log!("Could not find platform {}: {}; removing", platform_id, e);
-                    guard.remove(i);
-                }
-            }
-        }
+
+        
+        tick_platforms_once_per_frame();
 
         match to_be_returned {
             Some(ret) => {
@@ -854,6 +847,24 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
             None => (),
         }
     }
+}
+thread_local! {
+    static LAST_TICK_FRAME: Cell<u64> = Cell::new(0);
+}
+static LAST_PROCESSED_DELTA_BITS: AtomicU64 = AtomicU64::new(0);
+
+pub fn tick_platforms_once_per_frame() {
+    let delta = FApp::delta();
+    let bits = delta.to_bits();
+
+    let last = LAST_PROCESSED_DELTA_BITS.load(Ordering::Relaxed);
+    if last == bits {
+        // Already ticked this frame
+        return;
+    }
+
+    LAST_PROCESSED_DELTA_BITS.store(bits, Ordering::Relaxed);
+    tick_platforms(delta as f32);
 }
 
 #[rebo::required_rebo_functions]
@@ -1312,7 +1323,7 @@ fn spawn_platform_rando_location(max_loc: f32, max_rot: f32) -> i32 {
         roll: (rand::random::<f32>() - 0.5) * 2. * max_rot as f32,
     };
     let id = spawn_platform(loc, rot);
-    set_platform_movement_path(id, 2., vec![
+    set_platform_movement_path(id, 200., vec![
         vec![loc.x, loc.y, loc.z],
         vec![loc.x, loc.y, loc.z + sz],
     ], 3);
@@ -1646,24 +1657,174 @@ fn set_platform_location(internal_index: i32, loc: Location) {
         .unwrap_or_else(|e| log!("Could not set location for platform {:?}: {}", internal_index, e));
 }
 
-static PLATFORMS_TO_TICK: Lazy<std::sync::Mutex<Vec<i32>>> = Lazy::new(|| std::sync::Mutex::new(Vec::new()));
+struct PlatformMovement {
+    speed: f32,
+    path: Vec<Location>,
+    current_segment: usize,
+    end_behavior: u8,
+    forward: bool,
+    current_pos: Location, // ← new
+}
 
-// function to call when setting a movement path for a platform, which stores the intended path
-// it also registers the platform for per-tick updates, which will be used to move the platform along the path
+struct PlatformTickEntry {
+    ptr: *mut UObject,
+    movement: PlatformMovement,
+}
+
+thread_local! {
+    static PLATFORMS_TO_TICK: RefCell<Vec<PlatformTickEntry>> = RefCell::new(Vec::new());
+}
+
 #[rebo::function("Tas::set_platform_movement_path")]
 fn set_platform_movement_path_rebo(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) {
     set_platform_movement_path(internal_index, speed, locations, end_behavior);
 }
-fn set_platform_movement_path(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) {
-    find_platform_and(internal_index, |platform| platform.set_movement_path(speed, locations, end_behavior))
-        .unwrap_or_else(|e| log!("Could not set movement path for platform {:?}: {}", internal_index, e));
+fn set_platform_movement_path(
+    internal_index: i32,
+    speed: f32,
+    locations: Vec<Vec<f32>>,
+    end_behavior: u8,
+) {
+    let ptr = match find_platform_and(internal_index, |p| p.as_ptr() as *mut UObject) {
+        Ok(ptr) => ptr,
+        Err(e) => {
+            log!("Could not set movement path for platform {:?}: {}", internal_index, e);
+            return;
+        }
+    };
 
-    // register platform for per-tick movement updates
-    let mut guard = PLATFORMS_TO_TICK.lock().unwrap();
-    if !guard.contains(&internal_index) {
-        guard.push(internal_index);
-    }
+    let path = locations
+        .into_iter()
+        .map(|v| Location { x: v[0], y: v[1], z: v[2] })
+        .collect::<Vec<_>>();
+
+    let current_pos = find_platform_and(internal_index, |p| {
+        let (x, y, z) = p.absolute_location();
+        Location { x, y, z }
+    }).unwrap();
+
+    PLATFORMS_TO_TICK.with(|list| {
+        list.borrow_mut().push(PlatformTickEntry {
+            ptr,
+            movement: PlatformMovement {
+                speed,
+                path,
+                current_segment: 0,
+                end_behavior,
+                forward: true,
+                current_pos,
+            },
+        });
+    });
 }
+
+fn tick_platforms(delta_seconds: f32) {
+    PLATFORMS_TO_TICK.with(|list| {
+        let mut platforms = list.borrow_mut();
+        let mut i = 0;
+
+        while i < platforms.len() {
+            let remove = unsafe {
+                let entry = &mut platforms[i];
+                let object = ObjectWrapper::new(entry.ptr);
+
+                if object.is_null() {
+                    true
+                } else {
+                    match object.try_upcast::<PlatformWrapper>() {
+                        Some(platform) => {
+                            movement_step(&platform, &mut entry.movement, delta_seconds)
+                        }
+                        None => true,
+                    }
+                }
+            };
+
+            if remove {
+                platforms.swap_remove(i);
+            } else {
+                i += 1;
+            }
+        }
+    });
+}
+
+fn movement_step(
+    platform: &PlatformWrapper,
+    movement: &mut PlatformMovement,
+    delta_seconds: f32,
+) -> bool {
+    let path = &movement.path;
+    let idx = movement.current_segment;
+
+    if idx >= path.len() {
+        return true;
+    }
+
+    let target = &path[idx];
+    let (cx, cy, cz) = (movement.current_pos.x, movement.current_pos.y, movement.current_pos.z);
+
+    let dx = target.x - cx;
+    let dy = target.y - cy;
+    let dz = target.z - cz;
+    let dist_sq = dx*dx + dy*dy + dz*dz;
+    let stepp = movement.speed * delta_seconds;
+
+    if dist_sq <= stepp * stepp || dist_sq <= f32::EPSILON {
+        platform.set_location(target.x, target.y, target.z);
+        movement.current_pos = *target;
+
+        match movement.end_behavior {
+            1 => return true,
+            2 => {
+                if path.len() <= 1 {
+                    return true;
+                }
+                if movement.forward {
+                    if idx + 1 >= path.len() {
+                        movement.forward = false;
+                        if idx > 0 {
+                            movement.current_segment -= 1;
+                        }
+                    } else {
+                        movement.current_segment += 1;
+                    }
+                } else {
+                    if idx == 0 {
+                        movement.forward = true;
+                        if path.len() > 1 {
+                            movement.current_segment = 1;
+                        }
+                    } else {
+                        movement.current_segment -= 1;
+                    }
+                }
+            }
+            3 => {
+                if path.len() <= 1 {
+                    return true;
+                }
+                movement.current_segment += 1;
+                if movement.current_segment >= path.len() {
+                    movement.current_segment = 0;
+                }
+            }
+            _ => return true,
+        }
+    } else {
+        let dist = dist_sq.sqrt();
+        let nx = cx + dx / dist * stepp;
+        let ny = cy + dy / dist * stepp;
+        let nz = cz + dz / dist * stepp;
+        platform.set_location(nx, ny, nz);
+        movement.current_pos = Location { x: nx, y: ny, z: nz };
+    }
+
+    false
+}
+
+
+
 
 #[rebo::function("Tas::set_cube_rando_location")]
 fn set_cube_rando_location(internal_index: i32, max: f32) {
