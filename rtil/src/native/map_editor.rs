@@ -1,9 +1,9 @@
 use std::cell::Cell;
 use std::fmt::{Formatter, Pointer};
 use std::ops::Deref;
-use std::sync::Mutex;
+use std::sync::Mutex;       
 use std::ptr;
-use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld, BoolValueWrapper, AMyCharacter};
+use crate::native::{ArrayWrapper, ObjectIndex, StructValueWrapper, UeObjectWrapperType, UeScope, UObject, ObjectWrapper, ClassWrapper, UWorld, BoolValueWrapper, AMyCharacter, FunctionWrapper};
 use crate::native::reflection::{AActor, ActorWrapper, UeObjectWrapper};
 use crate::native::ue::{FRotator, FVector, FName};
 use crate::native::uworld::{ESpawnActorCollisionHandlingMethod, ESpawnActorNameMode, FActorSpawnParameters};
@@ -102,6 +102,7 @@ impl<'a> LevelWrapper<'a> {
 #[derive(Debug, Clone)]
 pub struct PlatformWrapper<'a> {
     base: ActorWrapper<'a>,
+    cached_set_location_fn: Option<FunctionWrapper<'a>>,
 }
 pub enum PlatformWrapperType {}
 impl UeObjectWrapperType for PlatformWrapperType {
@@ -133,7 +134,7 @@ impl<'a> Pointer for PlatformWrapper<'a> {
 impl<'a> PlatformWrapper<'a> {
     pub fn new(base: ActorWrapper<'a>) -> PlatformWrapper<'a> {
         assert_eq!(base.class().name(), "BP_IslandChunk_C");
-        PlatformWrapper { base }
+        PlatformWrapper { base, cached_set_location_fn: None }
     }
 
     pub fn spawn(x: f32, y: f32, z: f32, pi: f32, ya: f32, ro: f32) -> Result<PlatformWrapper<'a>, &'static str> {
@@ -190,7 +191,7 @@ impl<'a> PlatformWrapper<'a> {
         }
     }
 
-    pub fn reset(&self) {
+    pub fn reset(&mut self) {
         self.set_color(1.0, 0.016666, 0.03305);
         self.set_scale(1.0);
         self.set_picked_up(false);
@@ -312,7 +313,7 @@ impl<'a> PlatformWrapper<'a> {
         }
     }
 
-    pub fn set_scale(&self, new_scale: f32) {
+    pub fn set_scale(&mut self, new_scale: f32) {
         let old_bounds = self.get_actor_bounds();
         let old_z = old_bounds.2;
         let old_h = old_bounds.5;
@@ -335,21 +336,28 @@ impl<'a> PlatformWrapper<'a> {
         self.set_location(loc.0, loc.1, loc.2 - (new_z - old_z) + (new_h - old_h)/2.0);
     }
 
-    pub fn set_location(&self, x: f32, y: f32, z: f32) {
-        let root_component: ObjectWrapper = self.get_field("RootComponent").unwrap();
-        let set_world_location_and_rotation = root_component.class().find_function("K2_SetWorldLocation").unwrap();
+    pub fn set_location(&mut self, x: f32, y: f32, z: f32) {
+        let root_component: ObjectWrapper = self.base.get_field("RootComponent").unwrap();
 
-        let params = set_world_location_and_rotation.create_argument_struct();
+        // cache the function per instance
+        if self.cached_set_location_fn.is_none() {
+            self.cached_set_location_fn = Some(root_component.class()
+                .find_function("K2_SetWorldLocation")
+                .unwrap());
+        }
+
+        let fn_wrapper = self.cached_set_location_fn.as_ref().unwrap();
+        let params = fn_wrapper.create_argument_struct();
         let location: StructValueWrapper = params.get_field("NewLocation").unwrap();
         location.get_field("X").unwrap::<&Cell<f32>>().set(x);
         location.get_field("Y").unwrap::<&Cell<f32>>().set(y);
         location.get_field("Z").unwrap::<&Cell<f32>>().set(z);
+
         params.get_field("bSweep").unwrap::<BoolValueWrapper>().set(false);
         params.get_field("bTeleport").unwrap::<BoolValueWrapper>().set(true);
-        unsafe {
-            set_world_location_and_rotation.call(root_component.as_ptr(), &params);
-        }
-    }        
+
+        unsafe { fn_wrapper.call(root_component.as_ptr(), &params); }
+    }
 
 }
 #[derive(Debug, Clone)]

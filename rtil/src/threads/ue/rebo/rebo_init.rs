@@ -1515,7 +1515,7 @@ fn find_cube_and<R: 'static, F: FnOnce(&CubeWrapper) -> R>(internal_index: i32, 
 
 static PLATFORM_PTR_CACHE: Lazy<std::sync::Mutex<HashMap<i32, usize>>> = Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
 
-fn find_platform_and<R: 'static, F: FnOnce(&PlatformWrapper) -> R>(internal_index: i32, f: F) -> Result<R, String> {
+fn find_platform_and<R: 'static, F: FnOnce(&mut PlatformWrapper) -> R>(internal_index: i32, f: F) -> Result<R, String> {
     // try cached pointer first (do not hold the lock while calling into UE)
     if let Some(ptr) = {
         let cache = PLATFORM_PTR_CACHE.lock().unwrap();
@@ -1523,8 +1523,8 @@ fn find_platform_and<R: 'static, F: FnOnce(&PlatformWrapper) -> R>(internal_inde
     } {
         let object = unsafe { ObjectWrapper::new(ptr as *mut UObject) };
         if !object.is_null() {
-            if let Some(platform) = object.try_upcast::<PlatformWrapper>() {
-                return Ok(f(&platform));
+            if let Some(mut platform) = object.try_upcast::<PlatformWrapper>() {
+                return Ok(f(&mut platform));
             }
         }
         // stale entry -> remove it
@@ -1537,10 +1537,10 @@ fn find_platform_and<R: 'static, F: FnOnce(&PlatformWrapper) -> R>(internal_inde
             .ok_or_else(|| format!("Failed to find platform at index {}", internal_index))?;
 
         match item.object().try_upcast::<PlatformWrapper>() {
-            Some(platform) => {
+            Some(mut platform) => {
                 let ptr = platform.as_ptr() as usize;
                 PLATFORM_PTR_CACHE.lock().unwrap().insert(internal_index, ptr);
-                Ok(f(&platform))
+                Ok(f(&mut platform))
             }
             None => Err(format!("Failed to find platform {}", internal_index))
         }
@@ -1682,8 +1682,8 @@ fn tick_platforms(delta_seconds: f32) {
                     true
                 } else {
                     match object.try_upcast::<PlatformWrapper>() {
-                        Some(platform) => {
-                            movement_step(&platform, &mut entry.movement, delta_seconds)
+                        Some(mut platform) => {
+                            movement_step(&mut platform, &mut entry.movement, delta_seconds)
                         }
                         None => true,
                     }
@@ -1700,7 +1700,7 @@ fn tick_platforms(delta_seconds: f32) {
 }
 
 fn movement_step(
-    platform: &PlatformWrapper,
+    platform: &mut PlatformWrapper,
     movement: &mut PlatformMovement,
     delta_seconds: f32,
 ) -> bool {
