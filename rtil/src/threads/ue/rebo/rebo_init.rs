@@ -1315,7 +1315,8 @@ fn spawn_platform_rando_location(max_loc: f32, max_rot: f32) -> i32 {
     let rx = rand::random::<f32>();
     let ry = rand::random::<f32>();
     let rz = rand::random::<f32>();
-    let sz = 1000. + rand::random::<f32>() * 5000.;
+    let sz1 = 1000. + rand::random::<f32>() * 5000.;
+    let sz2 = 1000. + rand::random::<f32>() * 5000.;
     let loc = Location { x: (rx-0.5) * 2. * max_loc as f32, y: (ry-0.5) * 2. * max_loc as f32, z: rz * max_loc as f32 };
     let rot = Rotation {
         pitch: (rand::random::<f32>() -0.5) * 2. * max_rot as f32,
@@ -1323,9 +1324,9 @@ fn spawn_platform_rando_location(max_loc: f32, max_rot: f32) -> i32 {
         roll: (rand::random::<f32>() - 0.5) * 2. * max_rot as f32,
     };
     let id = spawn_platform(loc, rot);
-    set_platform_movement_path(id, 200., vec![
-        vec![loc.x, loc.y, loc.z],
-        vec![loc.x, loc.y, loc.z + sz],
+    set_platform_movement_path(id, 500., vec![
+        vec![loc.x, loc.y, loc.z - sz1],
+        vec![loc.x, loc.y, loc.z + sz2],
     ], 3);
     id
 }
