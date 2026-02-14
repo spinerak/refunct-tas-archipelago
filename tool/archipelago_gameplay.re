@@ -730,7 +730,7 @@ fn archipelago_start(){
     if ARCHIPELAGO_STATE.gamemode == 5 {
         // log("Starting Block Brawl Minigame gamemode");
         archipelago_block_brawl_start();
-    }
+    }  
     if ARCHIPELAGO_STATE.gamemode == 6 {
         // log("Starting The Climb Minigame gamemode");
         archipelago_the_climb_start(1);
@@ -742,6 +742,12 @@ fn archipelago_start(){
     if ARCHIPELAGO_STATE.gamemode == 8 {
         // log("Starting The Climb Minigame gamemode");
         archipelago_the_climb_start(3);
+    }
+    if ARCHIPELAGO_STATE.gamemode == 9 {
+        archipelago_hillside_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 6 {
+        archipelago_hillside_start();
     }
     
     let mut i = 0;
@@ -891,10 +897,11 @@ fn archipelago_vanilla_start(){
     collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
 
-    Tas::set_platform_movement_path(
+    let id = Tas::set_platform_movement_path(
         Tas::spawn_platform(Location { x: 1000., y: 1000., z: 1000. }, Rotation {pitch : 0., yaw: 0., roll: 0. }),
-        500., List::of(List::of(1000., 1000., 1000.), List::of(500., -500., -100.), List::of(300., 100., -200.)), 3
+        200., List::of(List::of(0., 1000., 900.), List::of(-500., -500., 0.), List::of(-300., 100., 0.)), 3
     );
+    Tas::set_platform_scale(id, 0.1, 0.1, 0.1);
 }
 
 fn archipelago_seeker_start(){
@@ -1073,6 +1080,135 @@ fn got_cube_block_brawl(id: int){
     ARCHIPELAGO_STATE.block_brawl_cubes_collected += 1;
     let next_score = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_brawl_cubes_collected).unwrap_or(1);
     ARCHIPELAGO_STATE.score_for_next_block = next_score;
+}
+
+fn archipelago_hillside_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
+    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+    Tas::archipelago_deactivate_buttons_ap();
+
+    // start location, spawn block below it, player in the middle, a platform that is longer x-wise than z-wise
+    Tas::set_location(Location { x: 0., y: 0., z: 2000. });
+    Tas::set_rotation(Rotation { pitch: 0., yaw: 0., roll: 0. });
+
+let id1 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: -750.00, y: -1000.00, z: 1000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 6.00, 8.00, 2.00);
+let id2 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 750.00, y: -1000.00, z: 1250.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 6.00, 8.00, 2.00);
+Tas::set_platform_movement_path(id2, 500., List::of(
+List::of(750.00, -2000.00, 1250.00), 
+List::of(750.00, 0.00, 1250.00), 
+), 3);
+let id3 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 2250.00, y: -1000.00, z: 1500.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 6.00, 8.00, 2.00);     
+Tas::set_platform_movement_path(id3, 500., List::of(
+List::of(2250.00, 0.00, 1500.00),
+List::of(2250.00, -2000.00, 1500.00),
+), 3);
+let id4 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 3750.00, y: -1000.00, z: 1750.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 6.00, 8.00, 2.00);     
+Tas::set_platform_movement_path(id4, 500., List::of(
+List::of(3750.00, -2000.00, 1750.00),
+List::of(3750.00, 0.00, 1750.00),
+), 3);
+let id5 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 5250.00, y: -1000.00, z: 2000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 6.00, 8.00, 2.00);     
+Tas::set_platform_movement_path(id5, 500., List::of(
+List::of(5250.00, 0.00, 2000.00),
+List::of(5250.00, -2000.00, 2000.00),
+), 3);
+let id6 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 6750.00, y: -1000.00, z: 2000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 6.00, 8.00, 2.00);     
+Tas::set_platform_movement_path(id6, 500., List::of(
+List::of(6750.00, -1000.00, 2000.00),
+List::of(6750.00, -1000.00, 3500.00),
+), 3);
+let id7 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 8250.00, y: -1000.00, z: 3000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 8.00, 8.00, 4.00);     
+let id8 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 10250.00, y: -2000.00, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);    
+Tas::set_platform_movement_path(id8, 500., List::of(
+List::of(10250.00, -2000.00, 2666.67),
+List::of(10250.00, -2000.00, 4000.00),
+), 3);
+let id9 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 10916.67, y: -2000.00, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);    
+Tas::set_platform_movement_path(id9, 500., List::of(
+List::of(10916.67, -2666.67, 3333.33),
+List::of(10916.67, -1333.33, 3333.33),
+), 3);
+let id10 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 11583.33, y: -2000.00, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);   
+Tas::set_platform_movement_path(id10, 500., List::of(
+List::of(11583.33, -2000.00, 3333.33),
+List::of(12250.00, -2000.00, 3333.33),
+), 3);
+let id11 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 12250.00, y: -2000.00, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);
+let id12 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 12916.67, y: -2000.00, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);   
+Tas::set_platform_movement_path(id12, 500., List::of(
+List::of(12916.67, -2666.67, 3333.33),
+List::of(12916.67, -1333.33, 3333.33),
+), 3);
+let id13 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 13583.33, y: -2000.00, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);   
+Tas::set_platform_movement_path(id13, 500., List::of(
+List::of(13583.33, -2000.00, 2666.67),
+List::of(13583.33, -2000.00, 4000.00),
+), 3);
+let id14 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 10250.00, y: -1333.33, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);   
+let id15 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 11583.33, y: -1333.33, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);   
+Tas::set_platform_movement_path(id15, 500., List::of(
+List::of(11583.33, -1333.33, 3333.33),
+List::of(12250.00, -1333.33, 3333.33),
+), 3);
+let id16 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 13583.33, y: -1333.33, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);   
+Tas::set_platform_movement_path(id16, 500., List::of(
+List::of(13583.33, -2000.00, 3333.33),
+List::of(13583.33, -666.67, 3333.33),
+), 3);
+let id17 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 10250.00, y: -666.67, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);    
+Tas::set_platform_movement_path(id17, 500., List::of(
+List::of(10250.00, -1333.33, 3333.33),
+List::of(10250.00, -0.00, 3333.33),
+), 3);
+let id18 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 10916.67, y: -666.67, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);    
+Tas::set_platform_movement_path(id18, 500., List::of(
+List::of(10916.67, -666.67, 3333.33),
+List::of(11583.33, -666.67, 3333.33),
+), 3);
+let id19 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 10916.67, y: 0.00, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);       
+Tas::set_platform_movement_path(id19, 500., List::of(
+List::of(10916.67, 0.00, 2666.67),
+List::of(10916.67, 0.00, 4000.00),
+), 3);
+let id20 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 12250.00, y: 0.00, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);       
+let id21 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 13583.33, y: 0.00, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);       
+let id22 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 10250.00, y: 666.67, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);     
+let id23 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 11583.33, y: 666.67, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);     
+let id24 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 12250.00, y: 666.67, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);     
+let id25 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 12916.67, y: 666.67, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);     
+let id26 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 10250.00, y: 1333.33, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);    
+let id27 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 10916.67, y: 1333.33, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);    
+let id28 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 11583.33, y: 1333.33, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);    
+Tas::set_platform_movement_path(id28, 500., List::of(
+List::of(11583.33, 1333.33, 2666.67),
+List::of(11583.33, 1333.33, 4000.00),
+), 3);
+let id29 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 12250.00, y: 1333.33, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);    
+Tas::set_platform_movement_path(id29, 500., List::of(
+List::of(12250.00, 1333.33, 3333.33),
+List::of(12916.67, 1333.33, 3333.33),
+), 3);
+let id30 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 13583.33, y: 1333.33, z: 3333.33 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.67, 2.67, 2.67);    
+Tas::set_platform_movement_path(id30, 500., List::of(
+List::of(13583.33, 1333.33, 2666.67),
+List::of(13583.33, 1333.33, 4000.00),
+), 3);
+let id31 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 14250.00, y: -1000.00, z: 3750.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 8.00, 8.00, 1.00);   
+let id32 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 16250.00, y: -375.00, z: 3750.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 40.00, 3.00, 1.00);   
+let id33 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 17500.00, y: -1000.00, z: 4000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 8.00, 8.00, 8.00);   
+let id34 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 20750.00, y: -1000.00, z: 4000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 8.00, 8.00, 8.00);   
+let id35 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 24000.00, y: -1000.00, z: 4000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 8.00, 8.00, 8.00);   
+let id36 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 24000.00, y: -1000.00, z: 1750.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 8.00, 8.00, 8.00);   
+let id37 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 26250.00, y: -1000.00, z: 3750.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 8.00, 8.00, 1.00);   
+let id38 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 29250.00, y: -250.00, z: 3750.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.00, 2.00, 1.00);    
+let id39 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 30750.00, y: -250.00, z: 3750.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 2.00, 2.00, 1.00);    
+let id40 = Tas::set_platform_scale(Tas::spawn_platform(Location { x: 32250.00, y: -750.00, z: 3750.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 10.00, 6.00, 1.00);     
 
 }
 

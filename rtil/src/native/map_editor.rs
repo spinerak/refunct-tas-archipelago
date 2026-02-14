@@ -192,7 +192,7 @@ impl<'a> PlatformWrapper<'a> {
 
     pub fn reset(&self) {
         self.set_color(1.0, 0.016666, 0.03305);
-        self.set_scale(1.0);
+        self.set_scale(1.0, 1.0, 1.0);
         self.set_picked_up(false);
         self.set_hidden(false);
     }
@@ -312,7 +312,7 @@ impl<'a> PlatformWrapper<'a> {
         }
     }
 
-    pub fn set_scale(&self, new_scale: f32) {
+    pub fn set_scale(&self, new_x: f32, new_y: f32, new_z: f32) {
         let old_bounds = self.get_actor_bounds();
         let old_z = old_bounds.2;
         let old_h = old_bounds.5;
@@ -321,18 +321,18 @@ impl<'a> PlatformWrapper<'a> {
         let set_world_scale = root_component.class().find_function("SetRelativeScale3D").unwrap();
         let params = set_world_scale.create_argument_struct();
         let s: StructValueWrapper = params.get_field("NewScale3D").unwrap();
-        s.get_field("X").unwrap::<&Cell<f32>>().set(new_scale);
-        s.get_field("Y").unwrap::<&Cell<f32>>().set(new_scale);
-        s.get_field("Z").unwrap::<&Cell<f32>>().set(new_scale);
+        s.get_field("X").unwrap::<&Cell<f32>>().set(new_x);
+        s.get_field("Y").unwrap::<&Cell<f32>>().set(new_y);
+        s.get_field("Z").unwrap::<&Cell<f32>>().set(new_z);
 
         unsafe { set_world_scale.call(root_component.as_ptr(), &params); }
 
-        let new_bounds = self.get_actor_bounds();
-        let new_z = new_bounds.2;
-        let new_h = new_bounds.5;
+        // let new_bounds = self.get_actor_bounds();
+        // let new_z = new_bounds.2;
+        // let new_h = new_bounds.5;
 
-        let loc = self.absolute_location();
-        self.set_location(loc.0, loc.1, loc.2 - (new_z - old_z) + (new_h - old_h)/2.0);
+        // let loc = self.absolute_location();
+        // self.set_location(loc.0, loc.1, loc.2 - (new_z - old_z) + (new_h - old_h)/2.0);
     }
 
     pub fn set_location(&self, x: f32, y: f32, z: f32) {

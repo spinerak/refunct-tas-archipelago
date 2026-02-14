@@ -29,7 +29,7 @@ use crate::threads::ue::iced_ui::rebo_elements::{IcedButton, IcedColumn, IcedEle
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::native::{BoolValueWrapper};
+use crate::native::{BoolValueWrapper, FunctionWrapper, StructValueWrapper};
 use crate::native::reflection::DerefToObjectWrapper;
 use crate::native::font::replace_unrenderable_chars;
 
@@ -99,6 +99,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(spawn_platform_rando_location_4)
         .add_function(spawn_cube_rando_location)
         .add_function(set_platform_location)
+        .add_function(set_platform_scale)
         .add_function(set_platform_movement_path_rebo)
         .add_function(destroy_platforms)
         .add_function(destroy_platform_rebo)
@@ -853,6 +854,32 @@ thread_local! {
 }
 static LAST_PROCESSED_DELTA_BITS: AtomicU64 = AtomicU64::new(0);
 
+struct CachedPlatform {
+    platform_id: i32,
+    // platform_ptr: *mut UObject,
+    root_component_ptr: *mut UObject,
+    set_location_func_ptr: *mut UObject,
+    movement: PlatformMovement,
+}
+
+impl CachedPlatform {
+    pub fn set_location_cached(&self, x: f32, y: f32, z: f32) {
+        unsafe {
+            // let object = ObjectWrapper::new(self.root_component_ptr);
+            if let Some(func) = ObjectWrapper::new(self.set_location_func_ptr).try_upcast::<FunctionWrapper>() {
+                let params = func.create_argument_struct();
+                let location: StructValueWrapper = params.get_field("NewLocation").unwrap();
+                location.get_field("X").unwrap::<&Cell<f32>>().set(x);
+                location.get_field("Y").unwrap::<&Cell<f32>>().set(y);
+                location.get_field("Z").unwrap::<&Cell<f32>>().set(z);
+                params.get_field("bSweep").unwrap::<BoolValueWrapper>().set(false);
+                params.get_field("bTeleport").unwrap::<BoolValueWrapper>().set(true);
+                func.call(self.root_component_ptr, &params);
+            }
+        }
+    }
+}
+
 pub fn tick_platforms_once_per_frame() {
     let delta = FApp::delta();
     let bits = delta.to_bits();
@@ -1315,8 +1342,8 @@ fn spawn_platform_rando_location(max_loc: f32, max_rot: f32) -> i32 {
     let rx = rand::random::<f32>();
     let ry = rand::random::<f32>();
     let rz = rand::random::<f32>();
-    let sz1 = 1000. + rand::random::<f32>() * 5000.;
-    let sz2 = 1000. + rand::random::<f32>() * 5000.;
+    // let sz1 = 1000. + rand::random::<f32>() * 5000.;
+    // let sz2 = 1000. + rand::random::<f32>() * 5000.;
     let loc = Location { x: (rx-0.5) * 2. * max_loc as f32, y: (ry-0.5) * 2. * max_loc as f32, z: rz * max_loc as f32 };
     let rot = Rotation {
         pitch: (rand::random::<f32>() -0.5) * 2. * max_rot as f32,
@@ -1324,10 +1351,10 @@ fn spawn_platform_rando_location(max_loc: f32, max_rot: f32) -> i32 {
         roll: (rand::random::<f32>() - 0.5) * 2. * max_rot as f32,
     };
     let id = spawn_platform(loc, rot);
-    set_platform_movement_path(id, 500., vec![
-        vec![loc.x, loc.y, loc.z - sz1],
-        vec![loc.x, loc.y, loc.z + sz2],
-    ], 3);
+    // set_platform_movement_path(id, 500., vec![
+    //     vec![loc.x, loc.y, loc.z - sz1],
+    //     vec![loc.x, loc.y, loc.z + sz2],
+    // ], 3);  // example code for setting movement path
     id
 }
 #[rebo::function("Tas::spawn_platform_rando_location_2")]
@@ -1658,6 +1685,13 @@ fn set_platform_location(internal_index: i32, loc: Location) {
         .unwrap_or_else(|e| log!("Could not set location for platform {:?}: {}", internal_index, e));
 }
 
+#[rebo::function("Tas::set_platform_scale")]
+fn set_platform_scale(internal_index: i32, scale_x: f32, scale_y: f32, scale_z: f32) -> i32 {
+    find_platform_and(internal_index, |platform| platform.set_scale(scale_x, scale_y, scale_z))
+        .unwrap_or_else(|e| log!("Could not set scale for platform {:?}: {}", internal_index, e));
+    internal_index
+}
+
 struct PlatformMovement {
     speed: f32,
     path: Vec<Location>,
@@ -1667,31 +1701,25 @@ struct PlatformMovement {
     current_pos: Location, // ← new
 }
 
-struct PlatformTickEntry {
-    platform_id: i32,
-    ptr: *mut UObject,
-    movement: PlatformMovement,
-}
-
 thread_local! {
-    static PLATFORMS_TO_TICK: RefCell<Vec<PlatformTickEntry>> = RefCell::new(Vec::new());
+    static PLATFORMS_TO_TICK: RefCell<Vec<CachedPlatform>> = RefCell::new(Vec::new());
 }
 
 #[rebo::function("Tas::set_platform_movement_path")]
-fn set_platform_movement_path_rebo(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) {
-    set_platform_movement_path(internal_index, speed, locations, end_behavior);
+fn set_platform_movement_path_rebo(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) -> i32 {
+    set_platform_movement_path(internal_index, speed, locations, end_behavior)
 }
 fn set_platform_movement_path(
     internal_index: i32,
     speed: f32,
     locations: Vec<Vec<f32>>,
     end_behavior: u8,
-) {
+) -> i32 {
     let ptr = match find_platform_and(internal_index, |p| p.as_ptr() as *mut UObject) {
         Ok(ptr) => ptr,
         Err(e) => {
             log!("Could not set movement path for platform {:?}: {}", internal_index, e);
-            return;
+            return internal_index;
         }
     };
 
@@ -1706,41 +1734,40 @@ fn set_platform_movement_path(
     }).unwrap();
 
     PLATFORMS_TO_TICK.with(|list| {
-        list.borrow_mut().push(PlatformTickEntry {
-            platform_id: internal_index,
-            ptr,
-            movement: PlatformMovement {
-                speed,
-                path,
-                current_segment: 0,
-                end_behavior,
-                forward: true,
-                current_pos,
-            },
-        });
+        let object = unsafe { ObjectWrapper::new(ptr) };
+        if let Some(platform) = object.try_upcast::<PlatformWrapper>() {
+            let root_component = platform.get_field("RootComponent").unwrap::<ObjectWrapper>();
+            if let Some(func) = root_component.class().find_function("K2_SetWorldLocation") {
+                let initial_movement = PlatformMovement {
+                    speed,
+                    path: path.clone(),
+                    current_segment: 0,
+                    end_behavior,
+                    forward: true,
+                    current_pos,
+                };
+                list.borrow_mut().push(CachedPlatform {
+                    platform_id: internal_index,
+                    // platform_ptr: platform.as_ptr() as *mut UObject,
+                    root_component_ptr: root_component.as_ptr(),
+                    set_location_func_ptr: func.as_ptr() as *mut UObject,
+                    movement: initial_movement,
+                });
+            }
+        }
     });
+    internal_index
 }
+
 
 fn tick_platforms(delta_seconds: f32) {
     PLATFORMS_TO_TICK.with(|list| {
         let mut platforms = list.borrow_mut();
         let mut i = 0;
-
         while i < platforms.len() {
-            let remove = unsafe {
+            let remove = {
                 let entry = &mut platforms[i];
-                let object = ObjectWrapper::new(entry.ptr);
-
-                if object.is_null() {
-                    true
-                } else {
-                    match object.try_upcast::<PlatformWrapper>() {
-                        Some(platform) => {
-                            movement_step(&platform, &mut entry.movement, delta_seconds)
-                        }
-                        None => true,
-                    }
-                }
+                movement_step_cached(entry, delta_seconds)
             };
 
             if remove {
@@ -1752,64 +1779,56 @@ fn tick_platforms(delta_seconds: f32) {
     });
 }
 
-fn movement_step(
-    platform: &PlatformWrapper,
-    movement: &mut PlatformMovement,
-    delta_seconds: f32,
-) -> bool {
-    let path = &movement.path;
-    let idx = movement.current_segment;
+fn movement_step_cached(platform: &mut CachedPlatform, delta_seconds: f32) -> bool {
+    let path = &platform.movement.path;
+    let idx = platform.movement.current_segment;
 
     if idx >= path.len() {
         return true;
     }
 
     let target = &path[idx];
-    let (cx, cy, cz) = (movement.current_pos.x, movement.current_pos.y, movement.current_pos.z);
+    let (cx, cy, cz) = (
+        platform.movement.current_pos.x,
+        platform.movement.current_pos.y,
+        platform.movement.current_pos.z,
+    );
 
     let dx = target.x - cx;
     let dy = target.y - cy;
     let dz = target.z - cz;
     let dist_sq = dx*dx + dy*dy + dz*dz;
-    let stepp = movement.speed * delta_seconds;
+    let stepp = platform.movement.speed * delta_seconds;
 
     if dist_sq <= stepp * stepp || dist_sq <= f32::EPSILON {
-        platform.set_location(target.x, target.y, target.z);
-        movement.current_pos = *target;
+        platform.set_location_cached(target.x, target.y, target.z);
+        platform.movement.current_pos = *target;
 
-        match movement.end_behavior {
+        match platform.movement.end_behavior {
             1 => return true,
             2 => {
-                if path.len() <= 1 {
-                    return true;
-                }
-                if movement.forward {
+                if path.len() <= 1 { return true; }
+                if platform.movement.forward {
                     if idx + 1 >= path.len() {
-                        movement.forward = false;
-                        if idx > 0 {
-                            movement.current_segment -= 1;
-                        }
+                        platform.movement.forward = false;
+                        if idx > 0 { platform.movement.current_segment -= 1; }
                     } else {
-                        movement.current_segment += 1;
+                        platform.movement.current_segment += 1;
                     }
                 } else {
                     if idx == 0 {
-                        movement.forward = true;
-                        if path.len() > 1 {
-                            movement.current_segment = 1;
-                        }
+                        platform.movement.forward = true;
+                        if path.len() > 1 { platform.movement.current_segment = 1; }
                     } else {
-                        movement.current_segment -= 1;
+                        platform.movement.current_segment -= 1;
                     }
                 }
             }
             3 => {
-                if path.len() <= 1 {
-                    return true;
-                }
-                movement.current_segment += 1;
-                if movement.current_segment >= path.len() {
-                    movement.current_segment = 0;
+                if path.len() <= 1 { return true; }
+                platform.movement.current_segment += 1;
+                if platform.movement.current_segment >= path.len() {
+                    platform.movement.current_segment = 0;
                 }
             }
             _ => return true,
@@ -1819,13 +1838,12 @@ fn movement_step(
         let nx = cx + dx / dist * stepp;
         let ny = cy + dy / dist * stepp;
         let nz = cz + dz / dist * stepp;
-        platform.set_location(nx, ny, nz);
-        movement.current_pos = Location { x: nx, y: ny, z: nz };
+        platform.set_location_cached(nx, ny, nz);
+        platform.movement.current_pos = Location { x: nx, y: ny, z: nz };
     }
 
     false
 }
-
 
 
 
