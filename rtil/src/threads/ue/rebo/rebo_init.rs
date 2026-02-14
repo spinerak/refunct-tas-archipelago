@@ -101,6 +101,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_platform_location)
         .add_function(set_platform_scale)
         .add_function(set_platform_movement_path_rebo)
+        .add_function(set_platform_movement_path_min_max_speed_rebo)
         .add_function(destroy_platforms)
         .add_function(destroy_platform_rebo)
 
@@ -1707,6 +1708,11 @@ thread_local! {
 
 #[rebo::function("Tas::set_platform_movement_path")]
 fn set_platform_movement_path_rebo(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) -> i32 {
+    set_platform_movement_path(internal_index, speed, locations, end_behavior)
+}
+#[rebo::function("Tas::set_platform_movement_path_min_max_speed")]
+fn set_platform_movement_path_min_max_speed_rebo(internal_index: i32, min_speed: f32, max_speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) -> i32 {
+    let speed = min_speed + rand::random::<f32>() * (max_speed - min_speed);
     set_platform_movement_path(internal_index, speed, locations, end_behavior)
 }
 fn set_platform_movement_path(

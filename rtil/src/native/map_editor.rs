@@ -313,10 +313,6 @@ impl<'a> PlatformWrapper<'a> {
     }
 
     pub fn set_scale(&self, new_x: f32, new_y: f32, new_z: f32) {
-        let old_bounds = self.get_actor_bounds();
-        let old_z = old_bounds.2;
-        let old_h = old_bounds.5;
-
         let root_component: ObjectWrapper = self.get_field("RootComponent").unwrap();
         let set_world_scale = root_component.class().find_function("SetRelativeScale3D").unwrap();
         let params = set_world_scale.create_argument_struct();
