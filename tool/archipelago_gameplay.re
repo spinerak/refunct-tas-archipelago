@@ -65,6 +65,7 @@ struct ArchipelagoState {
     score_for_next_block: int,
     block_brawl_cubes_collected: int,
     block_brawl_cubes_total: int,
+    unlock_block_brawl: bool,
     unlock_block_brawl_reds: bool,
     unlock_block_brawl_blues: bool,
     unlock_block_brawl_greens: bool,
@@ -153,6 +154,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         score_for_next_block: 1,
         block_brawl_cubes_collected: 0,
         block_brawl_cubes_total: 0,
+        unlock_block_brawl: false,
         unlock_block_brawl_reds: false,
         unlock_block_brawl_blues: false,
         unlock_block_brawl_greens: false,
@@ -167,7 +169,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "0.8.2",
+        mod_version: "0.8.3",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -559,21 +561,25 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
         return;
     }
     if item_id == 9999941 {
+        ARCHIPELAGO_STATE.unlock_block_brawl = true;
         ARCHIPELAGO_STATE.unlock_block_brawl_reds = true;
         update_block_brawl_in_logic_counts();
         return;
     }
     if item_id == 9999942 {
+        ARCHIPELAGO_STATE.unlock_block_brawl = true;
         ARCHIPELAGO_STATE.unlock_block_brawl_blues = true;
         update_block_brawl_in_logic_counts();
         return;
     }
     if item_id == 9999943 {
+        ARCHIPELAGO_STATE.unlock_block_brawl = true;
         ARCHIPELAGO_STATE.unlock_block_brawl_greens = true;
         update_block_brawl_in_logic_counts();
         return;
     }
     if item_id == 9999944 {
+        ARCHIPELAGO_STATE.unlock_block_brawl = true;
         ARCHIPELAGO_STATE.unlock_block_brawl_yellows = true;
         update_block_brawl_in_logic_counts();
         return;
@@ -724,6 +730,18 @@ fn archipelago_start(){
     if ARCHIPELAGO_STATE.gamemode == 5 {
         // log("Starting Block Brawl Minigame gamemode");
         archipelago_block_brawl_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 6 {
+        // log("Starting The Climb Minigame gamemode");
+        archipelago_the_climb_start(1);
+    }
+    if ARCHIPELAGO_STATE.gamemode == 7 {
+        // log("Starting The Climb Minigame gamemode");
+        archipelago_the_climb_start(2);
+    }
+    if ARCHIPELAGO_STATE.gamemode == 8 {
+        // log("Starting The Climb Minigame gamemode");
+        archipelago_the_climb_start(3);
     }
     
     let mut i = 0;
@@ -1051,6 +1069,38 @@ fn got_cube_block_brawl(id: int){
     let next_score = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_brawl_cubes_collected).unwrap_or(1);
     ARCHIPELAGO_STATE.score_for_next_block = next_score;
 
+}
+
+fn archipelago_the_climb_start(mode: int){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
+    Tas::archipelago_deactivate_buttons_ap();
+    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+    ARCHIPELAGO_STATE.started = 2;
+
+    let mut i:float = -1.;
+    let mut xs = -500.00146;
+    let mut ys = -573.4705;
+    let mut zs = -250.;
+    while zs < 9750. {
+        let mut loc = Location { x: xs, y: ys, z: zs };
+        if mode == 1 {
+            loc = Tas::spawn_platform_rando_location_2(xs, ys, zs, i);
+        } else if mode == 2 {
+            loc = Tas::spawn_platform_rando_location_3(xs, ys, zs, i);
+        } else {
+            loc = Tas::spawn_platform_rando_location_4(xs, ys, zs, i);
+        }
+        i += 1.;
+        xs = loc.x;
+        ys = loc.y;
+        zs = loc.z;
+    }
 }
 
 fn ap_on_level_change_function(old: int, new: int) {

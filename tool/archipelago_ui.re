@@ -316,12 +316,12 @@ fn create_archipelago_settings_menu() -> Ui {
             },
         }),
         UiElement::FloatInput(FloatInput {
-            label: Text { text: "Minimap Size (0.0-1.0) " },
+            label: Text { text: "Minimap Size (0.2 - 1.0) " },
             input: f"{MINIMAP_STATE.size}",
             onclick: fn(input: string) {},
             onchange: fn(input: string) {
                 match input.parse_float() {
-                    Result::Ok(size) => if 0.0 <= size && size <= 1.0 {
+                    Result::Ok(size) => if 0.2 <= size && size <= 1.0 {
                         MINIMAP_STATE.calculate_minimap_size(size);
                         SETTINGS.minimap_size = size;
                         SETTINGS.store();
@@ -331,12 +331,12 @@ fn create_archipelago_settings_menu() -> Ui {
             },
         }),
         UiElement::FloatInput(FloatInput {
-            label: Text { text: "Minimap Alpha (0.0 - 1.0)" },
+            label: Text { text: "Minimap Alpha (0.2 - 1.0)" },
             input: f"{MINIMAP_STATE.alpha}",
             onclick: fn(input: string) {},
             onchange: fn(input: string) {
                 match input.parse_float() {
-                    Result::Ok(alpha) => if 0.0 <= alpha && alpha <= 1.0 {
+                    Result::Ok(alpha) => if 0.2 <= alpha && alpha <= 1.0 {
                         MINIMAP_STATE.alpha = alpha;
                         Tas::set_minimap_alpha(alpha);
                         SETTINGS.minimap_alpha = alpha;
@@ -417,16 +417,16 @@ fn create_archipelago_settings_menu() -> Ui {
                 Text { text: "Show Only Progressive" },
                 Text { text: "Show None" },
             ),
-            selected: match SETTINGS.archipelago_log_level_player {
+            selected: match SETTINGS.archipelago_log_level_player_items {
                 ArchipelagoLogLevel::AllMessages => 0,
                 ArchipelagoLogLevel::OnlyProgressive => 1,
                 ArchipelagoLogLevel::NoMessages => 2,
             },
             onchange: fn(index: int) {
                 match index {
-                    0 => { SETTINGS.archipelago_log_level_player = ArchipelagoLogLevel::AllMessages; },
-                    1 => { SETTINGS.archipelago_log_level_player = ArchipelagoLogLevel::OnlyProgressive; },
-                    2 => { SETTINGS.archipelago_log_level_player = ArchipelagoLogLevel::NoMessages; },
+                    0 => { SETTINGS.archipelago_log_level_player_items = ArchipelagoLogLevel::AllMessages; },
+                    1 => { SETTINGS.archipelago_log_level_player_items = ArchipelagoLogLevel::OnlyProgressive; },
+                    2 => { SETTINGS.archipelago_log_level_player_items = ArchipelagoLogLevel::NoMessages; },
                     _ => panic(f"unknown index {index}"),
                 };
                 SETTINGS.store();
@@ -439,16 +439,36 @@ fn create_archipelago_settings_menu() -> Ui {
                 Text { text: "Show Only Progressive" },
                 Text { text: "Show None" },
             ),
-            selected: match SETTINGS.archipelago_log_level_others {
+            selected: match SETTINGS.archipelago_log_level_other_items {
                 ArchipelagoLogLevel::AllMessages => 0,
                 ArchipelagoLogLevel::OnlyProgressive => 1,
                 ArchipelagoLogLevel::NoMessages => 2,
             },
             onchange: fn(index: int) {
                 match index {
-                    0 => { SETTINGS.archipelago_log_level_others = ArchipelagoLogLevel::AllMessages; },
-                    1 => { SETTINGS.archipelago_log_level_others = ArchipelagoLogLevel::OnlyProgressive; },
-                    2 => { SETTINGS.archipelago_log_level_others = ArchipelagoLogLevel::NoMessages; },
+                    0 => { SETTINGS.archipelago_log_level_other_items = ArchipelagoLogLevel::AllMessages; },
+                    1 => { SETTINGS.archipelago_log_level_other_items = ArchipelagoLogLevel::OnlyProgressive; },
+                    2 => { SETTINGS.archipelago_log_level_other_items = ArchipelagoLogLevel::NoMessages; },
+                    _ => panic(f"unknown index {index}"),
+                };
+                SETTINGS.store();
+            },
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Other AP messages" },
+            options: List::of(
+                Text { text: "Show All" },
+                Text { text: "Show None" },
+            ),
+            selected: match SETTINGS.archipelago_log_level_other_messages {
+                ArchipelagoLogLevel::AllMessages => 0,
+                ArchipelagoLogLevel::NoMessages => 1,
+                ArchipelagoLogLevel::OnlyProgressive => 999,  // na
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.archipelago_log_level_other_messages = ArchipelagoLogLevel::AllMessages; },
+                    1 => { SETTINGS.archipelago_log_level_other_messages = ArchipelagoLogLevel::NoMessages; },
                     _ => panic(f"unknown index {index}"),
                 };
                 SETTINGS.store();
@@ -483,12 +503,12 @@ fn create_archipelago_settings_menu() -> Ui {
             },
         }),
         UiElement::FloatInput(FloatInput {
-            label: Text { text: "Log Display Width (0.0 - 1.0)" },
+            label: Text { text: "Log Display Width (0.2 - 1.0)" },
             input: f"{SETTINGS.archipelago_log_display_width}",
             onclick: fn(input: string) {},
             onchange: fn(input: string) {
                 match input.parse_float() {
-                    Result::Ok(size) => if 0.0 <= size && size <= 1.0 {
+                    Result::Ok(size) => if 0.2 <= size && size <= 1.0 {
                         SETTINGS.archipelago_log_display_width = size;
                         SETTINGS.store();
                     },
@@ -644,9 +664,41 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "Block Brawl" },
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_block_brawl {
+                    "Block Brawl"
+                } else {
+                    "Block Brawl (locked)"
+                }
+            } },
             onclick: fn(label: Text) { 
+                if !ARCHIPELAGO_STATE.unlock_block_brawl {
+                    // log("Block Brawl gamemode is locked!");
+                    return;
+                }
+                // log("Set gamemode to Block Brawl");
                 archipelago_init(5); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "[test] The Climb: Line" },
+            onclick: fn(label: Text) { 
+                archipelago_init(6); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "[test] The Climb: Spiral" },
+            onclick: fn(label: Text) { 
+                archipelago_init(7); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "[test] The Climb: Random" },
+            onclick: fn(label: Text) { 
+                archipelago_init(8); 
                 leave_ui(); 
             },
         }),
@@ -658,6 +710,12 @@ fn create_archipelago_gamemodes_menu() -> Ui {
 }
 
 fn get_status_text_lines() -> List<ColorfulText> {
+    let mut height = 0.;
+    if ARCHIPELAGO_STATE.gamemode == 6 || ARCHIPELAGO_STATE.gamemode == 7 || ARCHIPELAGO_STATE.gamemode == 8 {
+        let loc = Tas::get_location();
+        height = loc.z;
+    }
+  
     let lines = List::new();
 
     if INPUT_MODE_IS_UI_ONLY {
@@ -721,6 +779,22 @@ fn get_status_text_lines() -> List<ColorfulText> {
 
                 ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block} pts", color: COLOR_WHITE },
             ),
+            6 => List::of(
+                ColorfulText { text: "Archipelago - The Climb: Curve\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Current height: {height/100.0:3.0}m", color: AP_COLOR_CYAN },
+            ),
+            7 => List::of(
+                ColorfulText { text: "Archipelago - The Climb: Spiral\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Current height: {height/100.0:3.0}m", color: AP_COLOR_CYAN },
+            ),
+            8 => List::of(
+                ColorfulText { text: "Archipelago - The Climb: Random\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Current height: {height/100.0:3.0}m", color: AP_COLOR_CYAN },
+            ),
+
             _ => List::of(
                 ColorfulText { text: "Archipelago\n", color: COLOR_WHITE },
                 ColorfulText { text: "Unknown Gamemode", color: AP_COLOR_RED },
