@@ -138,14 +138,15 @@ fn archipelago_print_json_message(json_message: ReboPrintJSONMessage) {
         message.push(archipelago_interpret_json_message_part(part, json_message.receiving, json_message.item));
     }
 
-    let player_log_level = SETTINGS.archipelago_log_level_player;
-    let others_log_level = SETTINGS.archipelago_log_level_others;
+    let player_items_log_level = SETTINGS.archipelago_log_level_player_items;
+    let other_items_log_level = SETTINGS.archipelago_log_level_other_items;
+    let other_messages_log_level = SETTINGS.archipelago_log_level_other_messages;
     let should_show_message =
-        (!contains_player && !contains_item) ||
-        (player_log_level == ArchipelagoLogLevel::AllMessages     && contains_this_player) ||
-        (player_log_level == ArchipelagoLogLevel::OnlyProgressive && contains_this_player && contains_progressive_item) ||
-        (others_log_level == ArchipelagoLogLevel::AllMessages     && contains_player && !contains_this_player) ||
-        (others_log_level == ArchipelagoLogLevel::OnlyProgressive && contains_player && !contains_this_player && contains_progressive_item);
+        (other_messages_log_level == ArchipelagoLogLevel::AllMessages    && !contains_player && !contains_item) ||
+        (player_items_log_level == ArchipelagoLogLevel::AllMessages      && contains_this_player) ||
+        (player_items_log_level == ArchipelagoLogLevel::OnlyProgressive  && contains_this_player && contains_progressive_item) ||
+        (other_items_log_level == ArchipelagoLogLevel::AllMessages       && contains_player && !contains_this_player) ||
+        (other_items_log_level == ArchipelagoLogLevel::OnlyProgressive   && contains_player && !contains_this_player && contains_progressive_item);
 
     if should_show_message { ap_log(message); }
 }

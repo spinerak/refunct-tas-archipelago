@@ -316,12 +316,12 @@ fn create_archipelago_settings_menu() -> Ui {
             },
         }),
         UiElement::FloatInput(FloatInput {
-            label: Text { text: "Minimap Size (0.0-1.0) " },
+            label: Text { text: "Minimap Size (0.2 - 1.0) " },
             input: f"{MINIMAP_STATE.size}",
             onclick: fn(input: string) {},
             onchange: fn(input: string) {
                 match input.parse_float() {
-                    Result::Ok(size) => if 0.0 <= size && size <= 1.0 {
+                    Result::Ok(size) => if 0.2 <= size && size <= 1.0 {
                         MINIMAP_STATE.calculate_minimap_size(size);
                         SETTINGS.minimap_size = size;
                         SETTINGS.store();
@@ -331,12 +331,12 @@ fn create_archipelago_settings_menu() -> Ui {
             },
         }),
         UiElement::FloatInput(FloatInput {
-            label: Text { text: "Minimap Alpha (0.0 - 1.0)" },
+            label: Text { text: "Minimap Alpha (0.2 - 1.0)" },
             input: f"{MINIMAP_STATE.alpha}",
             onclick: fn(input: string) {},
             onchange: fn(input: string) {
                 match input.parse_float() {
-                    Result::Ok(alpha) => if 0.0 <= alpha && alpha <= 1.0 {
+                    Result::Ok(alpha) => if 0.2 <= alpha && alpha <= 1.0 {
                         MINIMAP_STATE.alpha = alpha;
                         Tas::set_minimap_alpha(alpha);
                         SETTINGS.minimap_alpha = alpha;
@@ -417,16 +417,16 @@ fn create_archipelago_settings_menu() -> Ui {
                 Text { text: "Show Only Progressive" },
                 Text { text: "Show None" },
             ),
-            selected: match SETTINGS.archipelago_log_level_player {
+            selected: match SETTINGS.archipelago_log_level_player_items {
                 ArchipelagoLogLevel::AllMessages => 0,
                 ArchipelagoLogLevel::OnlyProgressive => 1,
                 ArchipelagoLogLevel::NoMessages => 2,
             },
             onchange: fn(index: int) {
                 match index {
-                    0 => { SETTINGS.archipelago_log_level_player = ArchipelagoLogLevel::AllMessages; },
-                    1 => { SETTINGS.archipelago_log_level_player = ArchipelagoLogLevel::OnlyProgressive; },
-                    2 => { SETTINGS.archipelago_log_level_player = ArchipelagoLogLevel::NoMessages; },
+                    0 => { SETTINGS.archipelago_log_level_player_items = ArchipelagoLogLevel::AllMessages; },
+                    1 => { SETTINGS.archipelago_log_level_player_items = ArchipelagoLogLevel::OnlyProgressive; },
+                    2 => { SETTINGS.archipelago_log_level_player_items = ArchipelagoLogLevel::NoMessages; },
                     _ => panic(f"unknown index {index}"),
                 };
                 SETTINGS.store();
@@ -439,16 +439,36 @@ fn create_archipelago_settings_menu() -> Ui {
                 Text { text: "Show Only Progressive" },
                 Text { text: "Show None" },
             ),
-            selected: match SETTINGS.archipelago_log_level_others {
+            selected: match SETTINGS.archipelago_log_level_other_items {
                 ArchipelagoLogLevel::AllMessages => 0,
                 ArchipelagoLogLevel::OnlyProgressive => 1,
                 ArchipelagoLogLevel::NoMessages => 2,
             },
             onchange: fn(index: int) {
                 match index {
-                    0 => { SETTINGS.archipelago_log_level_others = ArchipelagoLogLevel::AllMessages; },
-                    1 => { SETTINGS.archipelago_log_level_others = ArchipelagoLogLevel::OnlyProgressive; },
-                    2 => { SETTINGS.archipelago_log_level_others = ArchipelagoLogLevel::NoMessages; },
+                    0 => { SETTINGS.archipelago_log_level_other_items = ArchipelagoLogLevel::AllMessages; },
+                    1 => { SETTINGS.archipelago_log_level_other_items = ArchipelagoLogLevel::OnlyProgressive; },
+                    2 => { SETTINGS.archipelago_log_level_other_items = ArchipelagoLogLevel::NoMessages; },
+                    _ => panic(f"unknown index {index}"),
+                };
+                SETTINGS.store();
+            },
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Other AP messages" },
+            options: List::of(
+                Text { text: "Show All" },
+                Text { text: "Show None" },
+            ),
+            selected: match SETTINGS.archipelago_log_level_other_messages {
+                ArchipelagoLogLevel::AllMessages => 0,
+                ArchipelagoLogLevel::NoMessages => 1,
+                ArchipelagoLogLevel::OnlyProgressive => 999,  // na
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.archipelago_log_level_other_messages = ArchipelagoLogLevel::AllMessages; },
+                    1 => { SETTINGS.archipelago_log_level_other_messages = ArchipelagoLogLevel::NoMessages; },
                     _ => panic(f"unknown index {index}"),
                 };
                 SETTINGS.store();
@@ -483,12 +503,12 @@ fn create_archipelago_settings_menu() -> Ui {
             },
         }),
         UiElement::FloatInput(FloatInput {
-            label: Text { text: "Log Display Width (0.0 - 1.0)" },
+            label: Text { text: "Log Display Width (0.2 - 1.0)" },
             input: f"{SETTINGS.archipelago_log_display_width}",
             onclick: fn(input: string) {},
             onchange: fn(input: string) {
                 match input.parse_float() {
-                    Result::Ok(size) => if 0.0 <= size && size <= 1.0 {
+                    Result::Ok(size) => if 0.2 <= size && size <= 1.0 {
                         SETTINGS.archipelago_log_display_width = size;
                         SETTINGS.store();
                     },

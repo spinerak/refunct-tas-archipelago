@@ -153,8 +153,10 @@ struct Settings {
     archipelago_last_slot: string,
 
     archipelago_log_display: ArchipelagoLogDisplay,
-    archipelago_log_level_player: ArchipelagoLogLevel,
-    archipelago_log_level_others: ArchipelagoLogLevel,
+    archipelago_log_level_player_items: ArchipelagoLogLevel,
+    archipelago_log_level_other_items: ArchipelagoLogLevel,
+    archipelago_log_level_other_messages: ArchipelagoLogLevel,
+
     archipelago_log_display_width: float,
     archipelago_log_display_time_sec: int,
     archipelago_log_max_count: int
@@ -280,15 +282,20 @@ impl Settings {
                 "Off"  => ArchipelagoLogDisplay::Off,
                 other => panic(f"unknown archipelago log display style: {other}"),
             },
-            archipelago_log_level_player: match get_string("archipelago_log_level_player", "AllMessages") {
+            archipelago_log_level_player_items: match get_string("archipelago_log_level_player_items", "AllMessages") {
                 "AllMessages" => ArchipelagoLogLevel::AllMessages,
                 "OnlyProgressive" => ArchipelagoLogLevel::OnlyProgressive,
                 "NoMessages" => ArchipelagoLogLevel::NoMessages,
                 other => panic(f"unknown archipelago log filter for player: {other}"),
             },
-            archipelago_log_level_others: match get_string("archipelago_log_level_others", "AllMessages") {
+            archipelago_log_level_other_items: match get_string("archipelago_log_level_other_items", "AllMessages") {
                 "AllMessages" => ArchipelagoLogLevel::AllMessages,
                 "OnlyProgressive" => ArchipelagoLogLevel::OnlyProgressive,
+                "NoMessages" => ArchipelagoLogLevel::NoMessages,
+                other => panic(f"unknown archipelago log filter for others: {other}"),
+            },
+            archipelago_log_level_other_messages: match get_string("archipelago_log_level_other_messages", "AllMessages") {
+                "AllMessages" => ArchipelagoLogLevel::AllMessages,
                 "NoMessages" => ArchipelagoLogLevel::NoMessages,
                 other => panic(f"unknown archipelago log filter for others: {other}"),
             },
@@ -346,8 +353,9 @@ impl Settings {
         map.insert("archipelago_last_port", f"{SETTINGS.archipelago_last_port}");
         map.insert("archipelago_last_slot", f"{SETTINGS.archipelago_last_slot}");
         map.insert("archipelago_log_display", f"{SETTINGS.archipelago_log_display}");
-        map.insert("archipelago_log_level_player", f"{SETTINGS.archipelago_log_level_player}");
-        map.insert("archipelago_log_level_others", f"{SETTINGS.archipelago_log_level_others}");
+        map.insert("archipelago_log_level_player_items", f"{SETTINGS.archipelago_log_level_player_items}");
+        map.insert("archipelago_log_level_other_items", f"{SETTINGS.archipelago_log_level_other_items}");
+        map.insert("archipelago_log_level_other_messages", f"{SETTINGS.archipelago_log_level_other_messages}");
         map.insert("archipelago_log_display_width", f"{SETTINGS.archipelago_log_display_width}");
         map.insert("archipelago_log_display_time_sec", f"{SETTINGS.archipelago_log_display_time_sec}");
         map.insert("archipelago_log_max_count", f"{SETTINGS.archipelago_log_max_count}");
