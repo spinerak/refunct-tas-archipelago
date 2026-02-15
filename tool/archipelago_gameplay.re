@@ -690,8 +690,16 @@ fn archipelago_start(){
         archipelago_block_brawl_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 6 {
-        // log("Starting Leap Minigame gamemode");
-        archipelago_leap_start();
+        // log("Starting The Climb Minigame gamemode");
+        archipelago_the_climb_start(1);
+    }
+    if ARCHIPELAGO_STATE.gamemode == 7 {
+        // log("Starting The Climb Minigame gamemode");
+        archipelago_the_climb_start(2);
+    }
+    if ARCHIPELAGO_STATE.gamemode == 8 {
+        // log("Starting The Climb Minigame gamemode");
+        archipelago_the_climb_start(3);
     }
 }
 
@@ -1030,7 +1038,7 @@ fn got_cube_block_brawl(id: int){
 
 }
 
-fn archipelago_leap_start(){
+fn archipelago_the_climb_start(mode: int){
     Tas::abilities_set_swim(true);
     Tas::abilities_set_wall_jump(2, false);
     Tas::abilities_set_ledge_grab(true);
@@ -1038,15 +1046,23 @@ fn archipelago_leap_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
+    Tas::archipelago_deactivate_buttons_ap();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
 
     let mut i:float = -1.;
     let mut xs = -500.00146;
     let mut ys = -573.4705;
-    let mut zs = 0.;
-    while i < 200. {
-        let loc = Tas::spawn_platform_rando_location_2(xs, ys, zs, i);
+    let mut zs = -250.;
+    while zs < 9750. {
+        let mut loc = Location { x: xs, y: ys, z: zs };
+        if mode == 1 {
+            loc = Tas::spawn_platform_rando_location_2(xs, ys, zs, i);
+        } else if mode == 2 {
+            loc = Tas::spawn_platform_rando_location_3(xs, ys, zs, i);
+        } else {
+            loc = Tas::spawn_platform_rando_location_4(xs, ys, zs, i);
+        }
         i += 1.;
         xs = loc.x;
         ys = loc.y;

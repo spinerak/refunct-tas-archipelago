@@ -93,6 +93,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(spawn_platform_rebo)
         .add_function(spawn_platform_rando_location)
         .add_function(spawn_platform_rando_location_2)
+        .add_function(spawn_platform_rando_location_3)
+        .add_function(spawn_platform_rando_location_4)
         .add_function(spawn_cube_rando_location)
         .add_function(destroy_platforms)
         .add_function(destroy_platform_rebo)
@@ -1297,7 +1299,39 @@ fn spawn_platform_rando_location(max_loc: f32, max_rot: f32) -> i32 {
 fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32) -> Location {
     let rx = lx + 700. * (rand::random::<f32>()-0.4);
     let ry = ly + 600. * (rand::random::<f32>()-0.4);
-    let rz = lz + 500. * (rand::random::<f32>()-0.5 + i / 1000.);
+    let rz = lz + 500. * (rand::random::<f32>()-0.48 + i / 1000.);
+    let loc = Location { x: rx, y: ry, z: rz};
+    let rot = Rotation {
+        pitch: 0.0,
+        yaw: 0.0,
+        roll: 0.0,
+    };
+    spawn_platform(loc, rot);
+    Location { x: rx, y: ry, z: rz }
+}
+
+#[rebo::function("Tas::spawn_platform_rando_location_3")]
+fn spawn_platform_rando_location_3(lx: f32, ly: f32, lz: f32, i: f32) -> Location {
+    // Simulate clustered randomness by averaging multiple uniform random values
+    let rx = lx + (500.0 * rand::random::<f32>()) * ((0.8 - 0.01 * i) * i + rand::random::<f32>()).sin();
+    let ry = ly + (500.0 * rand::random::<f32>()) * ((0.6 - 0.01 * i) * i + rand::random::<f32>()).cos();
+    let rz = lz + 250.0 * rand::random::<f32>();
+    let loc = Location { x: rx, y: ry, z: rz};
+    let rot = Rotation {
+        pitch: 0.0,
+        yaw: 0.0,
+        roll: 0.0,
+    };
+    spawn_platform(loc, rot);
+    Location { x: rx, y: ry, z: rz }
+}
+
+#[rebo::function("Tas::spawn_platform_rando_location_4")]
+fn spawn_platform_rando_location_4(lx: f32, ly: f32, lz: f32, _i: f32) -> Location {
+    // Simulate clustered randomness by averaging multiple uniform random values
+    let rx = lx + 400.0 * (rand::random::<f32>() + rand::random::<f32>() + rand::random::<f32>() - 1.5);
+    let ry = ly + 400.0 * (rand::random::<f32>() + rand::random::<f32>() + rand::random::<f32>() - 1.5);
+    let rz = lz + 100.0 + 100.0 * rand::random::<f32>();
     let loc = Location { x: rx, y: ry, z: rz};
     let rot = Rotation {
         pitch: 0.0,

@@ -649,9 +649,23 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "Leap" },
+            label: Text { text: "The Climb: Line" },
             onclick: fn(label: Text) { 
                 archipelago_init(6); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "The Climb: Spiral" },
+            onclick: fn(label: Text) { 
+                archipelago_init(7); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "The Climb: Random" },
+            onclick: fn(label: Text) { 
+                archipelago_init(8); 
                 leave_ui(); 
             },
         }),
@@ -663,6 +677,11 @@ fn create_archipelago_gamemodes_menu() -> Ui {
 }
 
 fn get_status_text_lines() -> List<ColorfulText> {
+    let mut height = 0.;
+    if ARCHIPELAGO_STATE.gamemode == 6 || ARCHIPELAGO_STATE.gamemode == 7 || ARCHIPELAGO_STATE.gamemode == 8 {
+        let loc = Tas::get_location();
+        height = loc.z;
+    }
     let lines = match ARCHIPELAGO_STATE.started {
         0 => List::of(
             ColorfulText { text: "Archipelago Randomizer\n", color: COLOR_WHITE },
@@ -716,6 +735,22 @@ fn get_status_text_lines() -> List<ColorfulText> {
 
                 ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block} pts", color: COLOR_WHITE },
             ),
+            6 => List::of(
+                ColorfulText { text: "Archipelago - The Climb: Curve\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Current height: {height/100.0:3.0}m", color: AP_COLOR_CYAN },
+            ),
+            7 => List::of(
+                ColorfulText { text: "Archipelago - The Climb: Spiral\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Current height: {height/100.0:3.0}m", color: AP_COLOR_CYAN },
+            ),
+            8 => List::of(
+                ColorfulText { text: "Archipelago - The Climb: Random\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Current height: {height/100.0:3.0}m", color: AP_COLOR_CYAN },
+            ),
+
             _ => List::of(
                 ColorfulText { text: "Archipelago\n", color: COLOR_WHITE },
                 ColorfulText { text: "Unknown Gamemode", color: AP_COLOR_RED },
