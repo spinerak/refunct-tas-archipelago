@@ -92,7 +92,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         ap_connected: false,
 
         last_level_unlocked: 1,
-        grass: 0,
+        grass: -10000,
         wall_jump: 0,
         ledge_grab: false,
         swim: false,
@@ -169,7 +169,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "0.8.0",
+        mod_version: "0.8.2",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -183,7 +183,7 @@ static platforms_with_buttons = List::of(10010101,10010203,10010302,10010404,100
 
 static mut ARCHIPELAGO_COMPONENT = Component {
     id: ARCHIPELAGO_COMPONENT_ID,
-    conflicts_with: List::of(ARCHIPELAGO_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID),
+    conflicts_with: List::of(ARCHIPELAGO_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID),
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
     on_tick: fn() {},
@@ -349,13 +349,50 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     on_menu_open: fn() {},
 };
 
+static mut ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT = Component {
+    id: ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID,
+    conflicts_with: List::of(MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID),
+    tick_mode: TickMode::DontCare,
+    requested_delta_time: Option::None,
+    on_tick: fn() {},
+    on_yield: fn() {},
+    draw_hud_text: fn(text: string) -> string { text },
+    draw_hud_always: archipelago_disconnected_info_hud,
+    on_new_game: fn() {},
+    on_level_change: fn(old: int, new: int) {},
+    on_buttons_change: fn(old: int, new: int) {},
+    on_cubes_change: fn(old: int, new: int) {},
+    on_platforms_change: fn(old: int, new: int) {},
+    on_reset: fn(old: int, new: int) {},
+    on_element_pressed: fn(index: ElementIndex) {},
+    on_element_released: fn(index: ElementIndex) {},
+    on_key_down: fn(key: KeyCode, is_repeat: bool) {},
+    on_key_down_always: fn(key: KeyCode, is_repeat: bool) {},
+    on_key_up: fn(key: KeyCode) {},
+    on_key_up_always: fn(key: KeyCode) {},
+    on_key_char: fn(c: string) {},
+    on_key_char_always: fn(c: string) {},
+    on_mouse_move: fn(x: int, y: int) {},
+    on_component_enter: fn() {},
+    on_component_exit: fn() {},
+    on_resolution_change: fn() {},
+    on_menu_open: fn() {},
+};
+
 fn archipelago_disconnected() {
     ap_log_error("Disconnected from Archipelago server");
     remove_component(ARCHIPELAGO_COMPONENT);
+    add_component(ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT);
     ARCHIPELAGO_STATE.ap_connected = false;
 };
 
 fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) {
+    
+    if item_id == 9999999 {  // Grass
+        archipelago_got_grass();
+        return;
+    }
+
     if ARCHIPELAGO_STATE.gamemode == 0 {
         // log(f"Processing received item index {item_id}");
         if item_id == 9999990 {  // Ledge Grab
@@ -390,9 +427,6 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         }
         if item_id == 9999997 {  // Final Platform Known
             ARCHIPELAGO_STATE.final_platform_known = true;
-        }
-        if item_id == 9999999 {  // Grass
-            archipelago_got_grass();
         }
 
         if item_id == 9999989 && !ARCHIPELAGO_STATE.red_cubes_bag {  // Red Cubes Bag
@@ -671,6 +705,8 @@ fn archipelago_init(gamemode: int){
 }
 
 fn archipelago_start(){
+    ARCHIPELAGO_STATE.grass = 0;
+    
     if ARCHIPELAGO_STATE.gamemode == 0 {
         // log("Starting Move Rando gamemode");
         archipelago_main_start();
@@ -707,11 +743,18 @@ fn archipelago_start(){
         // log("Starting The Climb Minigame gamemode");
         archipelago_the_climb_start(3);
     }
+    
+    let mut i = 0;
+    for item in ARCHIPELAGO_STATE.received_items {
+        archipelago_process_item(item, 0, i);
+        i += 1;
+    }
+    ARCHIPELAGO_STATE.started = 2;
+
 }
 
 fn archipelago_main_start(){
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
-    ARCHIPELAGO_STATE.grass = 0;
     ARCHIPELAGO_STATE.wall_jump = 0;
     ARCHIPELAGO_STATE.ledge_grab = false;
     ARCHIPELAGO_STATE.swim = false;
@@ -731,21 +774,10 @@ fn archipelago_main_start(){
 
     Tas::reset_cubes(true, true);
 
-
     spawn_extra_cubes();
-
     
     archipelago_activate_stepped_on_platforms();
     archipelago_collect_collected_cubes();
-
-
-
-    ARCHIPELAGO_STATE.started = 2;
-    let mut i = 0;
-    for item in ARCHIPELAGO_STATE.received_items {
-        archipelago_process_item(item, 0, i);
-        i += 1;
-    }
 }
 
 fn spawn_extra_cubes(){    
@@ -858,7 +890,6 @@ fn archipelago_vanilla_start(){
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
-    ARCHIPELAGO_STATE.started = 2;
 }
 
 fn archipelago_seeker_start(){
@@ -870,7 +901,6 @@ fn archipelago_seeker_start(){
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
-    ARCHIPELAGO_STATE.started = 2;
 
     // for loop
     let list = List::of(2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31);
@@ -902,7 +932,6 @@ fn archipelago_button_galore_start(){
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
-    ARCHIPELAGO_STATE.started = 2;
 }
 
 fn archipelago_og_randomizer_start(){
@@ -914,7 +943,6 @@ fn archipelago_og_randomizer_start(){
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
-    ARCHIPELAGO_STATE.started = 2;
 }
 
 fn archipelago_block_brawl_start(){
@@ -927,7 +955,6 @@ fn archipelago_block_brawl_start(){
     Tas::archipelago_deactivate_buttons_ap();
     collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
-    ARCHIPELAGO_STATE.started = 2;
     ARCHIPELAGO_STATE.block_brawl_cubes_collected = 0;
     ARCHIPELAGO_STATE.block_brawl_cubes_total = 0;
 

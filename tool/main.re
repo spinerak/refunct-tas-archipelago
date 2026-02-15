@@ -28,6 +28,7 @@ static mut NEW_VERSION: Option<string> = Tas::new_version_string();
 fn create_start_menu() -> Ui {
     let mut start_menu_text = Text { text: "Press 'm' for menu." };
     add_component(AP_LOG_COMPONENT);
+    add_component(ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT);
     Ui {
         name: start_menu_text,
         elements: List::new(),

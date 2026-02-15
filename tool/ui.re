@@ -96,6 +96,7 @@ fn leave_ui() {
     }
 }
 
+static mut INPUT_MODE_IS_UI_ONLY = false;
 fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     let key = KeyCode::from_large(key_code);
     if key.to_small() == KEY_LEFT_SHIFT.to_small() {
@@ -110,15 +111,18 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     if key.to_small() == KEY_M.to_small() && !TAS_STATE.step_frame_mode && UI_STACK.len() == 1 {
         enter_ui(create_base_menu());
     }
-    if key.to_small() == KEY_N.to_small() {
-        Tas::set_input_mode_ui_only();
-        Tas::flush_pressed_keys();
+    if key.to_small() == KEY_F1.to_small() {
+        if INPUT_MODE_IS_UI_ONLY {
+            Tas::set_input_mode_game_only();
+            INPUT_MODE_IS_UI_ONLY = false;
+        } else {
+            Tas::set_input_mode_ui_only();
+            Tas::flush_pressed_keys();
+            INPUT_MODE_IS_UI_ONLY = true;
+        }
     }
     if key.to_small() == KEY_P.to_small() {
         Tas::get_location_and_log();
-    }
-    if key.to_small() == KEY_S.to_small() {
-        Tas::set_input_mode_game_only();
     }
 
     //Ledge, jump_pad, WallJump, Swim, Lifts, Pipes

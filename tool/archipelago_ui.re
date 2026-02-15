@@ -134,6 +134,7 @@ fn create_archipelago_connection_details_menu() -> Ui {
             onclick: fn(label: Text) {
                 Tas::archipelago_disconnect();
                 remove_component(ARCHIPELAGO_COMPONENT);
+                add_component(ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT);
                 ARCHIPELAGO_STATE.ap_connected = false;
                 leave_ui(); leave_ui();
             },
@@ -155,6 +156,7 @@ fn create_archipelago_connection_details_menu() -> Ui {
                 SETTINGS.archipelago_last_port = ARCHIPELAGO_CONNECTION_DETAILS.port;
                 SETTINGS.archipelago_last_slot = ARCHIPELAGO_CONNECTION_DETAILS.slot;
                 SETTINGS.store();
+                remove_component(ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT);
                 add_component(ARCHIPELAGO_COMPONENT);
                 leave_ui(); leave_ui(); // Now we're two levels deep
             },
@@ -693,7 +695,18 @@ fn get_status_text_lines() -> List<ColorfulText> {
         let loc = Tas::get_location();
         height = loc.z;
     }
-    let lines = match ARCHIPELAGO_STATE.started {
+  
+    let lines = List::new();
+
+    if INPUT_MODE_IS_UI_ONLY {
+        List::extend(lines, List::of(
+            ColorfulText { text: "Movement input disabled\n", color: AP_COLOR_RED },
+            ColorfulText { text: "Press F1 to enable movement input", color: AP_COLOR_RED },
+            ColorfulText { text: "\n\n", color: AP_COLOR_RED },
+        ));
+    }
+
+    List::extend(lines, match ARCHIPELAGO_STATE.started {
         0 => List::of(
             ColorfulText { text: "Archipelago Randomizer\n", color: COLOR_WHITE },
             ColorfulText { text: "Press new game (in Refunct menu).", color: AP_COLOR_CYAN },
@@ -767,18 +780,20 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: "Unknown Gamemode", color: AP_COLOR_RED },
             ),
         }
-    };
+    });
+
     let mut txt = "Checks in:";
     if ARCHIPELAGO_STATE.gamemode == 0 {
         txt = "\n\nMinigames with checks:";
     }
-    if ARCHIPELAGO_STATE.gamemode != 0 || ARCHIPELAGO_STATE.started == 0 {
+    if (ARCHIPELAGO_STATE.gamemode != 0 || ARCHIPELAGO_STATE.started == 0) && ARCHIPELAGO_STATE.grass >= 0 {
         lines.push(ColorfulText {
             text:  f"\n\n[Grass {ARCHIPELAGO_STATE.grass}/{ARCHIPELAGO_STATE.required_grass}] ",
             color: if ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass { AP_COLOR_GREEN } else { AP_COLOR_CYAN }
         });
     }
     lines.extend(create_list_of_minigames_with_checks(txt));
+
     if ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version {
         lines.push(ColorfulText {
             text:  "\n\nVERSION MISMATCH",
@@ -1000,4 +1015,66 @@ fn ap_draw_colorful_text(text_list: List<ColorfulText>, background_color: Color,
             }
         }
     }
+}
+
+fn archipelago_disconnected_info_hud() {
+    let viewport = Tas::get_viewport_size();
+    let w = viewport.width.to_float();
+    let h = viewport.height.to_float();
+    let lines = List::new();
+    if INPUT_MODE_IS_UI_ONLY {
+        lines.push(ColorfulText { text: "Movement input disabled\n", color: AP_COLOR_RED });
+        lines.push(ColorfulText { text: "Press F1 to enable movement input\n\n", color: AP_COLOR_RED });
+    } 
+
+    lines.push(ColorfulText { text: "Archipelago Randomizer\n\n", color: COLOR_WHITE });
+
+    lines.push(ColorfulText { text: "Not connected to an Archipelago server yet,\nuse the menu to ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "log in\n\n", color: AP_COLOR_YELLOW });
+
+    lines.push(ColorfulText { text: "Once logged in, use ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "Change gamemode ", color: AP_COLOR_YELLOW });
+    lines.push(ColorfulText { text: "to switch\nbetween the ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "main rando ", color: AP_COLOR_YELLOW });
+    lines.push(ColorfulText { text: "and the ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "minigames\n\n", color: AP_COLOR_YELLOW });
+
+    lines.push(ColorfulText { text: "Visit settings to change ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "UI layout,\n", color: AP_COLOR_YELLOW });
+    lines.push(ColorfulText { text: "show the ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "minimap ", color: AP_COLOR_YELLOW });
+    lines.push(ColorfulText { text: "or adjust ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "logs\n\n", color: AP_COLOR_YELLOW });
+
+    lines.push(ColorfulText { text: "If you have issues with background input,\n", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "hit F1 to ", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "enable/disable movement input", color: AP_COLOR_YELLOW });
+    
+    let anchor = SETTINGS.archipelago_display_position;
+    match anchor {
+        Anchor::TopLeft => {
+            // Make sure we don't overlap with the menu
+            let text_y = match UI_STACK.last() {
+                Option::Some(ui) => {
+                    let size = Tas::get_text_size("x", SETTINGS.ui_scale);
+                    let line_height = size.height;
+
+                    let elements = ui.elements;
+                    line_height * (elements.len().to_float() + 1.5)
+                },
+                Option::None => 0.0,
+            };
+
+            ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, 5.0, text_y, anchor, 5.0);
+        },
+        Anchor::TopCenter    => { ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, w/2.0, 5.0, anchor, 5.0); },
+        Anchor::TopRight     => { ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, w, 5.0, anchor, 5.0); },
+        Anchor::CenterRight  => { ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, w, h/2.0, anchor, 5.0); },
+        Anchor::BottomRight  => { ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, w, h, anchor, 5.0); },
+        Anchor::BottomCenter => { ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, w/2.0, h, anchor, 5.0); },
+        Anchor::BottomLeft   => { ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, 5.0, h, anchor, 5.0); },
+        Anchor::CenterLeft   => { ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, 5.0, h/2.0, anchor, 5.0); },
+
+        pos => panic(f"unknown/invalid archipelago display position: {pos}"),
+    };
 }
