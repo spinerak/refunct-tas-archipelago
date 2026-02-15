@@ -65,6 +65,7 @@ struct ArchipelagoState {
     score_for_next_block: int,
     block_brawl_cubes_collected: int,
     block_brawl_cubes_total: int,
+    unlock_block_brawl: bool,
     unlock_block_brawl_reds: bool,
     unlock_block_brawl_blues: bool,
     unlock_block_brawl_greens: bool,
@@ -153,6 +154,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         score_for_next_block: 1,
         block_brawl_cubes_collected: 0,
         block_brawl_cubes_total: 0,
+        unlock_block_brawl: false,
         unlock_block_brawl_reds: false,
         unlock_block_brawl_blues: false,
         unlock_block_brawl_greens: false,
@@ -525,21 +527,25 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
         return;
     }
     if item_id == 9999941 {
+        ARCHIPELAGO_STATE.unlock_block_brawl = true;
         ARCHIPELAGO_STATE.unlock_block_brawl_reds = true;
         update_block_brawl_in_logic_counts();
         return;
     }
     if item_id == 9999942 {
+        ARCHIPELAGO_STATE.unlock_block_brawl = true;
         ARCHIPELAGO_STATE.unlock_block_brawl_blues = true;
         update_block_brawl_in_logic_counts();
         return;
     }
     if item_id == 9999943 {
+        ARCHIPELAGO_STATE.unlock_block_brawl = true;
         ARCHIPELAGO_STATE.unlock_block_brawl_greens = true;
         update_block_brawl_in_logic_counts();
         return;
     }
     if item_id == 9999944 {
+        ARCHIPELAGO_STATE.unlock_block_brawl = true;
         ARCHIPELAGO_STATE.unlock_block_brawl_yellows = true;
         update_block_brawl_in_logic_counts();
         return;

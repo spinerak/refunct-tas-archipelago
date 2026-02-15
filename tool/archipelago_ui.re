@@ -642,28 +642,39 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "Block Brawl" },
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_block_brawl {
+                    "Block Brawl"
+                } else {
+                    "Block Brawl (locked)"
+                }
+            } },
             onclick: fn(label: Text) { 
+                if !ARCHIPELAGO_STATE.unlock_block_brawl {
+                    // log("Block Brawl gamemode is locked!");
+                    return;
+                }
+                // log("Set gamemode to Block Brawl");
                 archipelago_init(5); 
                 leave_ui(); 
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "The Climb: Line" },
+            label: Text { text: "[test] The Climb: Line" },
             onclick: fn(label: Text) { 
                 archipelago_init(6); 
                 leave_ui(); 
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "The Climb: Spiral" },
+            label: Text { text: "[test] The Climb: Spiral" },
             onclick: fn(label: Text) { 
                 archipelago_init(7); 
                 leave_ui(); 
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "The Climb: Random" },
+            label: Text { text: "[test] The Climb: Random" },
             onclick: fn(label: Text) { 
                 archipelago_init(8); 
                 leave_ui(); 
