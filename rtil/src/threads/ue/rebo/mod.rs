@@ -10,8 +10,6 @@ use crossbeam_channel::{Receiver, Sender};
 use image::{Rgba, RgbaImage};
 use once_cell::sync::Lazy;
 use tokio::sync::mpsc::UnboundedSender;
-use websocket::sync::Client;
-use websocket::stream::sync::NetworkStream;
 
 use crate::threads::{StreamToRebo, ReboToStream, ArchipelagoToRebo, ReboToArchipelago};
 use crate::native::{AMyCharacter, FPlatformMisc, Hooks, UTexture2D, UWorld, REBO_DOESNT_START_SEMAPHORE};
@@ -45,8 +43,6 @@ struct State {
     rebo_archipelago_tx: UnboundedSender<ReboToArchipelago>,
     working_dir: Option<String>,
     pressed_keys: HashSet<i32>,
-    websocket: Option<Client<Box<dyn NetworkStream + Send>>>,
-    local_time_offset: i32,
     extra_platforms: Vec<i32>,
     extra_cubes: Vec<i32>,
     pawns: HashMap<u32, AMyCharacter>,
@@ -169,8 +165,6 @@ pub fn init(
         rebo_archipelago_tx,
         working_dir: None,
         pressed_keys: HashSet::new(),
-        websocket: None,
-        local_time_offset: 0,
         extra_platforms: Vec::new(),
         extra_cubes: Vec::new(),
         pawns: HashMap::new(),
@@ -217,7 +211,6 @@ fn cleanup_after_rebo() {
     COROUTINE.with(|co| *co.borrow_mut() = None);
     state.event_queue.clear();
     state.delta = None;
-    drop(state.websocket.take());
     for (_id, my_character) in state.pawns.drain() {
         UWorld::destroy_amycharaccter(my_character);
     }
