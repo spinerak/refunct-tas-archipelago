@@ -867,7 +867,7 @@ struct CachedPlatform {
 }
 
 impl CachedPlatform {
-    pub fn set_location_cached(&self, x: f32, y: f32, z: f32) {
+    pub fn set_location_cached(&self, x: f32, y: f32, z: f32, lift_player: bool) {
         unsafe {
             // let object = ObjectWrapper::new(self.root_component_ptr);
             if let Some(func) = ObjectWrapper::new(self.set_location_func_ptr).try_upcast::<FunctionWrapper>() {
@@ -894,7 +894,6 @@ struct PlatformSpawner {
 
 impl PlatformSpawner {
     pub fn tick(&mut self, delta: f32) {
-        log!("PlatformSpawner tick: delta={}, timer={}", delta, self.timer);
         self.timer -= delta;
 
         if self.timer <= 0.0 {
@@ -1475,7 +1474,7 @@ fn spawn_platform(loc: Location, rot: Rotation) -> i32 {
     PLATFORMS_GONE.with(|gone_list| {
         let mut gone_list = gone_list.borrow_mut();
         if let Some(index) = gone_list.pop() {
-            index.set_location_cached(loc.x, loc.y, loc.z);
+            index.set_location_cached(loc.x, loc.y, loc.z, false);
             internal_index = index.platform_id;
             PLATFORMS_STATIC.with(|gone_list| {
                 gone_list.borrow_mut().push(index);
@@ -1539,13 +1538,23 @@ fn destroy_platforms(vanilla: bool, extra: i32) {
         for p in non_vanilla_platforms {
             destroy_platform(p);
         }
+        //clean PLATFORMS_TICK, STATI AND GONE:
+        PLATFORMS_STATIC.with(|list| {
+            list.borrow_mut().clear();
+        });
+        PLATFORMS_TICK.with(|list| {
+            list.borrow_mut().clear();
+        });
+        PLATFORMS_GONE.with(|list| {
+            list.borrow_mut().clear();
+        });
     }
     if extra == 1 {
         // for everything in PLATFORMS_TICK and PLATFORMS_STATIC, set location to 9999 and move to PLATFORMS_GONE
         PLATFORMS_STATIC.with(|list| {
             let mut list = list.borrow_mut();
             for platform in list.drain(..) {
-                platform.set_location_cached(9999., 9999., 9999.);
+                platform.set_location_cached(9999., 9999., 9999., true);
                 PLATFORMS_GONE.with(|gone_list| {
                     gone_list.borrow_mut().push(platform);
                 });
@@ -1555,7 +1564,7 @@ fn destroy_platforms(vanilla: bool, extra: i32) {
         PLATFORMS_TICK.with(|list| {
             let mut list = list.borrow_mut();
             for platform in list.drain(..) {
-                platform.set_location_cached(9999., 9999., 9999.);
+                platform.set_location_cached(9999., 9999., 9999., true);
                 PLATFORMS_GONE.with(|gone_list| {
                     gone_list.borrow_mut().push(platform);
                 });
@@ -1926,7 +1935,7 @@ fn tick_platforms(delta_seconds: f32) {
             if remove == 2 {
                 // remove this platform from PLATFORMS_TICK and add it to PLATFORMS_GONE, so we can keep track of it in case it gets destroyed and we need to remove it from the cache
                 let entry = platforms.remove(i);
-                entry.set_location_cached(9999., 9999., 9999.);
+                entry.set_location_cached(9999., 9999., 9999., true);
                 PLATFORMS_GONE.with(|gone_list| {
                     gone_list.borrow_mut().push(entry);
                 });
@@ -1944,7 +1953,6 @@ fn tick_platforms(delta_seconds: f32) {
 }
 
 fn tick_platform_spawners(delta_seconds: f32) {
-    log!("Ticking platform spawners with delta_seconds {}", delta_seconds);
     PLATFORM_SPAWNERS.with(|spawners| {
         let mut spawners = spawners.borrow_mut();
         for spawner in spawners.iter_mut() {
@@ -1998,7 +2006,7 @@ fn movement_step_cached(platform: &mut CachedPlatform, delta_seconds: f32) -> i3
     let stepp = speed * delta_seconds;
 
     if dist_sq <= stepp * stepp || dist_sq <= f32::EPSILON {
-        platform.set_location_cached(target.x, target.y, target.z);
+        platform.set_location_cached(target.x, target.y, target.z, false);
         platform.movement.as_mut().unwrap().current_pos = *target;
 
         match end_behavior {
@@ -2041,7 +2049,7 @@ fn movement_step_cached(platform: &mut CachedPlatform, delta_seconds: f32) -> i3
         let nx = cx + dx / dist * stepp;
         let ny = cy + dy / dist * stepp;
         let nz = cz + dz / dist * stepp;
-        platform.set_location_cached(nx, ny, nz);
+        platform.set_location_cached(nx, ny, nz, false);
         platform.movement.as_mut().unwrap().current_pos = Location { x: nx, y: ny, z: nz };
     }
     0

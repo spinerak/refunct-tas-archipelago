@@ -710,6 +710,13 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
+            label: Text { text: "Frogger" },
+            onclick: fn(label: Text) { 
+                archipelago_init(10); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
         }),

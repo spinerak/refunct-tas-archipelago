@@ -710,46 +710,37 @@ fn archipelago_start(){
     ARCHIPELAGO_STATE.grass = 0;
     
     if ARCHIPELAGO_STATE.gamemode == 0 {
-        // log("Starting Move Rando gamemode");
         archipelago_main_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 1 {
-        // log("Starting Vanilla gamemode");
         archipelago_vanilla_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 2 {
-        // log("Starting Button Galore gamemode");
         archipelago_button_galore_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 3 {
-        // log("Starting Seeker gamemode");
         archipelago_seeker_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 4 {
-        // log("Starting OG Randomizer gamemode");
         archipelago_og_randomizer_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 5 {
-        // log("Starting Block Brawl Minigame gamemode");
         archipelago_block_brawl_start();
     }  
     if ARCHIPELAGO_STATE.gamemode == 6 {
-        // log("Starting The Climb Minigame gamemode");
         archipelago_the_climb_start(1);
     }
     if ARCHIPELAGO_STATE.gamemode == 7 {
-        // log("Starting The Climb Minigame gamemode");
         archipelago_the_climb_start(2);
     }
     if ARCHIPELAGO_STATE.gamemode == 8 {
-        // log("Starting The Climb Minigame gamemode");
         archipelago_the_climb_start(3);
     }
     if ARCHIPELAGO_STATE.gamemode == 9 {
         archipelago_hillside_start();
     }
-    if ARCHIPELAGO_STATE.gamemode == 6 {
-        archipelago_hillside_start();
+    if ARCHIPELAGO_STATE.gamemode == 10 {
+        archipelago_frogger_start();
     }
     
     let mut i = 0;
@@ -905,8 +896,6 @@ fn archipelago_vanilla_start(){
     // );
     // Tas::set_platform_scale(id, 0.1, 0.1, 0.1);
 
-    //speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8, interval: f32
-    Tas::add_platform_spawner(1000., List::of(List::of(0., 1000., 900.), List::of(-500., -500., 0.), List::of(-300., 100., 0.)), 4, 5.);
 }
 
 fn archipelago_seeker_start(){
@@ -1085,6 +1074,30 @@ fn got_cube_block_brawl(id: int){
     ARCHIPELAGO_STATE.block_brawl_cubes_collected += 1;
     let next_score = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_brawl_cubes_collected).unwrap_or(1);
     ARCHIPELAGO_STATE.score_for_next_block = next_score;
+}
+
+fn archipelago_frogger_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
+    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+    Tas::archipelago_deactivate_buttons_ap();
+
+    // start location, spawn block below it, player in the middle, a platform that is longer x-wise than z-wise
+    Tas::set_location(Location { x: 9250., y: 0., z: 6000. }); 
+    Tas::set_rotation(Rotation { pitch: 0., yaw: 0., roll: 0. });
+
+    Tas::set_platform_scale(Tas::spawn_platform(Location { x: 8250.00, y: -1000.00, z: 3000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 8.00, 8.00, 4.00); 
+
+    Tas::add_platform_spawner(500., List::of(List::of(10500., -2000., 3800.), List::of(10500., 1750., 3800.)), 4, 3.);
+    Tas::add_platform_spawner(550., List::of(List::of(11000., -2000., 3900.), List::of(11000., 1750., 3900.)), 4, 3.1);
+    Tas::add_platform_spawner(600., List::of(List::of(11500., -2000., 4000.), List::of(11500., 1750., 4000.)), 4, 3.2);
+    Tas::add_platform_spawner(650., List::of(List::of(12000., -2000., 4100.), List::of(12000., 1750., 4100.)), 4, 3.3);
+    Tas::add_platform_spawner(700., List::of(List::of(12500., -2000., 4200.), List::of(12500., 1750., 4200.)), 4, 3.4);
 }
 
 fn archipelago_hillside_start(){
