@@ -98,12 +98,14 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(spawn_platform_rando_location_3)
         .add_function(spawn_platform_rando_location_4)
         .add_function(spawn_cube_rando_location)
+        .add_function(add_platform_spawner)
         .add_function(set_platform_location)
         .add_function(set_platform_scale)
         .add_function(set_platform_movement_path_rebo)
         .add_function(set_platform_movement_path_min_max_speed_rebo)
         .add_function(destroy_platforms)
         .add_function(destroy_platform_rebo)
+        .add_function(destroy_spawners)
 
         .add_function(spawn_cube_rebo)
         .add_function(reset_cubes)
@@ -835,7 +837,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
 
 
         
-        tick_platforms_once_per_frame();
+        tick();
 
         match to_be_returned {
             Some(ret) => {
@@ -855,12 +857,13 @@ thread_local! {
 }
 static LAST_PROCESSED_DELTA_BITS: AtomicU64 = AtomicU64::new(0);
 
+
 struct CachedPlatform {
     platform_id: i32,
     // platform_ptr: *mut UObject,
     root_component_ptr: *mut UObject,
     set_location_func_ptr: *mut UObject,
-    movement: PlatformMovement,
+    movement: Option<PlatformMovement>,
 }
 
 impl CachedPlatform {
@@ -881,7 +884,34 @@ impl CachedPlatform {
     }
 }
 
-pub fn tick_platforms_once_per_frame() {
+struct PlatformSpawner {
+    speed: f32,
+    locations: Vec<Vec<f32>>,
+    end_behavior: u8,
+    interval: f32,  // constant time between spawns
+    timer: f32,     // countdown timer
+}
+
+impl PlatformSpawner {
+    pub fn tick(&mut self, delta: f32) {
+        log!("PlatformSpawner tick: delta={}, timer={}", delta, self.timer);
+        self.timer -= delta;
+
+        if self.timer <= 0.0 {
+            set_platform_movement_path(
+                spawn_platform(
+                    Location { x: self.locations[0][0], y: self.locations[0][1], z: self.locations[0][2] },
+                    Rotation { pitch: 0., yaw: 0., roll: 0. },
+                ), 
+                self.speed, self.locations.clone(), self.end_behavior
+            );
+            
+            self.timer = self.interval;
+        }
+    }
+}
+
+pub fn tick(){
     let delta = FApp::delta();
     let bits = delta.to_bits();
 
@@ -892,7 +922,17 @@ pub fn tick_platforms_once_per_frame() {
     }
 
     LAST_PROCESSED_DELTA_BITS.store(bits, Ordering::Relaxed);
+
+    tick_platforms_once_per_frame(delta);
+    tick_platform_spawners_once_per_frame(delta);
+}
+
+pub fn tick_platforms_once_per_frame(delta: f64) {
     tick_platforms(delta as f32);
+}
+
+pub fn tick_platform_spawners_once_per_frame(delta: f64) {
+    tick_platform_spawners(delta as f32);
 }
 
 #[rebo::required_rebo_functions]
@@ -1425,31 +1465,110 @@ fn spawn_cube_rando_location(max: f32, spawn_platform_below: bool) -> i32 {
 fn spawn_platform_rebo(loc: Location, rot: Rotation) -> i32 {
     spawn_platform(loc, rot)
 }
+
+
+
 fn spawn_platform(loc: Location, rot: Rotation) -> i32 {
+    let mut internal_index = -1;
+
+    // if there is a platform in PLATFORMS_GONE, put its index as internal_index:
+    PLATFORMS_GONE.with(|gone_list| {
+        let mut gone_list = gone_list.borrow_mut();
+        if let Some(index) = gone_list.pop() {
+            index.set_location_cached(loc.x, loc.y, loc.z);
+            internal_index = index.platform_id;
+            PLATFORMS_STATIC.with(|gone_list| {
+                gone_list.borrow_mut().push(index);
+            });
+        }
+    });
+
+    if internal_index != -1 {
+        return internal_index;
+    }
+
     match crate::native::PlatformWrapper::spawn(loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll) {
         Ok(platform) => {
             let index = platform.internal_index();
             STATE.lock().unwrap().as_mut().unwrap().extra_platforms.push(index);
             log!("Successfully spawned platform at {:p} with internal index {}", platform.as_ptr(), index);
-            index
+            internal_index = index;
         }
+        // at the end return index
         Err(e) => {
             panic!("Failed to spawn platform: {}", e);
         }
     }
+    
+    let ptr = match find_platform_and(internal_index, |p| p.as_ptr() as *mut UObject) {
+        Ok(ptr) => ptr,
+        Err(e) => {
+            log!("Could not set movement path for platform {:?}: {}", internal_index, e);
+            return internal_index;
+        }
+    };
+
+    PLATFORMS_STATIC.with(|list| {
+        let object = unsafe { ObjectWrapper::new(ptr) };
+        if let Some(platform) = object.try_upcast::<PlatformWrapper>() {
+            let root_component = platform.get_field("RootComponent").unwrap::<ObjectWrapper>();
+            if let Some(func) = root_component.class().find_function("K2_SetWorldLocation") {
+                list.borrow_mut().push(CachedPlatform {
+                    platform_id: internal_index,
+                    root_component_ptr: root_component.as_ptr(),
+                    set_location_func_ptr: func.as_ptr() as *mut UObject,
+                    movement: None,
+                });
+            }
+        }
+    });
+    internal_index
 }
 
+
+
 #[rebo::function("Tas::destroy_platforms")]
-fn destroy_platforms(vanilla: bool, extra: bool) {
+fn destroy_platforms(vanilla: bool, extra: i32) {
+    //extra 1 means move to gone list, extra 2 means destroy
+
     if vanilla {
         // don't :)
     }
-    if extra {
+    if extra == 2 {
         let non_vanilla_platforms = get_non_vanilla_platforms();
         for p in non_vanilla_platforms {
             destroy_platform(p);
         }
     }
+    if extra == 1 {
+        // for everything in PLATFORMS_TICK and PLATFORMS_STATIC, set location to 9999 and move to PLATFORMS_GONE
+        PLATFORMS_STATIC.with(|list| {
+            let mut list = list.borrow_mut();
+            for platform in list.drain(..) {
+                platform.set_location_cached(9999., 9999., 9999.);
+                PLATFORMS_GONE.with(|gone_list| {
+                    gone_list.borrow_mut().push(platform);
+                });
+                log!("A Moved platform to gone list");
+            }
+        });
+        PLATFORMS_TICK.with(|list| {
+            let mut list = list.borrow_mut();
+            for platform in list.drain(..) {
+                platform.set_location_cached(9999., 9999., 9999.);
+                PLATFORMS_GONE.with(|gone_list| {
+                    gone_list.borrow_mut().push(platform);
+                });
+                log!("B Moved platform to gone list");
+            }
+        });
+    }
+}
+#[rebo::function("Tas::destroy_spawners")]
+fn destroy_spawners() {
+    PLATFORM_SPAWNERS.with(|spawners| {
+        spawners.borrow_mut().clear();
+    });
 }
 #[rebo::function("Tas::spawn_cube")]
 fn spawn_cube_rebo(loc: Location) -> i32 {
@@ -1703,7 +1822,19 @@ struct PlatformMovement {
 }
 
 thread_local! {
-    static PLATFORMS_TO_TICK: RefCell<Vec<CachedPlatform>> = RefCell::new(Vec::new());
+    static PLATFORMS_TICK: RefCell<Vec<CachedPlatform>> = RefCell::new(Vec::new());  // moving platforms
+    static PLATFORMS_STATIC: RefCell<Vec<CachedPlatform>> = RefCell::new(Vec::new());  // non-moving platforms
+    static PLATFORMS_GONE: RefCell<Vec<CachedPlatform>> = RefCell::new(Vec::new());  // destroyed but can be recycled
+    static PLATFORM_SPAWNERS: RefCell<Vec<PlatformSpawner>> = RefCell::new(Vec::new());
+}
+
+
+
+#[rebo::function("Tas::add_platform_spawner")]
+fn add_platform_spawner(speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8, interval: f32) {
+    let spawner = PlatformSpawner { speed, locations, end_behavior, interval: interval, timer: 0. };
+    PLATFORM_SPAWNERS.with(|spawners| spawners.borrow_mut().push(spawner));
+    log!("Added platform spawner with speed {}, interval {}, end_behavior {}", speed, interval, end_behavior);
 }
 
 #[rebo::function("Tas::set_platform_movement_path")]
@@ -1721,13 +1852,6 @@ fn set_platform_movement_path(
     locations: Vec<Vec<f32>>,
     end_behavior: u8,
 ) -> i32 {
-    let ptr = match find_platform_and(internal_index, |p| p.as_ptr() as *mut UObject) {
-        Ok(ptr) => ptr,
-        Err(e) => {
-            log!("Could not set movement path for platform {:?}: {}", internal_index, e);
-            return internal_index;
-        }
-    };
 
     let path = locations
         .into_iter()
@@ -1739,25 +1863,48 @@ fn set_platform_movement_path(
         Location { x, y, z }
     }).unwrap();
 
-    PLATFORMS_TO_TICK.with(|list| {
+    let initial_movement = PlatformMovement {
+        speed,
+        path: path.clone(),
+        current_segment: 0,
+        end_behavior,
+        forward: true,
+        current_pos,
+    };
+    
+    let ptr = match find_platform_and(internal_index, |p| p.as_ptr() as *mut UObject) {
+        Ok(ptr) => ptr,
+        Err(e) => {
+            log!("Could not set movement path for platform {:?}: {}", internal_index, e);
+            return internal_index;
+        }
+    };
+
+    // remove from "static" or "gone" if it's there, since it will now be ticked
+    PLATFORMS_STATIC.with(|static_list| {
+        let mut list = static_list.borrow_mut();
+        if let Some(pos) = list.iter().position(|p| p.platform_id == internal_index) {
+            list.remove(pos);
+        }
+    });
+    PLATFORMS_GONE.with(|gone_list| {
+        let mut list = gone_list.borrow_mut();
+        if let Some(pos) = list.iter().position(|p| p.platform_id == internal_index) {
+            list.remove(pos);
+        }
+    });
+
+    PLATFORMS_TICK.with(|list| {
         let object = unsafe { ObjectWrapper::new(ptr) };
         if let Some(platform) = object.try_upcast::<PlatformWrapper>() {
             let root_component = platform.get_field("RootComponent").unwrap::<ObjectWrapper>();
             if let Some(func) = root_component.class().find_function("K2_SetWorldLocation") {
-                let initial_movement = PlatformMovement {
-                    speed,
-                    path: path.clone(),
-                    current_segment: 0,
-                    end_behavior,
-                    forward: true,
-                    current_pos,
-                };
                 list.borrow_mut().push(CachedPlatform {
                     platform_id: internal_index,
                     // platform_ptr: platform.as_ptr() as *mut UObject,
                     root_component_ptr: root_component.as_ptr(),
                     set_location_func_ptr: func.as_ptr() as *mut UObject,
-                    movement: initial_movement,
+                    movement: Some(initial_movement),
                 });
             }
         }
@@ -1767,7 +1914,7 @@ fn set_platform_movement_path(
 
 
 fn tick_platforms(delta_seconds: f32) {
-    PLATFORMS_TO_TICK.with(|list| {
+    PLATFORMS_TICK.with(|list| {
         let mut platforms = list.borrow_mut();
         let mut i = 0;
         while i < platforms.len() {
@@ -1776,8 +1923,19 @@ fn tick_platforms(delta_seconds: f32) {
                 movement_step_cached(entry, delta_seconds)
             };
 
-            if remove {
-                platforms.swap_remove(i);
+            if remove == 2 {
+                // remove this platform from PLATFORMS_TICK and add it to PLATFORMS_GONE, so we can keep track of it in case it gets destroyed and we need to remove it from the cache
+                let entry = platforms.remove(i);
+                entry.set_location_cached(9999., 9999., 9999.);
+                PLATFORMS_GONE.with(|gone_list| {
+                    gone_list.borrow_mut().push(entry);
+                });
+            } else if remove == 1 {
+                // move to static list since it doesn't need to be ticked anymore, but keep it in the cache in case it gets destroyed
+                let entry = platforms.remove(i);
+                PLATFORMS_STATIC.with(|static_list| {
+                    static_list.borrow_mut().push(entry);
+                });
             } else {
                 i += 1;
             }
@@ -1785,59 +1943,98 @@ fn tick_platforms(delta_seconds: f32) {
     });
 }
 
-fn movement_step_cached(platform: &mut CachedPlatform, delta_seconds: f32) -> bool {
-    let path = &platform.movement.path;
-    let idx = platform.movement.current_segment;
+fn tick_platform_spawners(delta_seconds: f32) {
+    log!("Ticking platform spawners with delta_seconds {}", delta_seconds);
+    PLATFORM_SPAWNERS.with(|spawners| {
+        let mut spawners = spawners.borrow_mut();
+        for spawner in spawners.iter_mut() {
+            spawner.tick(delta_seconds);
+        }
+    });
+}
+
+fn movement_step_cached(platform: &mut CachedPlatform, delta_seconds: f32) -> i32 { 
+    // return 0 do nothing -> TICK, 1 stop movement but keep platform -> STATIC, 2 remove platform -> GONE
+    // end_behavior:
+    // 1 = stop at the end of the path
+    // 2 = ping pong back and forth along the path
+    // 3 = loop back to the start of the path
+    // 4 = stop movement and teleport to very far away at the end of the path (to gone)
+
+    let (path, idx, current_pos, speed, end_behavior) = {
+        let movement = match &mut platform.movement {
+            Some(m) => m,
+            None => return 0,
+        };
+        let path = movement.path.clone();
+        let idx = movement.current_segment;
+        let current_pos = movement.current_pos;
+        let speed = movement.speed;
+        let end_behavior = movement.end_behavior;
+        (path, idx, current_pos, speed, end_behavior)
+    };
 
     if idx >= path.len() {
-        return true;
+        if end_behavior == 4 {
+            return 2;
+        }
+        if end_behavior == 1 {
+            return 1;
+        }
+        return 0;
     }
 
     let target = &path[idx];
     let (cx, cy, cz) = (
-        platform.movement.current_pos.x,
-        platform.movement.current_pos.y,
-        platform.movement.current_pos.z,
+        current_pos.x,
+        current_pos.y,
+        current_pos.z,
     );
 
     let dx = target.x - cx;
     let dy = target.y - cy;
     let dz = target.z - cz;
     let dist_sq = dx*dx + dy*dy + dz*dz;
-    let stepp = platform.movement.speed * delta_seconds;
+    let stepp = speed * delta_seconds;
 
     if dist_sq <= stepp * stepp || dist_sq <= f32::EPSILON {
         platform.set_location_cached(target.x, target.y, target.z);
-        platform.movement.current_pos = *target;
+        platform.movement.as_mut().unwrap().current_pos = *target;
 
-        match platform.movement.end_behavior {
-            1 => return true,
-            2 => {
-                if path.len() <= 1 { return true; }
-                if platform.movement.forward {
+        match end_behavior {
+            1 => return 1,  // stop at the end of the path
+            2 => {  // ping pong back and forth along the path
+                if path.len() <= 1 { return 1; }
+                if platform.movement.as_mut().unwrap().forward {
                     if idx + 1 >= path.len() {
-                        platform.movement.forward = false;
-                        if idx > 0 { platform.movement.current_segment -= 1; }
+                        platform.movement.as_mut().unwrap().forward = false;
+                        if idx > 0 { platform.movement.as_mut().unwrap().current_segment -= 1; }
                     } else {
-                        platform.movement.current_segment += 1;
+                        platform.movement.as_mut().unwrap().current_segment += 1;
                     }
                 } else {
                     if idx == 0 {
-                        platform.movement.forward = true;
-                        if path.len() > 1 { platform.movement.current_segment = 1; }
+                        platform.movement.as_mut().unwrap().forward = true;
+                        if path.len() > 1 { platform.movement.as_mut().unwrap().current_segment = 1; }
                     } else {
-                        platform.movement.current_segment -= 1;
+                        platform.movement.as_mut().unwrap().current_segment -= 1;
                     }
                 }
             }
-            3 => {
-                if path.len() <= 1 { return true; }
-                platform.movement.current_segment += 1;
-                if platform.movement.current_segment >= path.len() {
-                    platform.movement.current_segment = 0;
+            3 => { // loop back to the start of the path
+                if path.len() <= 1 { return 1; }
+                platform.movement.as_mut().unwrap().current_segment += 1;
+                if platform.movement.as_mut().unwrap().current_segment >= path.len() {
+                    platform.movement.as_mut().unwrap().current_segment = 0;
                 }
             }
-            _ => return true,
+            4 => { // stop movement and teleport to very far away at the end of the path
+                platform.movement.as_mut().unwrap().current_segment += 1;  // go to next segment
+                if platform.movement.as_mut().unwrap().current_segment >= path.len() {
+                    return 2;
+                }
+            }
+            _ => return 2,
         }
     } else {
         let dist = dist_sq.sqrt();
@@ -1845,10 +2042,9 @@ fn movement_step_cached(platform: &mut CachedPlatform, delta_seconds: f32) -> bo
         let ny = cy + dy / dist * stepp;
         let nz = cz + dz / dist * stepp;
         platform.set_location_cached(nx, ny, nz);
-        platform.movement.current_pos = Location { x: nx, y: ny, z: nz };
+        platform.movement.as_mut().unwrap().current_pos = Location { x: nx, y: ny, z: nz };
     }
-
-    false
+    0
 }
 
 
@@ -1878,14 +2074,15 @@ fn collect_cube(internal_index: i32) -> i32 {
 }
 #[rebo::function("Tas::destroy_platform")]
 fn destroy_platform_rebo(internal_index: i32) {
+
     destroy_platform(internal_index);
 }
 
 fn destroy_platform(internal_index: i32) {
     maybe_remove_extra_platform(internal_index);
     let _ = find_platform_and(internal_index, |platform| platform.destroy());
-    //look through     PLATFORMS_TO_TICK and remove any entries for this platform, so we don't keep trying to tick it after it's destroyed
-    PLATFORMS_TO_TICK.with(|list| {
+    //look through     PLATFORMS_TICK and remove any entries for this platform, so we don't keep trying to tick it after it's destroyed
+    PLATFORMS_TICK.with(|list| {
         let mut platforms = list.borrow_mut();
         platforms.retain(|entry| entry.platform_id != internal_index);
     });

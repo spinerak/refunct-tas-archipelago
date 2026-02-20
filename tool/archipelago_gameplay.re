@@ -192,7 +192,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     draw_hud_always: archipelago_hud_color_coded,
     on_new_game: fn() {
         Tas::destroy_cubes(true, true);
-        Tas::destroy_platforms(true, true);
+        Tas::destroy_platforms(true, 2);
+        Tas::destroy_spawners();
         ARCHIPELAGO_STATE.extra_cubes_locs.clear();
         ARCHIPELAGO_STATE.extra_cubes_int_ids.clear();
 
@@ -213,17 +214,17 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     },
     on_level_change: ap_on_level_change_function,
     on_buttons_change: fn(old: int, new: int) {
-        log(f"[AP] # buttons changed: {old} -> {new}");
+        // log(f"[AP] # buttons changed: {old} -> {new}");
     },
     on_cubes_change: fn(old: int, new: int) {
-        log(f"[AP] # cubes changed: {old} -> {new}");
+        // log(f"[AP] # cubes changed: {old} -> {new}");
     },
     on_platforms_change: fn(old: int, new: int) {
-        log(f"[AP] # platforms changed: {old} -> {new}");
+        // log(f"[AP] # platforms changed: {old} -> {new}");
     },
     on_reset: fn(old: int, new: int) {},
     on_element_pressed: fn(index: ElementIndex) {
-        log(f"[AP] Pressed {index.element_type} {index.element_index} in cluster {index.cluster_index}");
+        // log(f"[AP] Pressed {index.element_type} {index.element_index} in cluster {index.cluster_index}");
         if index.cluster_index == 9999 {
             got_cube_block_brawl(index.element_index);
             got_extra_cube_ap(index.element_index);
@@ -898,11 +899,14 @@ fn archipelago_vanilla_start(){
     collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
 
-    let id = Tas::set_platform_movement_path(
-        Tas::spawn_platform(Location { x: 1000., y: 1000., z: 1000. }, Rotation {pitch : 0., yaw: 0., roll: 0. }),
-        200., List::of(List::of(0., 1000., 900.), List::of(-500., -500., 0.), List::of(-300., 100., 0.)), 3
-    );
-    Tas::set_platform_scale(id, 0.1, 0.1, 0.1);
+    // let id = Tas::set_platform_movement_path(
+    //     Tas::spawn_platform(Location { x: 1000., y: 1000., z: 1000. }, Rotation {pitch : 0., yaw: 0., roll: 0. }),
+    //     200., List::of(List::of(0., 1000., 900.), List::of(-500., -500., 0.), List::of(-300., 100., 0.)), 3
+    // );
+    // Tas::set_platform_scale(id, 0.1, 0.1, 0.1);
+
+    //speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8, interval: f32
+    Tas::add_platform_spawner(1000., List::of(List::of(0., 1000., 900.), List::of(-500., -500., 0.), List::of(-300., 100., 0.)), 4, 5.);
 }
 
 fn archipelago_seeker_start(){
@@ -984,7 +988,7 @@ fn archipelago_block_brawl_start(){
     Tas::archipelago_ds_get(f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
 
     let mut i = 0;
-    while i < 50 {
+    while i < 200 {
         Tas::spawn_platform_rando_location(3000., 10.);
         i += 1;
     }
