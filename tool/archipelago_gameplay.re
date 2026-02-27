@@ -1093,11 +1093,18 @@ fn archipelago_frogger_start(){
 
     Tas::set_platform_scale(Tas::spawn_platform(Location { x: 8250.00, y: -1000.00, z: 3000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }), 8.00, 8.00, 4.00); 
 
-    Tas::add_platform_spawner(500., List::of(List::of(10500., -2000., 3800.), List::of(10500., 1750., 3800.)), 4, 3.);
-    Tas::add_platform_spawner(550., List::of(List::of(11000., -2000., 3900.), List::of(11000., 1750., 3900.)), 4, 3.1);
-    Tas::add_platform_spawner(600., List::of(List::of(11500., -2000., 4000.), List::of(11500., 1750., 4000.)), 4, 3.2);
-    Tas::add_platform_spawner(650., List::of(List::of(12000., -2000., 4100.), List::of(12000., 1750., 4100.)), 4, 3.3);
-    Tas::add_platform_spawner(700., List::of(List::of(12500., -2000., 4200.), List::of(12500., 1750., 4200.)), 4, 3.4);
+    // path in positive x direction, middle y = 0
+    Tas::add_platform_spawner(500., 
+        List::of(
+            List::of(10500., -2000., 3800.), 
+            List::of(10500., 11750., 3800.)
+        ), 
+        Size3D { x: 2., y: 4., z: 2. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 30., roll: 0. },
+        4, 
+        3.
+    );
 }
 
 fn archipelago_hillside_start(){

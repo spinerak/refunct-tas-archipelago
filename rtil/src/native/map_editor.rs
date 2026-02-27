@@ -137,6 +137,7 @@ impl<'a> PlatformWrapper<'a> {
     }
 
     pub fn spawn(x: f32, y: f32, z: f32, pi: f32, ya: f32, ro: f32) -> Result<PlatformWrapper<'a>, &'static str> {
+        log!("Spawning platform at ({}, {}, {}) with rotation ({}, {}, {})", x, y, z, pi, ya, ro);
         UeScope::with(|scope| unsafe {
             let plat_class = scope.iter_global_object_array()
                 .map(|item| item.object())
