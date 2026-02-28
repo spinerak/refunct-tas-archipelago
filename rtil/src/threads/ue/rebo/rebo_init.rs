@@ -1,7 +1,7 @@
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{ErrorKind, Write};
+use std::io::Write;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -9,13 +9,12 @@ use std::sync::Arc;
 use archipelago_rs::protocol::{BounceData, ClientMessage, DataStorageOperation, DeathLink, Get, GetDataPackage, ItemsHandlingFlags, NetworkItem, RichMessageColor, RichMessagePart, RichPrint, ServerMessage, Set};
 use crossbeam_channel::{Sender, TryRecvError};
 use image::Rgba;
-use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span, Stdlib, Value, VmContext};
+use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span, Stdlib, VmContext};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
-use websocket::{ClientBuilder, Message, OwnedMessage, WebSocketError};
+//use websocket::{ClientBuilder, Message, OwnedMessage, WebSocketError};
 use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX, CubeWrapper, PlatformWrapper};
 use crate::native::{try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
-use protocol::{Request, Response};
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo};
 use super::{STATE, livesplit::{Game, NewGameGlitch, SplitsSaveError, SplitsLoadError}};
 use serde::{Serialize, Deserialize};
@@ -119,12 +118,6 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(move_pawn)
         .add_function(set_pawn_velocity)
         .add_function(pawn_location)
-        .add_function(connect_to_server)
-        .add_function(disconnect_from_server)
-        .add_function(join_multiplayer_room)
-        .add_function(move_on_server)
-        .add_function(press_platform_on_server)
-        .add_function(press_button_on_server)
 
         .add_function(archipelago_connect)
         .add_function(archipelago_disconnect)
@@ -132,7 +125,6 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(archipelago_goal)
         .add_function(archipelago_ds_get)
         .add_function(archipelago_ds_set_max)
-        .add_function(new_game_pressed)
         .add_function(get_level)
         .add_function(set_level_rebo)
         .add_function(trigger_element)
@@ -286,14 +278,6 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(on_key_char)
         .add_required_rebo_function(on_mouse_move)
         .add_required_rebo_function(draw_hud)
-        .add_required_rebo_function(player_joined_multiplayer_room)
-        .add_required_rebo_function(player_left_multiplayer_room)
-        .add_required_rebo_function(player_moved)
-        .add_required_rebo_function(press_platform)
-        .add_required_rebo_function(press_button)
-        .add_required_rebo_function(player_pressed_new_game)
-        .add_required_rebo_function(start_new_game_at)
-        .add_required_rebo_function(disconnected)
         .add_required_rebo_function(archipelago_disconnected)
         .add_required_rebo_function(archipelago_received_item)
         .add_required_rebo_function(archipelago_got_grass)
@@ -620,31 +604,6 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
             UeEvent::AddToScreen => on_menu_open(vm)?,
         }
 
-        // check websocket
-        loop {
-            let response = match receive_from_server(vm, true) {
-                Ok(response) => response,
-                Err(ReceiveError::ExecError(err)) => return Err(err),
-                Err(ReceiveError::Error) => break,
-            };
-            match response {
-                Response::ServerTime(_) => unreachable!("got Response::ServerTime in step-function"),
-                Response::PlayerJoinedRoom(id, name, red, green, blue, x, y, z, pitch, yaw, roll) => player_joined_multiplayer_room(vm, id.id(), name, Color { red, green, blue, alpha: 1. }, Location { x, y, z}, Rotation { pitch, yaw, roll })?,
-                Response::PlayerLeftRoom(id) => player_left_multiplayer_room(vm, id.id())?,
-                Response::MoveOther(id, x, y, z, pitch, yaw, roll) => player_moved(vm, id.id(), Location { x, y, z }, Rotation { pitch, yaw, roll })?,
-                Response::PressPlatform(id) => press_platform(vm, id)?,
-                Response::PressButton(id) => press_button(vm, id)?,
-                Response::NewGamePressed(id) => player_pressed_new_game(vm, id.id())?,
-                Response::StartNewGameAt(timestamp) => {
-                    let local_time_offset = STATE.lock().unwrap().as_ref().unwrap().local_time_offset as i64;
-                    start_new_game_at(vm, (timestamp as i64 + local_time_offset) as u64)?
-                },
-                Response::RoomNameTooLong => {
-                    disconnected(vm, Disconnected::RoomNameTooLong)?;
-                }
-            }
-        }
-
         // check archipelago
         loop {
             let res = STATE.lock().unwrap().as_mut().unwrap().archipelago_rebo_rx.try_recv();
@@ -848,14 +807,6 @@ extern "rebo" {
     fn on_key_char(character: String, is_repeat: bool);
     fn on_mouse_move(x: i32, y: i32);
     fn draw_hud();
-    fn player_joined_multiplayer_room(id: u32, name: String, col: Color, loc: Location, rot: Rotation);
-    fn player_left_multiplayer_room(id: u32);
-    fn player_moved(id: u32, loc: Location, rot: Rotation);
-    fn press_platform(id: u8);
-    fn press_button(id: u8);
-    fn player_pressed_new_game(id: u32);
-    fn start_new_game_at(timestamp: u64);
-    fn disconnected(reason: Disconnected);
     fn archipelago_disconnected();
     fn on_level_state_change(old: LevelState, new: LevelState);
     fn on_resolution_change();
@@ -1732,141 +1683,6 @@ enum Server {
     Localhost,
     Remote,
     Testing,
-}
-
-#[rebo::function(raw("Tas::connect_to_server"))]
-fn connect_to_server(server: Server) {
-    let address = match server {
-        Server::Localhost => "ws://localhost:8080/ws",
-        Server::Remote => "wss://refunct-tas.oberien.de/ws",
-        Server::Testing => "wss://refunct-tas-test.oberien.de/ws",
-    };
-    let client = ClientBuilder::new(address).unwrap().connect(None);
-    let client = match client {
-        Ok(client) => client,
-        Err(e) => {
-            log!("couldn't connect to server: {e:?}");
-            disconnected(vm, Disconnected::ConnectionRefused)?;
-            return Ok(Value::Unit)
-        }
-    };
-    log!("connected to server, figuring out time delta");
-    STATE.lock().unwrap().as_mut().unwrap().websocket = Some(client);
-
-    // time delta calculation
-    let mut deltas: Vec<i32> = vec![0];
-    let delta = loop {
-        deltas.sort();
-        let median = deltas[deltas.len() / 2];
-        let matches = deltas.iter().copied().filter(|&m| (m - median).abs() < 100).count();
-        if deltas.len() > 5 && matches as f64 / deltas.len() as f64 > 0.8 {
-            break median;
-        }
-        if deltas.len() > 20 {
-            log!("connection too unstable to get local time offset: {deltas:?}");
-            disconnected(vm, Disconnected::LocalTimeOffsetTooManyTries)?;
-            return Ok(Value::Unit);
-        }
-
-        let before = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
-        send_to_server(vm, "timesync", Request::GetServerTime)?;
-        let remote_time = match receive_from_server(vm, false) {
-            Err(ReceiveError::Error) => return Ok(Value::Unit),
-            Err(ReceiveError::ExecError(err)) => return Err(err),
-            Ok(Response::ServerTime(time)) => time,
-            Ok(response) => unreachable!("got non-ServerTime during deltatime calculation: {response:?}"),
-        };
-        let after = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
-        let local_time = ((before + after) / 2) as u64;
-        let delta = local_time as i64 - remote_time as i64;
-        deltas.push(delta as i32);
-        std::thread::sleep(Duration::from_millis(500));
-    };
-    let msg = format!("local time offset between us and server: {delta} ms");
-    log!("{}", msg);
-    STATE.lock().unwrap().as_ref().unwrap().rebo_stream_tx.send(ReboToStream::Print(msg)).unwrap();
-
-    STATE.lock().unwrap().as_mut().unwrap().local_time_offset = delta;
-}
-#[rebo::function(raw("Tas::disconnect_from_server"))]
-fn disconnect_from_server() {
-    STATE.lock().unwrap().as_mut().unwrap().websocket.take();
-    disconnected(vm, Disconnected::ManualDisconnect)?;
-}
-fn send_to_server<'i>(vm: &mut VmContext<'i, '_, '_>, desc: &str, request: Request) -> Result<(), ExecError<'i>> {
-    let mut state = STATE.lock().unwrap();
-    let state = state.as_mut().unwrap();
-    if state.websocket.is_none() {
-        log!("called {desc} without active websocket session");
-        // TODO: error propagation?
-        return Ok(());
-    }
-    let msg = serde_json::to_string(&request).unwrap();
-    let msg = Message::text(msg);
-    if let Err(e) = state.websocket.as_mut().unwrap().send_message(&msg) {
-        log!("error sending {desc} request: {e:?}");
-        state.websocket.take();
-        disconnected(vm, Disconnected::SendFailed)?;
-    }
-    Ok(())
-}
-enum ReceiveError<'i> {
-    ExecError(ExecError<'i>),
-    Error,
-}
-impl<'i> From<ExecError<'i>> for ReceiveError<'i> {
-    fn from(e: ExecError<'i>) -> Self {
-        ReceiveError::ExecError(e)
-    }
-}
-fn receive_from_server<'i>(vm: &mut VmContext<'i, '_, '_>, nonblocking: bool) -> Result<Response, ReceiveError<'i>> {
-    if STATE.lock().unwrap().as_ref().unwrap().websocket.is_none() {
-        return Err(ReceiveError::Error);
-    }
-    loop {
-        if nonblocking {
-            STATE.lock().unwrap().as_mut().unwrap().websocket.as_mut().unwrap().set_nonblocking(true).unwrap();
-        }
-        let res = STATE.lock().unwrap().as_mut().unwrap().websocket.as_mut().unwrap().recv_message();
-        if nonblocking {
-            STATE.lock().unwrap().as_mut().unwrap().websocket.as_mut().unwrap().set_nonblocking(false).unwrap();
-        }
-        return match res {
-            Ok(OwnedMessage::Text(text)) => Ok(serde_json::from_str(&text).unwrap()),
-            Ok(OwnedMessage::Binary(_) | OwnedMessage::Ping(_) | OwnedMessage::Pong(_)) => continue,
-            Err(WebSocketError::IoError(io)) if nonblocking && io.kind() == ErrorKind::WouldBlock => Err(ReceiveError::Error),
-            Ok(OwnedMessage::Close(_)) => {
-                drop(STATE.lock().unwrap().as_mut().unwrap().websocket.take());
-                disconnected(vm, Disconnected::Closed)?;
-                Err(ReceiveError::Error)
-            },
-            Err(_) => {
-                drop(STATE.lock().unwrap().as_mut().unwrap().websocket.take());
-                disconnected(vm, Disconnected::ReceiveFailed)?;
-                Err(ReceiveError::Error)
-            }
-        };
-    }
-}
-#[rebo::function(raw("Tas::join_multiplayer_room"))]
-fn join_multiplayer_room(room: String, name: String, col: Color, loc: Location, rot: Rotation) {
-    send_to_server(vm, "join room", Request::JoinRoom(room, name, col.red, col.green, col.blue, loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll))?;
-}
-#[rebo::function(raw("Tas::move_on_server"))]
-fn move_on_server(loc: Location, rot: Rotation) {
-    send_to_server(vm, "move", Request::MoveSelf(loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll))?;
-}
-#[rebo::function(raw("Tas::press_platform_on_server"))]
-fn press_platform_on_server(platform_id: u8) {
-    send_to_server(vm, "press platform", Request::PressPlatform(platform_id))?;
-}
-#[rebo::function(raw("Tas::press_button_on_server"))]
-fn press_button_on_server(button_id: u8) {
-    send_to_server(vm, "press button", Request::PressButton(button_id))?;
-}
-#[rebo::function(raw("Tas::new_game_pressed"))]
-fn new_game_pressed() {
-    send_to_server(vm, "new game pressed", Request::NewGamePressed)?;
 }
 
 // ARCHIPELAGO
