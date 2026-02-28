@@ -1,3 +1,5 @@
+This mod is possible because of the amazing work from the [refunct-tas](https://github.com/oberien/refunct-tas) team!
+
 # Refunct for Archipelago
 
 How does it work, what are items and locations?
@@ -37,6 +39,10 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 - On Linux, if the error says `thread 'main' panicked at 'called Result::unwrap()'...`, make sure that you configured `LD_PRELOAD` correctly.
 - If you're still having problems, try updating your graphics drivers (yes this already helped many times).
 - Feel free to ask in the discord (Archipelago -> future-game-design -> Refunct)
+
+## Building
+If you want to build the project yourself, follow the steps from the original [refunct-tas](https://github.com/oberien/refunct-tas) project.
+- For Windows: you might need to install "NASM - The Netwide Assembler" and add it to your PATH.
 
 ## Refunct TaS Tool
 This tool is derived from https://github.com/oberien/refunct-tas.
