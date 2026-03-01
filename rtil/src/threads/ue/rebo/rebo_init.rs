@@ -861,6 +861,7 @@ static LAST_PROCESSED_DELTA_BITS: AtomicU64 = AtomicU64::new(0);
 
 struct CachedPlatform {
     platform_id: i32,
+    size: Size3D,
     // platform_ptr: *mut UObject,
     root_component_ptr: *mut UObject,
     set_location_func_ptr: *mut UObject,
@@ -869,21 +870,101 @@ struct CachedPlatform {
 }
 
 impl CachedPlatform {
-    pub fn set_location_and_rotation_cached(&self, x: f32, y: f32, z: f32, pitch: f32, yaw: f32, roll: f32) {
+    pub fn set_location_and_rotation_cached(
+        &self,
+        x: f32,
+        y: f32,
+        z: f32,
+        pitch_deg: f32,
+        yaw_deg: f32,
+        roll_deg: f32,
+        sx: f32,
+        sy: f32, 
+        sz: f32,
+    ) {
+
         unsafe {
-            // let object = ObjectWrapper::new(self.root_component_ptr);
-            if let Some(func) = ObjectWrapper::new(self.set_location_func_ptr).try_upcast::<FunctionWrapper>() {
+            if let Some(func) =
+                ObjectWrapper::new(self.set_location_func_ptr).try_upcast::<FunctionWrapper>()
+            {
+                let half_x = sx * 0.5;
+                let half_y = sy * 0.5;
+                let half_z = sz * 0.5;
+
+                // Pivot is one corner, cube extends in +X +Y +Z
+                let mut ox = half_x;
+                let mut oy = half_y;
+                let mut oz = half_z;
+
+                if pitch_deg != 0.0 || yaw_deg != 0.0 || roll_deg != 0.0 {
+
+                    let pitch = -pitch_deg.to_radians();
+                    let yaw   = yaw_deg.to_radians();
+                    let roll  = -roll_deg.to_radians();
+
+                    // ---- 1. Roll (X axis) ----
+                    {
+                        let cos_r = roll.cos();
+                        let sin_r = roll.sin();
+
+                        let ny = oy * cos_r - oz * sin_r;
+                        let nz = oy * sin_r + oz * cos_r;
+
+                        oy = ny;
+                        oz = nz;
+                    }
+
+                    // ---- 2. Pitch (Y axis) ----
+                    {
+                        let cos_p = pitch.cos();
+                        let sin_p = pitch.sin();
+
+                        let nx = ox * cos_p + oz * sin_p;
+                        let nz = -ox * sin_p + oz * cos_p;
+
+                        ox = nx;
+                        oz = nz;
+                    }
+
+                    // ---- 3. Yaw (Z axis) ----
+                    {
+                        let cos_y = yaw.cos();
+                        let sin_y = yaw.sin();
+
+                        let nx = ox * cos_y - oy * sin_y;
+                        let ny = ox * sin_y + oy * cos_y;
+
+                        ox = nx;
+                        oy = ny;
+                    }
+                }
+
+                let final_x = x - ox;
+                let final_y = y - oy;
+                let final_z = z - oz;
+
                 let params = func.create_argument_struct();
-                let location: StructValueWrapper = params.get_field("NewLocation").unwrap();
-                location.get_field("X").unwrap::<&Cell<f32>>().set(x);
-                location.get_field("Y").unwrap::<&Cell<f32>>().set(y);
-                location.get_field("Z").unwrap::<&Cell<f32>>().set(z);
-                let rotation: StructValueWrapper = params.get_field("NewRotation").unwrap();
-                rotation.get_field("Pitch").unwrap::<&Cell<f32>>().set(pitch);
-                rotation.get_field("Yaw").unwrap::<&Cell<f32>>().set(yaw);
-                rotation.get_field("Roll").unwrap::<&Cell<f32>>().set(roll);
-                params.get_field("bSweep").unwrap::<BoolValueWrapper>().set(false);
-                params.get_field("bTeleport").unwrap::<BoolValueWrapper>().set(true);
+
+                let location: StructValueWrapper =
+                    params.get_field("NewLocation").unwrap();
+                location.get_field("X").unwrap::<&Cell<f32>>().set(final_x);
+                location.get_field("Y").unwrap::<&Cell<f32>>().set(final_y);
+                location.get_field("Z").unwrap::<&Cell<f32>>().set(final_z);
+
+                let rotation: StructValueWrapper =
+                    params.get_field("NewRotation").unwrap();
+                rotation.get_field("Pitch").unwrap::<&Cell<f32>>().set(pitch_deg);
+                rotation.get_field("Yaw").unwrap::<&Cell<f32>>().set(yaw_deg);
+                rotation.get_field("Roll").unwrap::<&Cell<f32>>().set(roll_deg);
+
+                params.get_field("bSweep")
+                    .unwrap::<BoolValueWrapper>()
+                    .set(false);
+
+                params.get_field("bTeleport")
+                    .unwrap::<BoolValueWrapper>()
+                    .set(true);
+
                 func.call(self.root_component_ptr, &params);
             }
         }
@@ -929,7 +1010,7 @@ impl PlatformSpawner {
                     rot,
                     self.size
                 ), 
-                self.speed, self.locations.clone(), loc, rot, self.rotation_delta, self.end_behavior
+                self.speed, self.locations.clone(), loc, rot, self.size, self.rotation_delta, self.end_behavior
             );
             
             self.timer = self.interval;
@@ -1498,17 +1579,15 @@ fn spawn_cube_rando_location(max: f32, spawn_platform_below: bool) -> i32 {
     let loc = Location { x: (rx-0.5) * 2. * max as f32, y: (ry-0.5) * 2. * max as f32, z: rz * max as f32 };
     if spawn_platform_below {
         let mut platform_loc = loc;
-        platform_loc.x -= 125.;
-        platform_loc.y -= 125.;
-        platform_loc.z -= 250.;
+        platform_loc.z -= 125.;
         spawn_platform(platform_loc, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1., y: 1., z: 1. }); // this id won't be returned
     }
     spawn_cube(loc)
 }
 
 #[rebo::function("Tas::spawn_platform")]
-fn spawn_platform_rebo(loc: Location, rot: Rotation) -> i32 {
-    spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. })
+fn spawn_platform_rebo(loc: Location, rot: Rotation, size: Size3D) -> i32 {
+    spawn_platform(loc, rot, size)
 }
 
 
@@ -1520,7 +1599,7 @@ fn spawn_platform(loc: Location, rot: Rotation, size: Size3D) -> i32 {
     PLATFORMS_GONE.with(|gone_list| {
         let mut gone_list = gone_list.borrow_mut();
         if let Some(index) = gone_list.pop() {
-            index.set_location_and_rotation_cached(loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll);
+            index.set_location_and_rotation_cached(loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll, size.x, size.y, size.z);
             index.set_size_cached(size.x, size.y, size.z);
             internal_index = index.platform_id;
             PLATFORMS_STATIC.with(|gone_list| {
@@ -1533,7 +1612,7 @@ fn spawn_platform(loc: Location, rot: Rotation, size: Size3D) -> i32 {
         return internal_index;
     }
 
-    match crate::native::PlatformWrapper::spawn(loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll) {
+    match crate::native::PlatformWrapper::spawn(loc.x - size.x * 125., loc.y - size.y * 125., loc.z - size.z * 125., rot.pitch, rot.yaw, rot.roll) {
         Ok(platform) => {
             let index = platform.internal_index();
             STATE.lock().unwrap().as_mut().unwrap().extra_platforms.push(index);
@@ -1565,6 +1644,7 @@ fn spawn_platform(loc: Location, rot: Rotation, size: Size3D) -> i32 {
                 if let Some(set_size_func) = root_component.class().find_function("SetRelativeScale3D") {
                     list.borrow_mut().push(CachedPlatform {
                         platform_id: internal_index,
+                        size: size,
                         root_component_ptr: root_component.as_ptr(),
                         set_location_func_ptr: func.as_ptr() as *mut UObject,
                         set_size_func_ptr: set_size_func.as_ptr() as *mut UObject,
@@ -1608,7 +1688,7 @@ fn destroy_platforms(vanilla: bool, extra: i32) {
         PLATFORMS_STATIC.with(|list| {
             let mut list = list.borrow_mut();
             for platform in list.drain(..) {
-                platform.set_location_and_rotation_cached(99999., 99999., 99999., 0., 0., 0.);
+                platform.set_location_and_rotation_cached(99999., 99999., 99999., 0., 0., 0., 1., 1., 1.);
                 PLATFORMS_GONE.with(|gone_list| {
                     gone_list.borrow_mut().push(platform);
                 });
@@ -1618,7 +1698,7 @@ fn destroy_platforms(vanilla: bool, extra: i32) {
         PLATFORMS_TICK.with(|list| {
             let mut list = list.borrow_mut();
             for platform in list.drain(..) {
-                platform.set_location_and_rotation_cached(99999., 99999., 99999., 0., 0., 0.);
+                platform.set_location_and_rotation_cached(99999., 99999., 99999., 0., 0., 0., 1., 1., 1.);
                 PLATFORMS_GONE.with(|gone_list| {
                     gone_list.borrow_mut().push(platform);
                 });
@@ -1915,6 +1995,7 @@ fn set_platform_movement_path_rebo(internal_index: i32, speed: f32, locations: V
         locations, 
         first_location,  // current location is set to the first point in the path, but it will be overridden on the first tick, so it doesn't really matter what we set it to
         Rotation { pitch: 0.0, yaw: 0.0, roll: 0.0 },
+        Size3D { x: 1., y: 1., z: 1. },
         Rotation { pitch: 0.0, yaw: 0.0, roll: 0.0 }, 
         end_behavior
     )
@@ -1929,6 +2010,7 @@ fn set_platform_movement_path_min_max_speed_rebo(internal_index: i32, min_speed:
         locations, 
         first_location,  // current location is set to the first point in the path, but it will be overridden on the first tick, so it doesn't really matter what we set it to
         Rotation { pitch: 0.0, yaw: 0.0, roll: 0.0 }, 
+        Size3D { x: 1., y: 1., z: 1. },
         Rotation { pitch: 0.0, yaw: 0.0, roll: 0.0 }, 
         end_behavior
     )
@@ -1939,6 +2021,7 @@ fn set_platform_movement_path(
     locations: Vec<Vec<f32>>,
     current_loc: Location,
     current_rot: Rotation,
+    size: Size3D,
     rotation_delta: Rotation,
     end_behavior: u8,
 ) -> i32 {
@@ -1991,6 +2074,7 @@ fn set_platform_movement_path(
                 if let Some(set_size_func) = root_component.class().find_function("SetRelativeScale3D") {
                     list.borrow_mut().push(CachedPlatform {
                         platform_id: internal_index,
+                        size: size,
                         root_component_ptr: root_component.as_ptr(),
                         set_location_func_ptr: set_location_func.as_ptr() as *mut UObject,
                         set_size_func_ptr: set_size_func.as_ptr() as *mut UObject,
@@ -2019,7 +2103,7 @@ fn tick_platforms(delta_seconds: f32) -> bool {
             if remove == 2 {
                 // remove this platform from PLATFORMS_TICK and add it to PLATFORMS_GONE, so we can keep track of it in case it gets destroyed and we need to remove it from the cache
                 let entry = platforms.remove(i);
-                entry.set_location_and_rotation_cached(99999., 99999., 99999., 0., 0., 0.);
+                entry.set_location_and_rotation_cached(99999., 99999., 99999., 0., 0., 0., 1., 1., 1.);
                 PLATFORMS_GONE.with(|gone_list| {
                     gone_list.borrow_mut().push(entry);
                 });
@@ -2097,11 +2181,9 @@ fn movement_step_cached(platform: &mut CachedPlatform, delta_seconds: f32) -> i3
     let rot_yaw = current_rot.yaw + rot_delta.yaw * delta_seconds;
     let rot_roll = current_rot.roll + rot_delta.roll * delta_seconds;
 
-    log!("Moving platform {} towards ({}, {}, {}) with speed {}, distance {}, step {}, end_behavior {}, rot ({}, {}, {})",
-        platform.platform_id, target.x, target.y, target.z, speed, dist_sq.sqrt(), stepp, end_behavior, rot_pitch, rot_yaw, rot_roll);
 
     if dist_sq <= stepp * stepp || dist_sq <= f32::EPSILON {
-        platform.set_location_and_rotation_cached(target.x, target.y, target.z, rot_pitch, rot_yaw, rot_roll);
+        platform.set_location_and_rotation_cached(target.x, target.y, target.z, rot_pitch, rot_yaw, rot_roll, platform.size.x, platform.size.y, platform.size.z);
         platform.movement.as_mut().unwrap().current_loc = *target;
         platform.movement.as_mut().unwrap().current_rot = Rotation { pitch: rot_pitch, yaw: rot_yaw, roll: rot_roll };
 
@@ -2145,7 +2227,7 @@ fn movement_step_cached(platform: &mut CachedPlatform, delta_seconds: f32) -> i3
         let nx = cx + dx / dist * stepp;
         let ny = cy + dy / dist * stepp;
         let nz = cz + dz / dist * stepp;
-        platform.set_location_and_rotation_cached(nx, ny, nz, rot_pitch, rot_yaw, rot_roll);
+        platform.set_location_and_rotation_cached(nx, ny, nz, rot_pitch, rot_yaw, rot_roll, platform.size.x, platform.size.y, platform.size.z);
         platform.movement.as_mut().unwrap().current_loc = Location { x: nx, y: ny, z: nz };
         platform.movement.as_mut().unwrap().current_rot = Rotation { pitch: rot_pitch, yaw: rot_yaw, roll: rot_roll };
     }
