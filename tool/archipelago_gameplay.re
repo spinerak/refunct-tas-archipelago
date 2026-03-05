@@ -54,6 +54,7 @@ struct ArchipelagoState {
     og_randomizer_order: List<int>,
     og_randomizer_index: int,
 
+    block_brawl_alt: bool,
     score_block_brawl_reds: int,
     score_block_brawl_blues: int,
     score_block_brawl_greens: int,
@@ -143,6 +144,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         og_randomizer_index: -1,
         og_randomizer_order: List::new(),
 
+        block_brawl_alt: false,
         score_block_brawl_reds: 0,
         score_block_brawl_blues: 0,
         score_block_brawl_greens: 0,
@@ -742,6 +744,9 @@ fn archipelago_start(){
     if ARCHIPELAGO_STATE.gamemode == 10 {
         archipelago_frogger_start();
     }
+    if ARCHIPELAGO_STATE.gamemode == 11 {
+        archipelago_button_blub();
+    }
     
     let mut i = 0;
     for item in ARCHIPELAGO_STATE.received_items {
@@ -932,6 +937,95 @@ fn archipelago_button_galore_start(){
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
+
+
+    let mut i = 0;
+    while i < 200 {
+        Tas::spawn_platform_rando_location_uw();
+        i += 1;
+    }
+
+    // log(f"Spawning Block Brawl cubes, colors unlocked: {ARCHIPELAGO_STATE.unlock_block_brawl_reds}, {ARCHIPELAGO_STATE.unlock_block_brawl_greens}, {ARCHIPELAGO_STATE.unlock_block_brawl_blues}, {ARCHIPELAGO_STATE.unlock_block_brawl_yellows}");
+
+    let mut j = 0;
+    if ARCHIPELAGO_STATE.unlock_block_brawl_reds {
+        // log("Spawning Block Brawl Reds");
+        while j < 5 {
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+            ARCHIPELAGO_STATE.block_brawl_red_ids.push(id);
+            j += 1;
+        }
+        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
+    }
+    j = 0;
+    if ARCHIPELAGO_STATE.unlock_block_brawl_greens {
+        // log("Spawning Block Brawl Greens");
+        while j < 5 {
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+            ARCHIPELAGO_STATE.block_brawl_green_ids.push(id);
+            j += 1;
+        }
+        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
+    }
+    j = 0;
+    if ARCHIPELAGO_STATE.unlock_block_brawl_blues {
+        // log("Spawning Block Brawl Blues");
+        while j < 5 {
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+            ARCHIPELAGO_STATE.block_brawl_blue_ids.push(id);
+            j += 1;
+        }
+        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
+    }
+    j = 0;
+    if ARCHIPELAGO_STATE.unlock_block_brawl_yellows {
+        // log("Spawning Block Brawl Yellows");
+        while j < 5 {
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+            ARCHIPELAGO_STATE.block_brawl_yellow_ids.push(id);
+            j += 1;
+        }
+        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
+    }
+}
+
+fn archipelago_button_blub(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
+    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+
+
+    let mut i = 0;
+    while i < 200 {
+        Tas::spawn_platform_rando_location_uw();
+        i += 1;
+    }
+
+    let mut j = 0;
+    while j < 5 {
+        let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+        j += 1;
+    }
+    j = 0;
+    while j < 5 {
+        let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+        j += 1;
+    }
+    j = 0;
+    while j < 5 {
+        let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+        j += 1;
+    }
+    j = 0;
+    while j < 5 {
+        let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+        j += 1;
+    }
 }
 
 fn archipelago_og_randomizer_start(){
@@ -971,9 +1065,16 @@ fn archipelago_block_brawl_start(){
     Tas::archipelago_ds_get(f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
 
     let mut i = 0;
-    while i < 200 {
-        Tas::spawn_platform_rando_location(3000., 10.);
-        i += 1;
+    if !ARCHIPELAGO_STATE.block_brawl_alt {
+        while i < 200 {
+            Tas::spawn_platform_rando_location(3000., 10.);
+            i += 1;
+        }
+    } else {
+        while i < 200 {
+            Tas::spawn_platform_rando_location_crazy(3000.);
+            i += 1;
+        }
     }
 
     // log(f"Spawning Block Brawl cubes, colors unlocked: {ARCHIPELAGO_STATE.unlock_block_brawl_reds}, {ARCHIPELAGO_STATE.unlock_block_brawl_greens}, {ARCHIPELAGO_STATE.unlock_block_brawl_blues}, {ARCHIPELAGO_STATE.unlock_block_brawl_yellows}");
@@ -1090,8 +1191,8 @@ fn archipelago_frogger_start(){
     // path in positive x direction, middle y = 0
     Tas::add_platform_spawner(500., 
         List::of(
-            List::of(10500., 1750., 3800.), 
-            List::of(10500., -2000., 3800.)
+            List::of(11000., 1750., 3125.), 
+            List::of(11000., -2000., 3125.)
         ), 
         Size3D { x: 1., y: 1., z: 1. },
         Rotation { pitch: 0., yaw: 0., roll: 0. },
@@ -1100,7 +1201,55 @@ fn archipelago_frogger_start(){
         3.
     );
 
-    Tas::spawn_platform(Location { x: 8250.00, y: -1000.00, z: 3000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }, Size3D { x: 8., y: 8., z: 4. }); 
+    Tas::add_platform_spawner(500., 
+        List::of(
+            List::of(11500., -2000., 3225.), 
+            List::of(11500., 1750., 3225.)
+        ), 
+        Size3D { x: 1., y: 1., z: 1. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        4, 
+        3.
+    );
+
+    Tas::add_platform_spawner(500., 
+        List::of(
+            List::of(12000., 1750., 3225.), 
+            List::of(12000., -2000., 3225.)
+        ), 
+        Size3D { x: 1., y: 1., z: 1. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 10., roll: 0. },
+        4, 
+        3.
+    );
+
+    Tas::add_platform_spawner(500., 
+        List::of(
+            List::of(12500., -2000., 3225.), 
+            List::of(12500., 1750., 3225.)
+        ), 
+        Size3D { x: 1., y: 1., z: 1. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 10., yaw: 10., roll: 10. },
+        4, 
+        3.
+    );
+
+    Tas::add_platform_spawner(500., 
+        List::of(
+            List::of(13000., 1750., 3225.), 
+            List::of(13000., -2000., 3225.)
+        ), 
+        Size3D { x: 1., y: 1., z: 1. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 500., roll: 0. },
+        4, 
+        3.
+    );
+
+
 }
 
 fn archipelago_hillside_start(){
