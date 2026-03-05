@@ -2,7 +2,7 @@ use std::time::SystemTime;
 use std::error::Error;
 use std::thread;
 use archipelago_rs::client::{ArchipelagoClient, ArchipelagoClientReceiver, ArchipelagoClientSender, ArchipelagoError};
-use archipelago_rs::protocol::{ClientStatus, ServerMessage, Bounce, BounceData, ClientMessage, DeathLink, ConnectUpdate, Connect, network_version}; // adjust path if needed
+use archipelago_rs::protocol::{Bounce, BounceData, ClientMessage, ClientStatus, Connect, ConnectUpdate, DeathLink, ServerMessage, network_version}; // adjust path if needed
 use crossbeam_channel::Sender;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::task::AbortHandle;
@@ -59,6 +59,7 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                                         Ok(ServerMessage::Connected(connected_info)) => {
                                             log!("Connected info: {:?}", connected_info);
                                             archipelago_rebo_tx.send(ArchipelagoToRebo::ServerMessage(ServerMessage::Connected(connected_info))).unwrap();
+                                            archipelago_rebo_tx.send(ArchipelagoToRebo::ServerMessage(ServerMessage::RoomInfo(client.room_info().clone()))).unwrap();
                                             let (s, receiver) = client.split();
                                             sender = Some(s);
                                             let join_handle = tokio::spawn(handle_receiver(receiver, archipelago_rebo_tx.clone()));

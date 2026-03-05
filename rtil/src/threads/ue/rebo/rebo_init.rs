@@ -625,6 +625,15 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     log!("RoomInfo message");
                     let msg = format!("Archipelago ServerMessage::RoomInfo: {:?}", info);
                     log!("{}", msg);
+                    
+                    let state = STATE.lock().unwrap();
+                    let tx = &state.as_ref().unwrap().rebo_archipelago_tx;
+                    for game in &info.games {
+                        tx.send(ReboToArchipelago::ClientMessage(
+                            ClientMessage::GetDataPackage(GetDataPackage { games: Some(vec![game.clone()]) })
+                        )).unwrap();
+                    }
+
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::ConnectionRefused(info))) => {
                     log!("ConnectionRefused message");
@@ -1698,10 +1707,7 @@ fn archipelago_connect(server_and_port: String, game: String, slot: String, pass
         tags: vec![],
     }).unwrap();
 
-    // Request item/location names from the server
-    tx.send(ReboToArchipelago::ClientMessage(
-        ClientMessage::GetDataPackage(GetDataPackage { games: None, })
-    )).unwrap();
+    // Don't request datapackage here anymore
 }
 #[rebo::function(raw("Tas::archipelago_disconnect"))]
 fn archipelago_disconnect() {
