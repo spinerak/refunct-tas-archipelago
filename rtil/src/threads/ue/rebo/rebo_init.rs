@@ -25,8 +25,10 @@ use chrono::{DateTime, Local};
 use crate::threads::ue::rebo::livesplit;
 use crate::threads::ue::iced_ui::Clipboard;
 use crate::threads::ue::iced_ui::rebo_elements::{IcedButton, IcedColumn, IcedElement, IcedRow, IcedText, IcedWindow};
+use std::cell::RefCell;
+use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::native::{BoolValueWrapper};
+use crate::native::{BoolValueWrapper, FunctionWrapper, StructValueWrapper};
 use crate::native::reflection::DerefToObjectWrapper;
 use crate::native::font::replace_unrenderable_chars;
 
@@ -91,12 +93,21 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
 
         .add_function(spawn_platform_rebo)
         .add_function(spawn_platform_rando_location)
+        .add_function(spawn_platform_rando_location_crazy)
         .add_function(spawn_platform_rando_location_2)
         .add_function(spawn_platform_rando_location_3)
         .add_function(spawn_platform_rando_location_4)
+        .add_function(spawn_platform_rando_location_uw)
         .add_function(spawn_cube_rando_location)
+        .add_function(spawn_cube_rando_location_uw)
+        .add_function(add_platform_spawner)
+        .add_function(set_platform_location)
+        .add_function(set_platform_scale)
+        .add_function(set_platform_movement_path_rebo)
+        .add_function(set_platform_movement_path_min_max_speed_rebo)
         .add_function(destroy_platforms)
         .add_function(destroy_platform_rebo)
+        .add_function(destroy_spawners)
 
         .add_function(spawn_cube_rebo)
         .add_function(reset_cubes)
@@ -107,6 +118,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_cube_color_rebo)
         .add_function(set_cube_color_random)
         .add_function(set_cube_location)
+        .add_function(set_cube_rando_location)
         .add_function(set_cube_scale)
         .add_function(get_vanilla_cubes)
         .add_function(get_non_vanilla_cubes)
@@ -231,6 +243,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_input_mode_ui_only)
         .add_function(flush_pressed_keys)
         .add_external_type(Location)
+        .add_external_type(Size3D)
         .add_external_type(Rotation)
         .add_external_type(Velocity)
         .add_external_type(Acceleration)
@@ -791,7 +804,12 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
 
         // get current timestamp in milliseconds:
         let before = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
+        
         let _ = archipelago_tick(vm, before)?;
+
+
+        
+        tick();
 
         match to_be_returned {
             Some(ret) => {
@@ -805,6 +823,207 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
             None => (),
         }
     }
+}
+thread_local! {
+    static LAST_TICK_FRAME: Cell<u64> = Cell::new(0);
+}
+static LAST_PROCESSED_DELTA_BITS: AtomicU64 = AtomicU64::new(0);
+
+
+struct CachedPlatform {
+    platform_id: i32,
+    size: Size3D,
+    // platform_ptr: *mut UObject,
+    root_component_ptr: *mut UObject,
+    set_location_func_ptr: *mut UObject,
+    set_size_func_ptr: *mut UObject,
+    movement: Option<PlatformMovement>,
+}
+
+impl CachedPlatform {
+    pub fn set_location_and_rotation_cached(
+        &self,
+        x: f32,
+        y: f32,
+        z: f32,
+        pitch_deg: f32,
+        yaw_deg: f32,
+        roll_deg: f32,
+        sx: f32,
+        sy: f32, 
+        sz: f32,
+    ) {
+
+        unsafe {
+            if let Some(func) =
+                ObjectWrapper::new(self.set_location_func_ptr).try_upcast::<FunctionWrapper>()
+            {
+                let half_x = sx * 0.5;
+                let half_y = sy * 0.5;
+                let half_z = sz * 0.5;
+
+                // Pivot is one corner, cube extends in +X +Y +Z
+                let mut ox = half_x;
+                let mut oy = half_y;
+                let mut oz = half_z;
+
+                if pitch_deg != 0.0 || yaw_deg != 0.0 || roll_deg != 0.0 {
+
+                    let pitch = -pitch_deg.to_radians();
+                    let yaw   = yaw_deg.to_radians();
+                    let roll  = -roll_deg.to_radians();
+
+                    // ---- 1. Roll (X axis) ----
+                    {
+                        let cos_r = roll.cos();
+                        let sin_r = roll.sin();
+
+                        let ny = oy * cos_r - oz * sin_r;
+                        let nz = oy * sin_r + oz * cos_r;
+
+                        oy = ny;
+                        oz = nz;
+                    }
+
+                    // ---- 2. Pitch (Y axis) ----
+                    {
+                        let cos_p = pitch.cos();
+                        let sin_p = pitch.sin();
+
+                        let nx = ox * cos_p + oz * sin_p;
+                        let nz = -ox * sin_p + oz * cos_p;
+
+                        ox = nx;
+                        oz = nz;
+                    }
+
+                    // ---- 3. Yaw (Z axis) ----
+                    {
+                        let cos_y = yaw.cos();
+                        let sin_y = yaw.sin();
+
+                        let nx = ox * cos_y - oy * sin_y;
+                        let ny = ox * sin_y + oy * cos_y;
+
+                        ox = nx;
+                        oy = ny;
+                    }
+                }
+
+                let final_x = x - ox;
+                let final_y = y - oy;
+                let final_z = z - oz;
+
+                let params = func.create_argument_struct();
+
+                let location: StructValueWrapper =
+                    params.get_field("NewLocation").unwrap();
+                location.get_field("X").unwrap::<&Cell<f32>>().set(final_x);
+                location.get_field("Y").unwrap::<&Cell<f32>>().set(final_y);
+                location.get_field("Z").unwrap::<&Cell<f32>>().set(final_z);
+
+                let rotation: StructValueWrapper =
+                    params.get_field("NewRotation").unwrap();
+                rotation.get_field("Pitch").unwrap::<&Cell<f32>>().set(pitch_deg);
+                rotation.get_field("Yaw").unwrap::<&Cell<f32>>().set(yaw_deg);
+                rotation.get_field("Roll").unwrap::<&Cell<f32>>().set(roll_deg);
+
+                params.get_field("bSweep")
+                    .unwrap::<BoolValueWrapper>()
+                    .set(false);
+
+                params.get_field("bTeleport")
+                    .unwrap::<BoolValueWrapper>()
+                    .set(true);
+
+                func.call(self.root_component_ptr, &params);
+            }
+        }
+    }
+
+    pub fn set_size_cached(&self, x: f32, y: f32, z: f32) {
+        unsafe {
+            // let object = ObjectWrapper::new(self.root_component_ptr);
+            if let Some(func) = ObjectWrapper::new(self.set_size_func_ptr).try_upcast::<FunctionWrapper>() {
+                let params = func.create_argument_struct();
+                let location: StructValueWrapper = params.get_field("NewScale3D").unwrap();
+                location.get_field("X").unwrap::<&Cell<f32>>().set(x);
+                location.get_field("Y").unwrap::<&Cell<f32>>().set(y);
+                location.get_field("Z").unwrap::<&Cell<f32>>().set(z);
+                func.call(self.root_component_ptr, &params);
+            }
+        }
+    }
+}
+
+struct PlatformSpawner {
+    speed: f32,
+    locations: Vec<Vec<f32>>,
+    size: Size3D,  // size of the spawned platform
+    rotation: Rotation,  // rotation of the spawned platform
+    rotation_delta: Rotation,  // rotation delta of the spawned platform
+    end_behavior: u8,
+    interval: f32,  // constant time between spawns
+    timer: f32,     // countdown timer
+}
+
+impl PlatformSpawner {
+    pub fn tick(&mut self, delta: f32) {
+        self.timer -= delta;
+
+        if self.timer <= 0.0 {
+            log!("Spawning platform at location: {:?}, rotation: {:?}", self.locations[0], self.rotation);
+            let loc = Location { x: self.locations[0][0], y: self.locations[0][1], z: self.locations[0][2] };
+            let rot = self.rotation;
+            set_platform_movement_path(
+                spawn_platform(
+                    loc,
+                    rot,
+                    self.size
+                ), 
+                self.speed, self.locations.clone(), loc, rot, self.size, self.rotation_delta, self.end_behavior
+            );
+            
+            self.timer = self.interval;
+        }
+    }
+}
+
+pub fn tick(){
+    let delta = FApp::delta();
+    let bits = delta.to_bits();
+
+    let last = LAST_PROCESSED_DELTA_BITS.load(Ordering::Relaxed);
+    if last == bits {
+        // Already ticked this frame
+        return;
+    }
+
+    LAST_PROCESSED_DELTA_BITS.store(bits, Ordering::Relaxed);
+    
+    let (x, y, z) = AMyCharacter::get_player().location();
+    let (rx, ry, rz) = AMyCharacter::get_player().rotation();
+    
+    tick_platforms_once_per_frame(delta);
+    tick_platform_spawners_once_per_frame(delta);
+
+    if y < 40000. {
+        LAST_VALID_LOCATION.with(|cell| cell.set(Location { x, y, z }));
+        LAST_VALID_ROTATION.with(|cell| cell.set(Rotation { pitch: rx, yaw: ry, roll: rz }));
+    }else{
+        let loc = LAST_VALID_LOCATION.with(|cell| cell.get());
+        AMyCharacter::get_player().set_location(loc.x, loc.y, loc.z);
+        let rot = LAST_VALID_ROTATION.with(|cell| cell.get());
+        AMyCharacter::get_player().set_rotation(rot.pitch, rot.yaw, rot.roll);
+    }
+}
+
+pub fn tick_platforms_once_per_frame(delta: f64) -> bool {
+    tick_platforms(delta as f32)
+}
+
+pub fn tick_platform_spawners_once_per_frame(delta: f64) {
+    tick_platform_spawners(delta as f32);
 }
 
 #[rebo::required_rebo_functions]
@@ -1009,6 +1228,12 @@ fn get_location_and_log() {
 fn set_location(loc: Location) {
     log!("TELEPORTED to x={}, y={}, z={}", loc.x, loc.y, loc.z);
     AMyCharacter::get_player().set_location(loc.x, loc.y, loc.z);
+}
+#[derive(Debug, Clone, Copy, rebo::ExternalType, Serialize, Deserialize)]
+struct Size3D {
+    x: f32,
+    y: f32,
+    z: f32,
 }
 #[derive(Debug, Clone, Copy, rebo::ExternalType, Serialize, Deserialize)]
 struct Rotation {
@@ -1253,7 +1478,46 @@ fn spawn_platform_rando_location(max_loc: f32, max_rot: f32) -> i32 {
         yaw: (rand::random::<f32>() - 0.5) * 2. * max_rot as f32,
         roll: (rand::random::<f32>() - 0.5) * 2. * max_rot as f32,
     };
-    spawn_platform(loc, rot)
+    spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. })
+}
+
+#[rebo::function("Tas::spawn_platform_rando_location_crazy")]
+fn spawn_platform_rando_location_crazy(max_loc: f32) -> i32 {
+    let rx = rand::random::<f32>();
+    let ry = rand::random::<f32>();
+    let rz = rand::random::<f32>();
+    // let sz1 = 1000. + rand::random::<f32>() * 5000.;
+    // let sz2 = 1000. + rand::random::<f32>() * 5000.;
+    let loc = Location { x: (rx-0.5) * 2. * max_loc as f32, y: (ry-0.5) * 2. * max_loc as f32, z: rz * max_loc as f32 };
+    let rot = Rotation {
+        pitch: rand::random::<f32>() * 360.0,
+        yaw: rand::random::<f32>() * 360.0,
+        roll: rand::random::<f32>() * 360.0,
+    };
+    let id = spawn_platform(loc, rot, Size3D { 
+        x: 0.5 + 2.9 * rand::random::<f32>(), 
+        y: 0.5 + 2.9 * rand::random::<f32>(), 
+        z: 0.5 + 2.9 * rand::random::<f32>() 
+    });
+    id
+}
+#[rebo::function("Tas::spawn_platform_rando_location_uw")]
+fn spawn_platform_rando_location_uw() -> i32 {
+    let rx = rand::random::<f32>();
+    let ry = rand::random::<f32>();
+    let rz = rand::random::<f32>();
+    // let sz1 = 1000. + rand::random::<f32>() * 5000.;
+    // let sz2 = 1000. + rand::random::<f32>() * 5000.;
+    let loc = Location { x: (rx-0.5) * 2. * 3000.0, y: (ry-0.5) * 2. * 3000.0, z: -800. - rz * 1600.0 };
+    let rot = Rotation {
+        pitch: rand::random::<f32>() * 360. as f32,
+        yaw: rand::random::<f32>() * 360. as f32,
+        roll: rand::random::<f32>() * 360. as f32,
+    };
+    let id = spawn_platform(loc, rot, 
+        Size3D { x: rand::random::<f32>() * 3., y: rand::random::<f32>() * 3., z: rand::random::<f32>() * 3. }
+    );
+    id
 }
 #[rebo::function("Tas::spawn_platform_rando_location_2")]
 fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32) -> Location {
@@ -1266,7 +1530,7 @@ fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32) -> Locatio
         yaw: 0.0,
         roll: 0.0,
     };
-    spawn_platform(loc, rot);
+    spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. });
     Location { x: rx, y: ry, z: rz }
 }
 
@@ -1282,7 +1546,7 @@ fn spawn_platform_rando_location_3(lx: f32, ly: f32, lz: f32, i: f32) -> Locatio
         yaw: 0.0,
         roll: 0.0,
     };
-    spawn_platform(loc, rot);
+    spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. });
     Location { x: rx, y: ry, z: rz }
 }
 
@@ -1298,7 +1562,7 @@ fn spawn_platform_rando_location_4(lx: f32, ly: f32, lz: f32, _i: f32) -> Locati
         yaw: 0.0,
         roll: 0.0,
     };
-    spawn_platform(loc, rot);
+    spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. });
     Location { x: rx, y: ry, z: rz }
 }
 
@@ -1310,43 +1574,147 @@ fn spawn_cube_rando_location(max: f32, spawn_platform_below: bool) -> i32 {
     let loc = Location { x: (rx-0.5) * 2. * max as f32, y: (ry-0.5) * 2. * max as f32, z: rz * max as f32 };
     if spawn_platform_below {
         let mut platform_loc = loc;
-        platform_loc.x -= 125.;
-        platform_loc.y -= 125.;
-        platform_loc.z -= 250.;
-        spawn_platform(platform_loc, Rotation { pitch: 0., yaw: 0., roll: 0. }); // this id won't be returned
+        platform_loc.z -= 125.;
+        spawn_platform(platform_loc, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1., y: 1., z: 1. }); // this id won't be returned
     }
+    spawn_cube(loc)
+}
+#[rebo::function("Tas::spawn_cube_rando_location_uw")]
+fn spawn_cube_rando_location_uw() -> i32 {
+    let rx = rand::random::<f32>();
+    let ry = rand::random::<f32>();
+    let rz = rand::random::<f32>();
+    let loc = Location { x: (rx-0.5) * 2. * 3000.0, y: (ry-0.5) * 2. * 3000.0, z: -800. - rz * 1600.0 };
     spawn_cube(loc)
 }
 
 #[rebo::function("Tas::spawn_platform")]
-fn spawn_platform_rebo(loc: Location, rot: Rotation) -> i32 {
-    spawn_platform(loc, rot)
+fn spawn_platform_rebo(loc: Location, rot: Rotation, size: Size3D) -> i32 {
+    spawn_platform(loc, rot, size)
 }
-fn spawn_platform(loc: Location, rot: Rotation) -> i32 {
-    match crate::native::PlatformWrapper::spawn(loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll) {
+
+
+
+fn spawn_platform(loc: Location, rot: Rotation, size: Size3D) -> i32 {
+    let mut internal_index = -1;
+
+    // if there is a platform in PLATFORMS_GONE, put its index as internal_index:
+    PLATFORMS_GONE.with(|gone_list| {
+        let mut gone_list = gone_list.borrow_mut();
+        if let Some(index) = gone_list.pop() {
+            index.set_location_and_rotation_cached(loc.x, loc.y, loc.z, rot.pitch, rot.yaw, rot.roll, size.x, size.y, size.z);
+            index.set_size_cached(size.x, size.y, size.z);
+            internal_index = index.platform_id;
+            PLATFORMS_STATIC.with(|gone_list| {
+                gone_list.borrow_mut().push(index);
+            });
+        }
+    });
+
+    if internal_index != -1 {
+        return internal_index;
+    }
+
+    match crate::native::PlatformWrapper::spawn(loc.x - size.x * 125., loc.y - size.y * 125., loc.z - size.z * 125., rot.pitch, rot.yaw, rot.roll) {
         Ok(platform) => {
             let index = platform.internal_index();
             STATE.lock().unwrap().as_mut().unwrap().extra_platforms.push(index);
             log!("Successfully spawned platform at {:p} with internal index {}", platform.as_ptr(), index);
-            index
+            internal_index = index;
         }
+        // at the end return index
         Err(e) => {
             panic!("Failed to spawn platform: {}", e);
         }
     }
+
+    find_platform_and(internal_index, |platform| platform.set_scale(size.x, size.y, size.z))
+        .unwrap_or_else(|e| log!("Could not set scale for platform {:?}: {}", internal_index, e));
+    
+    let ptr = match find_platform_and(internal_index, |p| p.as_ptr() as *mut UObject) {
+        Ok(ptr) => ptr,
+        Err(e) => {
+            log!("Could not set movement path for platform {:?}: {}", internal_index, e);
+            return internal_index;
+        }
+    };
+
+    PLATFORMS_STATIC.with(|list| {
+        let object = unsafe { ObjectWrapper::new(ptr) };
+        if let Some(platform) = object.try_upcast::<PlatformWrapper>() {
+            let root_component = platform.get_field("RootComponent").unwrap::<ObjectWrapper>();
+            if let Some(func) = root_component.class().find_function("K2_SetWorldLocationAndRotation") {
+                if let Some(set_size_func) = root_component.class().find_function("SetRelativeScale3D") {
+                    list.borrow_mut().push(CachedPlatform {
+                        platform_id: internal_index,
+                        size: size,
+                        root_component_ptr: root_component.as_ptr(),
+                        set_location_func_ptr: func.as_ptr() as *mut UObject,
+                        set_size_func_ptr: set_size_func.as_ptr() as *mut UObject,
+
+                        movement: None,
+                    });
+                }
+            }
+        }
+    });
+    internal_index
 }
 
+
+
 #[rebo::function("Tas::destroy_platforms")]
-fn destroy_platforms(vanilla: bool, extra: bool) {
+fn destroy_platforms(vanilla: bool, extra: i32) {
+    //extra 1 means move to gone list, extra 2 means destroy
+
     if vanilla {
         // don't :)
     }
-    if extra {
+    if extra == 2 {
         let non_vanilla_platforms = get_non_vanilla_platforms();
         for p in non_vanilla_platforms {
             destroy_platform(p);
         }
+        //clean PLATFORMS_TICK, STATI AND GONE:
+        PLATFORMS_STATIC.with(|list| {
+            list.borrow_mut().clear();
+        });
+        PLATFORMS_TICK.with(|list| {
+            list.borrow_mut().clear();
+        });
+        PLATFORMS_GONE.with(|list| {
+            list.borrow_mut().clear();
+        });
     }
+    if extra == 1 {
+        // for everything in PLATFORMS_TICK and PLATFORMS_STATIC, set location to 9999 and move to PLATFORMS_GONE
+        PLATFORMS_STATIC.with(|list| {
+            let mut list = list.borrow_mut();
+            for platform in list.drain(..) {
+                platform.set_location_and_rotation_cached(99999., 99999., 99999., 0., 0., 0., 1., 1., 1.);
+                PLATFORMS_GONE.with(|gone_list| {
+                    gone_list.borrow_mut().push(platform);
+                });
+                log!("A Moved platform to gone list");
+            }
+        });
+        PLATFORMS_TICK.with(|list| {
+            let mut list = list.borrow_mut();
+            for platform in list.drain(..) {
+                platform.set_location_and_rotation_cached(99999., 99999., 99999., 0., 0., 0., 1., 1., 1.);
+                PLATFORMS_GONE.with(|gone_list| {
+                    gone_list.borrow_mut().push(platform);
+                });
+                log!("B Moved platform to gone list");
+            }
+        });
+    }
+}
+#[rebo::function("Tas::destroy_spawners")]
+fn destroy_spawners() {
+    PLATFORM_SPAWNERS.with(|spawners| {
+        spawners.borrow_mut().clear();
+    });
 }
 #[rebo::function("Tas::spawn_cube")]
 fn spawn_cube_rebo(loc: Location) -> i32 {
@@ -1489,13 +1857,35 @@ fn find_cube_and<R: 'static, F: FnOnce(&CubeWrapper) -> R>(internal_index: i32, 
     })
 }
 
+static PLATFORM_PTR_CACHE: Lazy<std::sync::Mutex<HashMap<i32, usize>>> = Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
+
 fn find_platform_and<R: 'static, F: FnOnce(&PlatformWrapper) -> R>(internal_index: i32, f: F) -> Result<R, String> {
+    // try cached pointer first (do not hold the lock while calling into UE)
+    if let Some(ptr) = {
+        let cache = PLATFORM_PTR_CACHE.lock().unwrap();
+        cache.get(&internal_index).copied()
+    } {
+        let object = unsafe { ObjectWrapper::new(ptr as *mut UObject) };
+        if !object.is_null() {
+            if let Some(platform) = object.try_upcast::<PlatformWrapper>() {
+                return Ok(f(&platform));
+            }
+        }
+        // stale entry -> remove it
+        PLATFORM_PTR_CACHE.lock().unwrap().remove(&internal_index);
+    }
+
+    // fallback to expensive lookup and populate cache
     UeScope::with(|scope| {
         let item = scope.object_array().try_get(internal_index)
             .ok_or_else(|| format!("Failed to find platform at index {}", internal_index))?;
 
         match item.object().try_upcast::<PlatformWrapper>() {
-            Some(platform) => Ok(f(&platform)),
+            Some(platform) => {
+                let ptr = platform.as_ptr() as usize;
+                PLATFORM_PTR_CACHE.lock().unwrap().insert(internal_index, ptr);
+                Ok(f(&platform))
+            }
             None => Err(format!("Failed to find platform {}", internal_index))
         }
     })
@@ -1555,6 +1945,308 @@ fn set_cube_location(internal_index: i32, loc: Location) {
         .unwrap_or_else(|e| log!("Could not set location for cube {:?}: {}", internal_index, e));
 }
 
+#[rebo::function("Tas::set_platform_location")]
+fn set_platform_location(internal_index: i32, loc: Location) {
+    find_platform_and(internal_index, |platform| platform.set_location(loc.x, loc.y, loc.z))
+        .unwrap_or_else(|e| log!("Could not set location for platform {:?}: {}", internal_index, e));
+}
+
+#[rebo::function("Tas::set_platform_scale")]
+fn set_platform_scale(internal_index: i32, scale_x: f32, scale_y: f32, scale_z: f32) -> i32 {
+    find_platform_and(internal_index, |platform| platform.set_scale(scale_x, scale_y, scale_z))
+        .unwrap_or_else(|e| log!("Could not set scale for platform {:?}: {}", internal_index, e));
+    internal_index
+}
+
+struct PlatformMovement {
+    speed: f32,
+    path: Vec<Location>,
+    current_segment: usize,
+    end_behavior: u8,
+    forward: bool,
+    current_loc: Location,
+    current_rot: Rotation,
+    rotation_delta: Rotation,
+}
+
+thread_local! {
+    static PLATFORMS_TICK: RefCell<Vec<CachedPlatform>> = RefCell::new(Vec::new());  // moving platforms
+    static PLATFORMS_STATIC: RefCell<Vec<CachedPlatform>> = RefCell::new(Vec::new());  // non-moving platforms
+    static PLATFORMS_GONE: RefCell<Vec<CachedPlatform>> = RefCell::new(Vec::new());  // destroyed but can be recycled
+    static PLATFORM_SPAWNERS: RefCell<Vec<PlatformSpawner>> = RefCell::new(Vec::new());   
+    static LAST_VALID_LOCATION: Cell<Location> =
+        Cell::new(Location { x: 0.0, y: 0.0, z: 0.0 });
+    static LAST_VALID_ROTATION: Cell<Rotation> =
+        Cell::new(Rotation { pitch: 0.0, yaw: 0.0, roll: 0.0 });
+}
+
+
+
+#[rebo::function("Tas::add_platform_spawner")]
+fn add_platform_spawner(speed: f32, locations: Vec<Vec<f32>>, size: Size3D, rotation: Rotation, rotation_delta: Rotation, end_behavior: u8, interval: f32) {
+    let spawner = PlatformSpawner { speed, locations, size, rotation, rotation_delta, end_behavior, interval: interval, timer: 0. };
+    PLATFORM_SPAWNERS.with(|spawners| spawners.borrow_mut().push(spawner));
+    log!("Added platform spawner with speed {}, interval {}, end_behavior {}", speed, interval, end_behavior);
+}
+
+#[rebo::function("Tas::set_platform_movement_path")]
+fn set_platform_movement_path_rebo(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) -> i32 {
+    let first_location = Location { x: locations[0][0], y: locations[0][1], z: locations[0][2] };
+    set_platform_movement_path(
+        internal_index, 
+        speed, 
+        locations, 
+        first_location,  // current location is set to the first point in the path, but it will be overridden on the first tick, so it doesn't really matter what we set it to
+        Rotation { pitch: 0.0, yaw: 0.0, roll: 0.0 },
+        Size3D { x: 1., y: 1., z: 1. },
+        Rotation { pitch: 0.0, yaw: 0.0, roll: 0.0 }, 
+        end_behavior
+    )
+}
+#[rebo::function("Tas::set_platform_movement_path_min_max_speed")]
+fn set_platform_movement_path_min_max_speed_rebo(internal_index: i32, min_speed: f32, max_speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8) -> i32 {
+    let speed = min_speed + rand::random::<f32>() * (max_speed - min_speed);
+    let first_location = Location { x: locations[0][0], y: locations[0][1], z: locations[0][2] };
+    set_platform_movement_path(
+        internal_index, 
+        speed, 
+        locations, 
+        first_location,  // current location is set to the first point in the path, but it will be overridden on the first tick, so it doesn't really matter what we set it to
+        Rotation { pitch: 0.0, yaw: 0.0, roll: 0.0 }, 
+        Size3D { x: 1., y: 1., z: 1. },
+        Rotation { pitch: 0.0, yaw: 0.0, roll: 0.0 }, 
+        end_behavior
+    )
+}
+fn set_platform_movement_path(
+    internal_index: i32,
+    speed: f32,
+    locations: Vec<Vec<f32>>,
+    current_loc: Location,
+    current_rot: Rotation,
+    size: Size3D,
+    rotation_delta: Rotation,
+    end_behavior: u8,
+) -> i32 {
+
+    let path = locations
+        .into_iter()
+        .map(|v| Location { x: v[0], y: v[1], z: v[2] })
+        .collect::<Vec<_>>();
+
+    log!("Setting movement path for platform {:?} with speed {}, end_behavior {}, current_loc {:?}, current_rot {:?}, rotation_delta {:?}", internal_index, speed, end_behavior, current_loc, current_rot, rotation_delta);
+
+    let initial_movement = PlatformMovement {
+        speed,
+        path: path.clone(),
+        current_segment: 0,
+        end_behavior,
+        forward: true,
+        current_loc,
+        current_rot,
+        rotation_delta,
+    };
+    
+    let ptr = match find_platform_and(internal_index, |p| p.as_ptr() as *mut UObject) {
+        Ok(ptr) => ptr,
+        Err(e) => {
+            log!("Could not set movement path for platform {:?}: {}", internal_index, e);
+            return internal_index;
+        }
+    };
+
+    // remove from "static" or "gone" if it's there, since it will now be ticked
+    PLATFORMS_STATIC.with(|static_list| {
+        let mut list = static_list.borrow_mut();
+        if let Some(pos) = list.iter().position(|p| p.platform_id == internal_index) {
+            list.remove(pos);
+        }
+    });
+    PLATFORMS_GONE.with(|gone_list| {
+        let mut list = gone_list.borrow_mut();
+        if let Some(pos) = list.iter().position(|p| p.platform_id == internal_index) {
+            list.remove(pos);
+        }
+    });
+
+    PLATFORMS_TICK.with(|list| {
+        let object = unsafe { ObjectWrapper::new(ptr) };
+        if let Some(platform) = object.try_upcast::<PlatformWrapper>() {
+            let root_component = platform.get_field("RootComponent").unwrap::<ObjectWrapper>();
+            if let Some(set_location_func) = root_component.class().find_function("K2_SetWorldLocationAndRotation") {
+                if let Some(set_size_func) = root_component.class().find_function("SetRelativeScale3D") {
+                    list.borrow_mut().push(CachedPlatform {
+                        platform_id: internal_index,
+                        size: size,
+                        root_component_ptr: root_component.as_ptr(),
+                        set_location_func_ptr: set_location_func.as_ptr() as *mut UObject,
+                        set_size_func_ptr: set_size_func.as_ptr() as *mut UObject,
+                        movement: Some(initial_movement),
+                    });
+                }
+            }
+        }
+    });
+
+    internal_index
+}
+
+
+fn tick_platforms(delta_seconds: f32) -> bool {
+    let mut deleted_a_platform = false;
+    PLATFORMS_TICK.with(|list| {
+        let mut platforms = list.borrow_mut();
+        let mut i = 0;
+        while i < platforms.len() {
+            let remove = {
+                let entry = &mut platforms[i];
+                movement_step_cached(entry, delta_seconds)
+            };
+
+            if remove == 2 {
+                // remove this platform from PLATFORMS_TICK and add it to PLATFORMS_GONE, so we can keep track of it in case it gets destroyed and we need to remove it from the cache
+                let entry = platforms.remove(i);
+                entry.set_location_and_rotation_cached(99999., 99999., 99999., 0., 0., 0., 1., 1., 1.);
+                PLATFORMS_GONE.with(|gone_list| {
+                    gone_list.borrow_mut().push(entry);
+                });
+                deleted_a_platform = true;
+            } else if remove == 1 {
+                // move to static list since it doesn't need to be ticked anymore, but keep it in the cache in case it gets destroyed
+                let entry = platforms.remove(i);
+                PLATFORMS_STATIC.with(|static_list| {
+                    static_list.borrow_mut().push(entry);
+                });
+            } else {
+                i += 1;
+            }
+        }
+    });
+    deleted_a_platform
+}
+
+fn tick_platform_spawners(delta_seconds: f32) {
+    PLATFORM_SPAWNERS.with(|spawners| {
+        let mut spawners = spawners.borrow_mut();
+        for spawner in spawners.iter_mut() {
+            spawner.tick(delta_seconds);
+        }
+    });
+}
+
+fn movement_step_cached(platform: &mut CachedPlatform, delta_seconds: f32) -> i32 { 
+    // return 0 do nothing -> TICK, 1 stop movement but keep platform -> STATIC, 2 remove platform -> GONE
+    // end_behavior:
+    // 1 = stop at the end of the path
+    // 2 = ping pong back and forth along the path
+    // 3 = loop back to the start of the path
+    // 4 = stop movement and teleport to very far away at the end of the path (to gone)
+
+    let (path, idx, current_pos, current_rot, rot_delta, speed, end_behavior) = {
+        let movement = match &mut platform.movement {
+            Some(m) => m,
+            None => return 0,
+        };
+        let path = movement.path.clone();
+        let idx = movement.current_segment;
+        let current_loc = movement.current_loc;
+        let current_rot = movement.current_rot;
+        let rot_delta = movement.rotation_delta;
+        let speed = movement.speed;
+        let end_behavior = movement.end_behavior;
+        (path, idx, current_loc, current_rot, rot_delta, speed, end_behavior)
+    };
+
+    if idx >= path.len() {
+        if end_behavior == 4 {
+            return 2;
+        }
+        if end_behavior == 1 {
+            return 1;
+        }
+        return 0;
+    }
+
+    let target = &path[idx];
+    let (cx, cy, cz) = (
+        current_pos.x,
+        current_pos.y,
+        current_pos.z,
+    );
+
+    let dx = target.x - cx;
+    let dy = target.y - cy;
+    let dz = target.z - cz;
+    let dist_sq = dx*dx + dy*dy + dz*dz;
+    let stepp = speed * delta_seconds;
+
+    let rot_pitch = current_rot.pitch + rot_delta.pitch * delta_seconds;
+    let rot_yaw = current_rot.yaw + rot_delta.yaw * delta_seconds;
+    let rot_roll = current_rot.roll + rot_delta.roll * delta_seconds;
+
+
+    if dist_sq <= stepp * stepp || dist_sq <= f32::EPSILON {
+        platform.set_location_and_rotation_cached(target.x, target.y, target.z, rot_pitch, rot_yaw, rot_roll, platform.size.x, platform.size.y, platform.size.z);
+        platform.movement.as_mut().unwrap().current_loc = *target;
+        platform.movement.as_mut().unwrap().current_rot = Rotation { pitch: rot_pitch, yaw: rot_yaw, roll: rot_roll };
+
+        match end_behavior {
+            1 => return 1,  // stop at the end of the path
+            2 => {  // ping pong back and forth along the path
+                if path.len() <= 1 { return 1; }
+                if platform.movement.as_mut().unwrap().forward {
+                    if idx + 1 >= path.len() {
+                        platform.movement.as_mut().unwrap().forward = false;
+                        if idx > 0 { platform.movement.as_mut().unwrap().current_segment -= 1; }
+                    } else {
+                        platform.movement.as_mut().unwrap().current_segment += 1;
+                    }
+                } else {
+                    if idx == 0 {
+                        platform.movement.as_mut().unwrap().forward = true;
+                        if path.len() > 1 { platform.movement.as_mut().unwrap().current_segment = 1; }
+                    } else {
+                        platform.movement.as_mut().unwrap().current_segment -= 1;
+                    }
+                }
+            }
+            3 => { // loop back to the start of the path
+                if path.len() <= 1 { return 1; }
+                platform.movement.as_mut().unwrap().current_segment += 1;
+                if platform.movement.as_mut().unwrap().current_segment >= path.len() {
+                    platform.movement.as_mut().unwrap().current_segment = 0;
+                }
+            }
+            4 => { // stop movement and teleport to very far away at the end of the path
+                platform.movement.as_mut().unwrap().current_segment += 1;  // go to next segment
+                if platform.movement.as_mut().unwrap().current_segment >= path.len() {
+                    return 2;
+                }
+            }
+            _ => return 2,
+        }
+    } else {
+        let dist = dist_sq.sqrt();
+        let nx = cx + dx / dist * stepp;
+        let ny = cy + dy / dist * stepp;
+        let nz = cz + dz / dist * stepp;
+        platform.set_location_and_rotation_cached(nx, ny, nz, rot_pitch, rot_yaw, rot_roll, platform.size.x, platform.size.y, platform.size.z);
+        platform.movement.as_mut().unwrap().current_loc = Location { x: nx, y: ny, z: nz };
+        platform.movement.as_mut().unwrap().current_rot = Rotation { pitch: rot_pitch, yaw: rot_yaw, roll: rot_roll };
+    }
+    0
+}
+
+
+#[rebo::function("Tas::set_cube_rando_location")]
+fn set_cube_rando_location(internal_index: i32, max: f32) {
+    let rx = (rand::random::<f32>()-0.5) * 2. * max;
+    let ry = (rand::random::<f32>()-0.5) * 2. * max;
+    let rz = (rand::random::<f32>()-0.5) * 2. * max;
+    find_cube_and(internal_index, |cube| cube.set_location(rx, ry, rz))
+        .unwrap_or_else(|e| log!("Could not set location for cube {:?}: {}", internal_index, e));
+}
+
 #[rebo::function("Tas::set_cube_scale")]
 fn set_cube_scale(internal_index: i32, s: f32) -> i32 {
     find_cube_and(internal_index, |cube| cube.set_scale(s))
@@ -1571,12 +2263,18 @@ fn collect_cube(internal_index: i32) -> i32 {
 }
 #[rebo::function("Tas::destroy_platform")]
 fn destroy_platform_rebo(internal_index: i32) {
+
     destroy_platform(internal_index);
 }
 
 fn destroy_platform(internal_index: i32) {
     maybe_remove_extra_platform(internal_index);
     let _ = find_platform_and(internal_index, |platform| platform.destroy());
+    //look through     PLATFORMS_TICK and remove any entries for this platform, so we don't keep trying to tick it after it's destroyed
+    PLATFORMS_TICK.with(|list| {
+        let mut platforms = list.borrow_mut();
+        platforms.retain(|entry| entry.platform_id != internal_index);
+    });
 }
 
 pub fn maybe_remove_extra_cube(internal_index: i32) -> bool {

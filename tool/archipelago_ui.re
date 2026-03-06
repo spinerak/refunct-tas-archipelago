@@ -677,6 +677,26 @@ fn create_archipelago_gamemodes_menu() -> Ui {
                     return;
                 }
                 // log("Set gamemode to Block Brawl");
+                ARCHIPELAGO_STATE.block_brawl_alt = false;
+                archipelago_init(5); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_block_brawl {
+                    "Block Brawl ALT"
+                } else {
+                    "Block Brawl ALT (locked)"
+                }
+            } },
+            onclick: fn(label: Text) { 
+                if !ARCHIPELAGO_STATE.unlock_block_brawl {
+                    // log("Block Brawl gamemode is locked!");
+                    return;
+                }
+                // log("Set gamemode to Block Brawl ALT");
+                ARCHIPELAGO_STATE.block_brawl_alt = true;
                 archipelago_init(5); 
                 leave_ui(); 
             },
@@ -699,6 +719,27 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             label: Text { text: "[test] The Climb: Random" },
             onclick: fn(label: Text) { 
                 archipelago_init(8); 
+                leave_ui(); 
+            },
+        }),
+        // UiElement::Button(UiButton {
+        //     label: Text { text: "[test] Hillside Cave Secret" },
+        //     onclick: fn(label: Text) { 
+        //         archipelago_init(9); 
+        //         leave_ui(); 
+        //     },
+        // }),
+        UiElement::Button(UiButton {
+            label: Text { text: "[test] Frogger" },
+            onclick: fn(label: Text) { 
+                archipelago_init(10); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "[test] Block Blub" },
+            onclick: fn(label: Text) { 
+                archipelago_init(11); 
                 leave_ui(); 
             },
         }),
@@ -827,7 +868,7 @@ fn get_status_text_lines() -> List<ColorfulText> {
     }else{
         if ARCHIPELAGO_STATE.started == 0 {
             lines.push(ColorfulText {
-                text:  f"\n\nVersion {ARCHIPELAGO_STATE.apworld_version}",
+                text:  f"\n\nVersion {ARCHIPELAGO_STATE.mod_version}",
                 color: COLOR_WHITE
             });
         }
