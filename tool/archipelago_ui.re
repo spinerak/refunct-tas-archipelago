@@ -867,7 +867,7 @@ fn get_status_text_lines() -> List<ColorfulText> {
     }else{
         if ARCHIPELAGO_STATE.started == 0 {
             lines.push(ColorfulText {
-                text:  f"\n\nVersion {ARCHIPELAGO_STATE.apworld_version}",
+                text:  f"\n\nVersion {ARCHIPELAGO_STATE.mod_version}",
                 color: COLOR_WHITE
             });
         }
