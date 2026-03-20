@@ -578,6 +578,49 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
         });
         added_minigame_header = true;
     }
+
+    if ARCHIPELAGO_STATE.unlock_climb_line && !ARCHIPELAGO_STATE.done_climb_line_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nClimb Line",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+    if ARCHIPELAGO_STATE.unlock_climb_spiral && !ARCHIPELAGO_STATE.done_climb_spiral_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nClimb Spiral",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+    if ARCHIPELAGO_STATE.unlock_climb_chaos && !ARCHIPELAGO_STATE.done_climb_chaos_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nClimb Chaos",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+    
+
+    if ARCHIPELAGO_STATE.block_blub_check_in_logic > 0 {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  f"\nBlock Blub: {ARCHIPELAGO_STATE.block_blub_check_in_logic} in logic",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
     lines
 }
 
@@ -702,22 +745,52 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "[test] The Climb: Line" },
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_climb_line {
+                    "Climb Line"
+                } else {
+                    "Climb Line (locked)"
+                }
+            } },
             onclick: fn(label: Text) { 
+                if !ARCHIPELAGO_STATE.unlock_climb_line {
+                    // log("Climb Line gamemode is locked!");
+                    return;
+                }
                 archipelago_init(6); 
                 leave_ui(); 
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "[test] The Climb: Spiral" },
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_climb_spiral {
+                    "Climb Spiral"
+                } else {
+                    "Climb Spiral (locked)"
+                }
+            } },
             onclick: fn(label: Text) { 
+                if !ARCHIPELAGO_STATE.unlock_climb_spiral {
+                    // log("Climb Spiral gamemode is locked!");
+                    return;
+                }
                 archipelago_init(7); 
                 leave_ui(); 
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "[test] The Climb: Random" },
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_climb_chaos {
+                    "Climb Chaos"
+                } else {
+                    "Climb Chaos (locked)"
+                }
+            } },
             onclick: fn(label: Text) { 
+                if !ARCHIPELAGO_STATE.unlock_climb_chaos {
+                    // log("Climb Chaos gamemode is locked!");
+                    return;
+                }
                 archipelago_init(8); 
                 leave_ui(); 
             },
@@ -729,16 +802,27 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         //         leave_ui(); 
         //     },
         // }),
+        // UiElement::Button(UiButton {
+        //     label: Text { text: "[test] Frogger" },
+        //     onclick: fn(label: Text) { 
+        //         archipelago_init(10); 
+        //         leave_ui(); 
+        //     },
+        // }),
         UiElement::Button(UiButton {
-            label: Text { text: "[test] Frogger" },
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_block_blub {
+                    "Block Blub"
+                } else {
+                    "Block Blub (locked)"
+                }
+            } },
             onclick: fn(label: Text) { 
-                archipelago_init(10); 
-                leave_ui(); 
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: "[test] Block Blub" },
-            onclick: fn(label: Text) { 
+                if !ARCHIPELAGO_STATE.unlock_block_blub {
+                    // log("Block Blub gamemode is locked!");
+                    return;
+                }
+                // log("Set gamemode to Block Blub");
                 archipelago_init(11); 
                 leave_ui(); 
             },
@@ -750,13 +834,7 @@ fn create_archipelago_gamemodes_menu() -> Ui {
     ))
 }
 
-fn get_status_text_lines() -> List<ColorfulText> {
-    let mut height = 0.;
-    if ARCHIPELAGO_STATE.gamemode == 6 || ARCHIPELAGO_STATE.gamemode == 7 || ARCHIPELAGO_STATE.gamemode == 8 {
-        let loc = Tas::get_location();
-        height = loc.z;
-    }
-  
+fn get_status_text_lines() -> List<ColorfulText> {  
     let lines = List::new();
 
     if INPUT_MODE_IS_UI_ONLY {
@@ -818,22 +896,45 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_yellows:3} ", color: AP_COLOR_YELLOW },
                 ColorfulText { text: f"\nCubes collected: {ARCHIPELAGO_STATE.block_brawl_cubes_collected} / {ARCHIPELAGO_STATE.block_brawl_cubes_total}", color: COLOR_WHITE },
 
-                ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block} pts", color: COLOR_WHITE },
+                ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block_brawl} pts", color: COLOR_WHITE },
             ),
             6 => List::of(
-                ColorfulText { text: "Archipelago - The Climb: Curve\n", color: COLOR_WHITE },
+                ColorfulText { text: "Archipelago - Climb Line\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
-                ColorfulText { text: f"Current height: {height/100.0:3.0}m", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Current height: {ARCHIPELAGO_STATE.climb_current_height:3.0}m\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Highest: {ARCHIPELAGO_STATE.climb_line_highscore:3.0}m", color: AP_COLOR_CYAN },
             ),
             7 => List::of(
-                ColorfulText { text: "Archipelago - The Climb: Spiral\n", color: COLOR_WHITE },
+                ColorfulText { text: "Archipelago - Climb Spiral\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
-                ColorfulText { text: f"Current height: {height/100.0:3.0}m", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Current height: {ARCHIPELAGO_STATE.climb_current_height:3.0}m\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Highest: {ARCHIPELAGO_STATE.climb_spiral_highscore:3.0}m", color: AP_COLOR_CYAN },
             ),
             8 => List::of(
-                ColorfulText { text: "Archipelago - The Climb: Random\n", color: COLOR_WHITE },
+                ColorfulText { text: "Archipelago - Climb Chaos\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
-                ColorfulText { text: f"Current height: {height/100.0:3.0}m", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Current height: {ARCHIPELAGO_STATE.climb_current_height:3.0}m\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Highest: {ARCHIPELAGO_STATE.climb_chaos_highscore:3.0}m", color: AP_COLOR_CYAN },
+            ),
+            11 => List::of(
+                ColorfulText { text: "Archipelago - Block Blub\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: cubes => points => checks!", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"\n\nNew game => new layout + cubes\nScores will be saved", color: COLOR_WHITE},
+
+                ColorfulText { text: f"\n\nCurrent scores: ", color: COLOR_WHITE },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_reds:3} ", color: AP_COLOR_RED },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_blues:3} ", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_greens:3} ", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_yellows:3} ", color: AP_COLOR_YELLOW },
+
+                ColorfulText { text: f"\nScore in logic: ", color: COLOR_WHITE },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_reds:3} ", color: AP_COLOR_RED },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_blues:3} ", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_greens:3} ", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_yellows:3} ", color: AP_COLOR_YELLOW },
+                ColorfulText { text: f"\nCubes collected: {ARCHIPELAGO_STATE.block_blub_cubes_collected} / {ARCHIPELAGO_STATE.block_blub_cubes_total}", color: COLOR_WHITE },
+
+                ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block_blub} pts", color: COLOR_WHITE },
             ),
 
             _ => List::of(

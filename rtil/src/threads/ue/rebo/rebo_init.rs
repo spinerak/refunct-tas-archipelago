@@ -1515,7 +1515,7 @@ fn spawn_platform_rando_location_uw() -> i32 {
         roll: rand::random::<f32>() * 360. as f32,
     };
     let id = spawn_platform(loc, rot, 
-        Size3D { x: rand::random::<f32>() * 3., y: rand::random::<f32>() * 3., z: rand::random::<f32>() * 3. }
+        Size3D { x: rand::random::<f32>() * 3., y: rand::random::<f32>() * 3., z: rand::random::<f32>() * 2. }
     );
     id
 }
@@ -1584,7 +1584,7 @@ fn spawn_cube_rando_location_uw() -> i32 {
     let rx = rand::random::<f32>();
     let ry = rand::random::<f32>();
     let rz = rand::random::<f32>();
-    let loc = Location { x: (rx-0.5) * 2. * 3000.0, y: (ry-0.5) * 2. * 3000.0, z: -800. - rz * 1600.0 };
+    let loc = Location { x: (rx-0.5) * 2. * 3000.0, y: (ry-0.5) * 2. * 3000.0, z: -1100. - rz * 1600.0 };
     spawn_cube(loc)
 }
 

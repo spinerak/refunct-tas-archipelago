@@ -33,9 +33,11 @@ struct ArchipelagoState {
     extra_cubes_locs: List<int>,
     extra_cubes_int_ids: List<int>,
 
+
     unlock_vanilla_minigame: bool,
     done_vanilla_minigame: bool,
     progress_vanilla_minigame: string,
+
 
     unlock_seeker_minigame: bool,
     done_seeker_minigame: bool,
@@ -44,15 +46,18 @@ struct ArchipelagoState {
     seeker_extra_pressed: List<int>,
     seeker_done_triggering: int,
 
+
     unlock_button_galore_minigame: bool,
     done_button_galore_minigame: bool,
     progress_button_galore_minigame: string,
+
 
     unlock_OG_randomizer: bool,
     done_OG_randomizer_minigame: bool,
     progress_OG_randomizer_minigame: string,
     og_randomizer_order: List<int>,
     og_randomizer_index: int,
+
 
     block_brawl_alt: bool,
     score_block_brawl_reds: int,
@@ -63,7 +68,7 @@ struct ArchipelagoState {
     in_logic_block_brawl_blues: int,
     in_logic_block_brawl_greens: int,
     in_logic_block_brawl_yellows: int,
-    score_for_next_block: int,
+    score_for_next_block_brawl: int,
     block_brawl_cubes_collected: int,
     block_brawl_cubes_total: int,
     unlock_block_brawl: bool,
@@ -77,6 +82,50 @@ struct ArchipelagoState {
     block_brawl_yellow_ids: List<int>,
     done_block_brawl_minigame: bool,
     block_brawl_check_in_logic: int,
+
+
+    climb_current_height: float,
+
+    unlock_climb_line: bool,
+    done_climb_line_minigame: bool,
+    progress_climb_line_minigame: string,
+    climb_line_highscore: float,
+
+    unlock_climb_spiral: bool,
+    done_climb_spiral_minigame: bool,
+    progress_climb_spiral_minigame: string,
+    climb_spiral_highscore: float,
+
+    unlock_climb_chaos: bool,
+    done_climb_chaos_minigame: bool,
+    progress_climb_chaos_minigame: string,
+    climb_chaos_highscore: float,
+
+
+    block_blub_alt: bool,
+    score_block_blub_reds: int,
+    score_block_blub_blues: int,
+    score_block_blub_greens: int,
+    score_block_blub_yellows: int,
+    in_logic_block_blub_reds: int,
+    in_logic_block_blub_blues: int,
+    in_logic_block_blub_greens: int,
+    in_logic_block_blub_yellows: int,
+    score_for_next_block_blub: int,
+    block_blub_cubes_collected: int,
+    block_blub_cubes_total: int,
+    unlock_block_blub: bool,
+    unlock_block_blub_reds: bool,
+    unlock_block_blub_blues: bool,
+    unlock_block_blub_greens: bool,
+    unlock_block_blub_yellows: bool,
+    block_blub_red_ids: List<int>,
+    block_blub_blue_ids: List<int>,
+    block_blub_green_ids: List<int>,
+    block_blub_yellow_ids: List<int>,
+    done_block_blub_minigame: bool,
+    block_blub_check_in_logic: int,
+
 
     last_platform_c: Option<int>,
     last_platform_p: Option<int>,
@@ -123,9 +172,11 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         extra_cubes_locs: List::new(),
         extra_cubes_int_ids: List::new(),
 
+
         unlock_vanilla_minigame: false,
         done_vanilla_minigame: false,
         progress_vanilla_minigame: "0/37",
+
 
         unlock_seeker_minigame: false,
         done_seeker_minigame: false,
@@ -134,15 +185,18 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         seeker_extra_pressed: List::new(),
         seeker_done_triggering: 0,
 
+
         unlock_button_galore_minigame: false,
         done_button_galore_minigame: false,
         progress_button_galore_minigame: "0/37",
+
 
         unlock_OG_randomizer: false,
         done_OG_randomizer_minigame: false,
         progress_OG_randomizer_minigame: "0/37",
         og_randomizer_index: -1,
         og_randomizer_order: List::new(),
+
 
         block_brawl_alt: false,
         score_block_brawl_reds: 0,
@@ -153,7 +207,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         in_logic_block_brawl_blues: 0,
         in_logic_block_brawl_greens: 0,
         in_logic_block_brawl_yellows: 0,
-        score_for_next_block: 1,
+        score_for_next_block_brawl: 1,
         block_brawl_cubes_collected: 0,
         block_brawl_cubes_total: 0,
         unlock_block_brawl: false,
@@ -168,10 +222,54 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         done_block_brawl_minigame: false,
         block_brawl_check_in_logic: 0,
 
+
+        climb_current_height: 0.0,
+
+        unlock_climb_line: false,
+        done_climb_line_minigame: false,
+        progress_climb_line_minigame: "0m/100m",
+        climb_line_highscore: 0.0,
+
+        unlock_climb_spiral: false,
+        done_climb_spiral_minigame: false,
+        progress_climb_spiral_minigame: "0m/100m",
+        climb_spiral_highscore: 0.0,
+
+        unlock_climb_chaos: false,
+        done_climb_chaos_minigame: false,
+        progress_climb_chaos_minigame: "0m/100m",
+        climb_chaos_highscore: 0.0,
+
+
+        block_blub_alt: false,
+        score_block_blub_reds: 0,
+        score_block_blub_blues: 0,
+        score_block_blub_greens: 0,
+        score_block_blub_yellows: 0,
+        in_logic_block_blub_reds: 0,
+        in_logic_block_blub_blues: 0,
+        in_logic_block_blub_greens: 0,
+        in_logic_block_blub_yellows: 0,
+        score_for_next_block_blub: 1,
+        block_blub_cubes_collected: 0,
+        block_blub_cubes_total: 0,
+        unlock_block_blub: false,
+        unlock_block_blub_reds: false,
+        unlock_block_blub_blues: false,
+        unlock_block_blub_greens: false,
+        unlock_block_blub_yellows: false,
+        block_blub_red_ids: List::new(),
+        block_blub_blue_ids: List::new(),
+        block_blub_green_ids: List::new(),
+        block_blub_yellow_ids: List::new(),
+        done_block_blub_minigame: false,
+        block_blub_check_in_logic: 0,
+
+
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "0.8.3a",
+        mod_version: "0.9.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -212,7 +310,10 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 
         ARCHIPELAGO_STATE.og_randomizer_index = -1;
 
+        ARCHIPELAGO_STATE.climb_current_height = 0.0;
+
         update_block_brawl_in_logic_counts();
+        update_block_blub_in_logic_counts();
     },
     on_level_change: ap_on_level_change_function,
     on_buttons_change: fn(old: int, new: int) {
@@ -229,6 +330,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         // log(f"[AP] Pressed {index.element_type} {index.element_index} in cluster {index.cluster_index}");
         if index.cluster_index == 9999 {
             got_cube_block_brawl(index.element_index);
+            got_cube_block_blub(index.element_index);
             got_extra_cube_ap(index.element_index);
             return;
         }
@@ -511,6 +613,53 @@ fn archipelago_tick(time: int) {
     if time - ARCHIPELAGO_STATE.last_tick_time < 400 {
         return;
     }
+    if ARCHIPELAGO_STATE.gamemode == 6 || ARCHIPELAGO_STATE.gamemode == 7 || ARCHIPELAGO_STATE.gamemode == 8 {
+        if ARCHIPELAGO_STATE.started != 2 {
+            return;
+        }
+        let loc = Tas::get_location();
+        let height = loc.z;
+        ARCHIPELAGO_STATE.climb_current_height = float::floor(height / 100.0,0);
+
+        let list_of_milestones = List::of(1,2,3,4,5,6,7,8,9,10);
+        let list_of_milestone_heights = List::of(10.,20.,30.,40.,50.,60.,70.,80.,90.,100.);
+
+        if ARCHIPELAGO_STATE.gamemode == 6 {
+            ARCHIPELAGO_STATE.progress_climb_line_minigame = f"{ARCHIPELAGO_STATE.climb_current_height:3.0}m/100m";
+            if ARCHIPELAGO_STATE.climb_current_height > ARCHIPELAGO_STATE.climb_line_highscore {
+                for milestone in list_of_milestones {
+                    let milestone_height = list_of_milestone_heights.get(milestone - 1).unwrap();
+                    if ARCHIPELAGO_STATE.climb_line_highscore < milestone_height && ARCHIPELAGO_STATE.climb_current_height >= milestone_height {
+                        archipelago_send_check(10091000 + milestone);
+                    }
+                }
+                ARCHIPELAGO_STATE.climb_line_highscore = ARCHIPELAGO_STATE.climb_current_height;
+            }
+        } else if ARCHIPELAGO_STATE.gamemode == 7 {
+            ARCHIPELAGO_STATE.progress_climb_spiral_minigame = f"{ARCHIPELAGO_STATE.climb_current_height:3.0}m/100m";
+            if ARCHIPELAGO_STATE.climb_current_height > ARCHIPELAGO_STATE.climb_spiral_highscore {
+                for milestone in list_of_milestones {
+                    let milestone_height = list_of_milestone_heights.get(milestone - 1).unwrap();
+                    if ARCHIPELAGO_STATE.climb_spiral_highscore < milestone_height && ARCHIPELAGO_STATE.climb_current_height >= milestone_height {
+                        archipelago_send_check(10092000 + milestone);
+                    }
+                }
+                ARCHIPELAGO_STATE.climb_spiral_highscore = ARCHIPELAGO_STATE.climb_current_height;
+            }
+        } else if ARCHIPELAGO_STATE.gamemode == 8 {
+            ARCHIPELAGO_STATE.progress_climb_chaos_minigame = f"{ARCHIPELAGO_STATE.climb_current_height:3.0}m/100m";
+            if ARCHIPELAGO_STATE.climb_current_height > ARCHIPELAGO_STATE.climb_chaos_highscore {
+                for milestone in list_of_milestones {
+                    let milestone_height = list_of_milestone_heights.get(milestone - 1).unwrap();
+                    if ARCHIPELAGO_STATE.climb_chaos_highscore < milestone_height && ARCHIPELAGO_STATE.climb_current_height >= milestone_height {
+                        archipelago_send_check(10093000 + milestone);
+                    }
+                }
+                ARCHIPELAGO_STATE.climb_chaos_highscore = ARCHIPELAGO_STATE.climb_current_height;
+            }
+        }
+        return;
+    }
     if ARCHIPELAGO_STATE.triggering_clusters.len() == 0 {
         if ARCHIPELAGO_STATE.gamemode == 3 && ARCHIPELAGO_STATE.seeker_done_triggering == 1 {
             Tas::archipelago_activate_buttons_ap();
@@ -586,6 +735,42 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
         ARCHIPELAGO_STATE.unlock_block_brawl = true;
         ARCHIPELAGO_STATE.unlock_block_brawl_yellows = true;
         update_block_brawl_in_logic_counts();
+        return;
+    }
+    if item_id == 9999931 {  // Climb Line Minigame
+        ARCHIPELAGO_STATE.unlock_climb_line = true;
+        return;
+    }
+    if item_id == 9999932 {  // Climb Spiral Minigame
+        ARCHIPELAGO_STATE.unlock_climb_spiral = true;
+        return;
+    }
+    if item_id == 9999933 {  // Climb Chaos Minigame
+        ARCHIPELAGO_STATE.unlock_climb_chaos = true;
+        return;
+    }
+    if item_id == 9999921 {
+        ARCHIPELAGO_STATE.unlock_block_blub = true;
+        ARCHIPELAGO_STATE.unlock_block_blub_reds = true;
+        update_block_blub_in_logic_counts();
+        return;
+    }
+    if item_id == 9999922 {
+        ARCHIPELAGO_STATE.unlock_block_blub = true;
+        ARCHIPELAGO_STATE.unlock_block_blub_blues = true;
+        update_block_blub_in_logic_counts();
+        return;
+    }
+    if item_id == 9999923 {
+        ARCHIPELAGO_STATE.unlock_block_blub = true;
+        ARCHIPELAGO_STATE.unlock_block_blub_greens = true;
+        update_block_blub_in_logic_counts();
+        return;
+    }
+    if item_id == 9999924 {
+        ARCHIPELAGO_STATE.unlock_block_blub = true;
+        ARCHIPELAGO_STATE.unlock_block_blub_yellows = true;
+        update_block_blub_in_logic_counts();
         return;
     }
 
@@ -684,8 +869,100 @@ fn update_block_brawl_in_logic_counts(){
     }
 
     ARCHIPELAGO_STATE.block_brawl_check_in_logic = block_brawl_locations_in_logic.len() - number_pressed_in_logic;
-
 }
+
+fn update_block_blub_in_logic_counts(){
+    if ARCHIPELAGO_STATE.done_block_blub_minigame {
+        return;
+    }
+    let mut number_of_colors = 0;
+    if ARCHIPELAGO_STATE.unlock_block_blub_reds {
+        number_of_colors += 1;
+    }
+    if ARCHIPELAGO_STATE.unlock_block_blub_blues {
+        number_of_colors += 1;
+    }
+    if ARCHIPELAGO_STATE.unlock_block_blub_greens {
+        number_of_colors += 1;
+    }
+    if ARCHIPELAGO_STATE.unlock_block_blub_yellows {
+        number_of_colors += 1;
+    }
+    let scores_in_logic = List::of(0,15,30,60,120);
+    ARCHIPELAGO_STATE.in_logic_block_blub_reds = 0;
+    ARCHIPELAGO_STATE.in_logic_block_blub_blues = 0;
+    ARCHIPELAGO_STATE.in_logic_block_blub_greens = 0;
+    ARCHIPELAGO_STATE.in_logic_block_blub_yellows = 0;
+    if ARCHIPELAGO_STATE.unlock_block_blub_reds {
+        ARCHIPELAGO_STATE.in_logic_block_blub_reds = scores_in_logic.get(number_of_colors).unwrap();
+    }
+    if ARCHIPELAGO_STATE.unlock_block_blub_blues {
+        ARCHIPELAGO_STATE.in_logic_block_blub_blues = scores_in_logic.get(number_of_colors).unwrap();
+    }
+    if ARCHIPELAGO_STATE.unlock_block_blub_greens {
+        ARCHIPELAGO_STATE.in_logic_block_blub_greens = scores_in_logic.get(number_of_colors).unwrap();
+    }
+    if ARCHIPELAGO_STATE.unlock_block_blub_yellows {
+        ARCHIPELAGO_STATE.in_logic_block_blub_yellows = scores_in_logic.get(number_of_colors).unwrap();
+    }
+
+    let block_blub_locations = List::of(
+        10101003, 10101015, 10101021, 10101030, 10101042, 10101060, 10101084, 10101120,
+        10102003, 10102015, 10102021, 10102030, 10102042, 10102060, 10102084, 10102120,
+        10103003, 10103015, 10103021, 10103030, 10103042, 10103060, 10103084, 10103120,
+        10104003, 10104015, 10104021, 10104030, 10104042, 10104060, 10104084, 10104120,
+    );
+    let mut block_blub_locations_in_logic = List::new();
+
+    let mut ncolors = 0;
+    if ARCHIPELAGO_STATE.unlock_block_blub_reds {
+        ncolors += 1;
+    }
+    if ARCHIPELAGO_STATE.unlock_block_blub_blues {
+        ncolors += 1;
+    }
+    if ARCHIPELAGO_STATE.unlock_block_blub_greens {
+        ncolors += 1;
+    }
+    if ARCHIPELAGO_STATE.unlock_block_blub_yellows {
+        ncolors += 1;
+    }
+    let check_points = List::of(0,15,30,60,120);
+    let max_in_logic = check_points.get(ncolors).unwrap();
+
+    for lid in block_blub_locations {
+        let color = (lid-10100000)/1000;
+        let score = lid % 1000;
+        if (color == 1 && ARCHIPELAGO_STATE.unlock_block_blub_reds) ||
+              (color == 2 && ARCHIPELAGO_STATE.unlock_block_blub_blues) ||
+              (color == 3 && ARCHIPELAGO_STATE.unlock_block_blub_greens) ||
+              (color == 4 && ARCHIPELAGO_STATE.unlock_block_blub_yellows) {
+                if score <= max_in_logic {
+                    block_blub_locations_in_logic.push(lid);
+                }
+          }
+    }
+
+    let mut number_pressed = 0;
+    let mut number_pressed_in_logic = 0;
+    for lid in block_blub_locations {
+        if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+            number_pressed += 1;
+            if block_blub_locations_in_logic.contains(lid) {
+                number_pressed_in_logic += 1;
+            }
+        }
+    }
+    if number_pressed == block_blub_locations.len() {
+        ARCHIPELAGO_STATE.done_block_blub_minigame = true;
+        ap_log(List::of(ColorfulText { text:"Completed Block Blub Minigame!", color: AP_COLOR_GREEN }));
+    }
+
+    ARCHIPELAGO_STATE.block_blub_check_in_logic = block_blub_locations_in_logic.len() - number_pressed_in_logic;
+}
+
+
+
 
 fn archipelago_got_grass(){
     ARCHIPELAGO_STATE.grass += 1;
@@ -699,7 +976,7 @@ fn archipelago_init(gamemode: int){
     ARCHIPELAGO_STATE.gamemode = gamemode;
     ARCHIPELAGO_STATE.triggering_clusters.clear();
 
-    if gamemode == 2 {
+    if gamemode == 2 || gamemode == 11 {
         Tas::set_level(30);
         // log("Setting level to 30 for Button Galore gamemode");
     }
@@ -745,7 +1022,7 @@ fn archipelago_start(){
         archipelago_frogger_start();
     }
     if ARCHIPELAGO_STATE.gamemode == 11 {
-        archipelago_button_blub();
+        archipelago_block_blub_start();
     }
     
     let mut i = 0;
@@ -937,95 +1214,6 @@ fn archipelago_button_galore_start(){
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
     ARCHIPELAGO_STATE.last_level_unlocked = 1;
-
-
-    let mut i = 0;
-    while i < 200 {
-        Tas::spawn_platform_rando_location_uw();
-        i += 1;
-    }
-
-    // log(f"Spawning Block Brawl cubes, colors unlocked: {ARCHIPELAGO_STATE.unlock_block_brawl_reds}, {ARCHIPELAGO_STATE.unlock_block_brawl_greens}, {ARCHIPELAGO_STATE.unlock_block_brawl_blues}, {ARCHIPELAGO_STATE.unlock_block_brawl_yellows}");
-
-    let mut j = 0;
-    if ARCHIPELAGO_STATE.unlock_block_brawl_reds {
-        // log("Spawning Block Brawl Reds");
-        while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
-            ARCHIPELAGO_STATE.block_brawl_red_ids.push(id);
-            j += 1;
-        }
-        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
-    }
-    j = 0;
-    if ARCHIPELAGO_STATE.unlock_block_brawl_greens {
-        // log("Spawning Block Brawl Greens");
-        while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 1., blue: 0., alpha: 1. });
-            ARCHIPELAGO_STATE.block_brawl_green_ids.push(id);
-            j += 1;
-        }
-        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
-    }
-    j = 0;
-    if ARCHIPELAGO_STATE.unlock_block_brawl_blues {
-        // log("Spawning Block Brawl Blues");
-        while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 0., blue: 1., alpha: 1. });
-            ARCHIPELAGO_STATE.block_brawl_blue_ids.push(id);
-            j += 1;
-        }
-        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
-    }
-    j = 0;
-    if ARCHIPELAGO_STATE.unlock_block_brawl_yellows {
-        // log("Spawning Block Brawl Yellows");
-        while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 1., blue: 0., alpha: 1. });
-            ARCHIPELAGO_STATE.block_brawl_yellow_ids.push(id);
-            j += 1;
-        }
-        ARCHIPELAGO_STATE.block_brawl_cubes_total += 5;
-    }
-}
-
-fn archipelago_button_blub(){
-    Tas::abilities_set_swim(true);
-    Tas::abilities_set_wall_jump(2, false);
-    Tas::abilities_set_ledge_grab(true);
-    Tas::abilities_set_jump_pads(true);
-    Tas::abilities_set_pipes(true);
-    Tas::abilities_set_lifts(true);
-    collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
-
-
-    let mut i = 0;
-    while i < 200 {
-        Tas::spawn_platform_rando_location_uw();
-        i += 1;
-    }
-
-    let mut j = 0;
-    while j < 5 {
-        let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
-        j += 1;
-    }
-    j = 0;
-    while j < 5 {
-        let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 1., blue: 0., alpha: 1. });
-        j += 1;
-    }
-    j = 0;
-    while j < 5 {
-        let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 0., blue: 1., alpha: 1. });
-        j += 1;
-    }
-    j = 0;
-    while j < 5 {
-        let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 1., blue: 0., alpha: 1. });
-        j += 1;
-    }
 }
 
 fn archipelago_og_randomizer_start(){
@@ -1057,7 +1245,7 @@ fn archipelago_block_brawl_start(){
     ARCHIPELAGO_STATE.block_brawl_green_ids.clear();
     ARCHIPELAGO_STATE.block_brawl_yellow_ids.clear();
     ARCHIPELAGO_STATE.block_brawl_cubes_collected = 0;
-    ARCHIPELAGO_STATE.score_for_next_block = 1;
+    ARCHIPELAGO_STATE.score_for_next_block_brawl = 1;
 
     Tas::archipelago_ds_get(f"RFBB_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
     Tas::archipelago_ds_get(f"RFBB_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
@@ -1168,8 +1356,142 @@ fn got_cube_block_brawl(id: int){
     }
     ARCHIPELAGO_STATE.block_brawl_cubes_collected += 1;
     let next_score = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_brawl_cubes_collected).unwrap_or(1);
-    ARCHIPELAGO_STATE.score_for_next_block = next_score;
+    ARCHIPELAGO_STATE.score_for_next_block_brawl = next_score;
 }
+
+fn archipelago_block_blub_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    Tas::archipelago_deactivate_buttons_ap();
+    collect_all_vanilla_cubes();
+    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+
+    ARCHIPELAGO_STATE.block_blub_cubes_collected = 0;
+    ARCHIPELAGO_STATE.block_blub_cubes_total = 0;
+
+    ARCHIPELAGO_STATE.block_blub_red_ids.clear();
+    ARCHIPELAGO_STATE.block_blub_blue_ids.clear();
+    ARCHIPELAGO_STATE.block_blub_green_ids.clear();
+    ARCHIPELAGO_STATE.block_blub_yellow_ids.clear();
+    ARCHIPELAGO_STATE.block_blub_cubes_collected = 0;
+    ARCHIPELAGO_STATE.score_for_next_block_blub = 1;
+
+    Tas::archipelago_ds_get(f"RFBBL_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
+    Tas::archipelago_ds_get(f"RFBBL_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
+    Tas::archipelago_ds_get(f"RFBBL_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
+    Tas::archipelago_ds_get(f"RFBBL_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
+
+    let mut i = 0;
+    while i < 200 {
+        Tas::spawn_platform_rando_location_uw();
+        i += 1;
+    }
+
+    // log(f"Spawning Block Blub cubes, colors unlocked: {ARCHIPELAGO_STATE.unlock_block_blub_reds}, {ARCHIPELAGO_STATE.unlock_block_blub_greens}, {ARCHIPELAGO_STATE.unlock_block_blub_blues}, {ARCHIPELAGO_STATE.unlock_block_blub_yellows}");
+
+    let mut j = 0;
+    if ARCHIPELAGO_STATE.unlock_block_blub_reds {
+        // log("Spawning Block blub Reds");
+        while j < 5 {
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+            ARCHIPELAGO_STATE.block_blub_red_ids.push(id);
+            j += 1;
+        }
+        ARCHIPELAGO_STATE.block_blub_cubes_total += 5;
+    }
+    j = 0;
+    if ARCHIPELAGO_STATE.unlock_block_blub_greens {
+        // log("Spawning Block blub Greens");
+        while j < 5 {
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+            ARCHIPELAGO_STATE.block_blub_green_ids.push(id);
+            j += 1;
+        }
+        ARCHIPELAGO_STATE.block_blub_cubes_total += 5;
+    }
+    j = 0;
+    if ARCHIPELAGO_STATE.unlock_block_blub_blues {
+        // log("Spawning Block blub Blues");
+        while j < 5 {
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+            ARCHIPELAGO_STATE.block_blub_blue_ids.push(id);
+            j += 1;
+        }
+        ARCHIPELAGO_STATE.block_blub_cubes_total += 5;
+    }
+    j = 0;
+    if ARCHIPELAGO_STATE.unlock_block_blub_yellows {
+        // log("Spawning Block blub Yellows");
+        while j < 5 {
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+            ARCHIPELAGO_STATE.block_blub_yellow_ids.push(id);
+            j += 1;
+        }
+        ARCHIPELAGO_STATE.block_blub_cubes_total += 5;
+    }
+}
+
+fn got_cube_block_blub(id: int){
+    let score_list_based_on_number_of_cubes = List::of(1,2,3,4,5,8,11,14,17,20,26,32,38,44,50,60,70,80,90,100);
+    let score_to_add = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_blub_cubes_collected).unwrap_or(1);
+    
+    let check_points = List::of(3,15,21,30,42,60,84,120);
+    if ARCHIPELAGO_STATE.block_blub_red_ids.contains(id) {
+        ARCHIPELAGO_STATE.block_blub_red_ids.remove(id);
+        ARCHIPELAGO_STATE.score_block_blub_reds += score_to_add;
+        for cp in check_points {
+            if ARCHIPELAGO_STATE.score_block_blub_reds >= cp {
+                Tas::archipelago_send_check(10101000 + cp);
+            }
+        }
+        Tas::archipelago_ds_set_max(f"RFBBL_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_blub_reds);
+    }
+    if ARCHIPELAGO_STATE.block_blub_blue_ids.contains(id) {
+        ARCHIPELAGO_STATE.block_blub_blue_ids.remove(id);
+        ARCHIPELAGO_STATE.score_block_blub_blues += score_to_add;
+        for cp in check_points {
+            if ARCHIPELAGO_STATE.score_block_blub_blues >= cp {
+                Tas::archipelago_send_check(10102000 + cp);
+            }
+        }
+        Tas::archipelago_ds_set_max(f"RFBBL_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_blub_blues);
+    }
+    if ARCHIPELAGO_STATE.block_blub_green_ids.contains(id) {
+        ARCHIPELAGO_STATE.block_blub_green_ids.remove(id);
+        ARCHIPELAGO_STATE.score_block_blub_greens += score_to_add;
+        for cp in check_points {
+            if ARCHIPELAGO_STATE.score_block_blub_greens >= cp {
+                Tas::archipelago_send_check(10103000 + cp);
+            }
+        }
+        Tas::archipelago_ds_set_max(f"RFBBL_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_blub_greens);
+    }
+    if ARCHIPELAGO_STATE.block_blub_yellow_ids.contains(id) {
+        ARCHIPELAGO_STATE.block_blub_yellow_ids.remove(id);
+        ARCHIPELAGO_STATE.score_block_blub_yellows += score_to_add;
+        for cp in check_points {
+            if ARCHIPELAGO_STATE.score_block_blub_yellows >= cp {
+                Tas::archipelago_send_check(10104000 + cp);
+            }
+        }
+        Tas::archipelago_ds_set_max(f"RFBBL_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_blub_yellows);
+    }
+    ARCHIPELAGO_STATE.block_blub_cubes_collected += 1;
+    let next_score = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_blub_cubes_collected).unwrap_or(1);
+    ARCHIPELAGO_STATE.score_for_next_block_blub = next_score;
+}
+
+
+
+
+
+
+
+
 
 fn archipelago_frogger_start(){
     Tas::abilities_set_swim(true);
@@ -1462,7 +1784,7 @@ fn archipelago_the_climb_start(mode: int){
 }
 
 fn ap_on_level_change_function(old: int, new: int) {
-    if ARCHIPELAGO_STATE.gamemode == 2 {
+    if ARCHIPELAGO_STATE.gamemode == 2 || ARCHIPELAGO_STATE.gamemode == 11 {
         // log(f"[AP] on_level_change: {old} -> {new}");
         Tas::set_level(30);
     }
@@ -1558,7 +1880,68 @@ fn archipelago_checked_location(id: int){
     if block_brawl_locations.contains(id) {
         update_block_brawl_in_logic_counts();
     }
+
+    let climb_line_locations = List::of(10091001, 10091002, 10091003, 10091004, 10091005, 10091006, 10091007, 10091008, 10091009, 10091010);
+    if climb_line_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in climb_line_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }
+        }
+        if number_pressed == climb_line_locations.len() {
+            ARCHIPELAGO_STATE.done_climb_line_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Climb Line Minigame!", color: AP_COLOR_GREEN }));
+        }
+        ARCHIPELAGO_STATE.progress_climb_line_minigame = f"{number_pressed*10}m/{climb_line_locations.len()*10}m";
+    }
+
+    let climb_spiral_locations = List::of(10092001, 10092002, 10092003, 10092004, 10092005, 10092006, 10092007, 10092008, 10092009, 10092010);
+    if climb_spiral_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in climb_spiral_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }
+        }
+        if number_pressed == climb_spiral_locations.len() {
+            ARCHIPELAGO_STATE.done_climb_spiral_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Climb Spiral Minigame!", color: AP_COLOR_GREEN }));
+        }
+        ARCHIPELAGO_STATE.progress_climb_spiral_minigame = f"{number_pressed*10}m/{climb_spiral_locations.len()*10}m";
+    }
+
+    let climb_chaos_locations = List::of(10093001, 10093002, 10093003, 10093004, 10093005, 10093006, 10093007, 10093008, 10093009, 10093010);
+    if climb_chaos_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in climb_chaos_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }
+        }
+        if number_pressed == climb_chaos_locations.len() {
+            ARCHIPELAGO_STATE.done_climb_chaos_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Climb Chaos Minigame!", color: AP_COLOR_GREEN }));
+        }
+        ARCHIPELAGO_STATE.progress_climb_chaos_minigame = f"{number_pressed*10}m/{climb_chaos_locations.len()*10}m";
+    }
+    
+    let block_blub_locations = List::of( 
+        10101003, 10101015, 10101021, 10101030, 10101042, 10101060, 10101084, 10101120,
+        10102003, 10102015, 10102021, 10102030, 10102042, 10102060, 10102084, 10102120,
+        10103003, 10103015, 10103021, 10103030, 10103042, 10103060, 10103084, 10103120,
+        10104003, 10104015, 10104021, 10104030, 10104042, 10104060, 10104084, 10104120,
+    );
+    if block_blub_locations.contains(id) {
+        update_block_blub_in_logic_counts();
+    }
+
 }
+
+
+
+
+
 fn archipelago_retrieved(key: string, value: string){
     if key == f"RFBB_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}" {
         let v = value.parse_int().unwrap();
@@ -1582,6 +1965,30 @@ fn archipelago_retrieved(key: string, value: string){
         let v = value.parse_int().unwrap();
         if v > ARCHIPELAGO_STATE.score_block_brawl_yellows {
             ARCHIPELAGO_STATE.score_block_brawl_yellows = v;
+        }
+    }
+    if key == f"RFBBL_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}" {
+        let v = value.parse_int().unwrap();
+        if v > ARCHIPELAGO_STATE.score_block_blub_reds {
+            ARCHIPELAGO_STATE.score_block_blub_reds = v;
+        }
+    }
+    if key == f"RFBBL_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}" {
+        let v = value.parse_int().unwrap();
+        if v > ARCHIPELAGO_STATE.score_block_blub_blues {
+            ARCHIPELAGO_STATE.score_block_blub_blues = v;
+        }
+    }
+    if key == f"RFBBL_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}" {
+        let v = value.parse_int().unwrap();
+        if v > ARCHIPELAGO_STATE.score_block_blub_greens {
+            ARCHIPELAGO_STATE.score_block_blub_greens = v;
+        }
+    }
+    if key == f"RFBBL_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}" {
+        let v = value.parse_int().unwrap();
+        if v > ARCHIPELAGO_STATE.score_block_blub_yellows {
+            ARCHIPELAGO_STATE.score_block_blub_yellows = v;
         }
     }
 }
