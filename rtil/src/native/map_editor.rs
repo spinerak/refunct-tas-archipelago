@@ -346,8 +346,7 @@ impl<'a> PlatformWrapper<'a> {
         unsafe {
             set_world_location_and_rotation.call(root_component.as_ptr(), &params);
         }
-    }        
-
+    }
 }
 #[derive(Debug, Clone)]
 pub struct CubeWrapper<'a> {
@@ -637,6 +636,48 @@ impl<'a> ButtonWrapper<'a> {
     pub fn new(button: ActorWrapper<'a>) -> ButtonWrapper<'a> {
         assert_eq!(button.class().name(), "BP_Button_C");
         ButtonWrapper { base: button }
+    }
+    
+    pub fn set_enabled(&self, enabled: bool) {
+        self.set_pressed(!enabled);
+        self.set_collision(enabled);
+    }
+
+    pub fn set_pressed(&self, pressed: bool) {
+        let set_active_fn = self.class().find_function("SetActive").unwrap();
+        let params = set_active_fn.create_argument_struct();
+        params.get_field("Value").unwrap::<BoolValueWrapper>().set(!pressed);
+        unsafe { set_active_fn.call(self.as_ptr(), &params); }
+    }
+
+    pub fn is_pressed(&self) -> bool {
+        self.get_field("IsPressed").unwrap::<BoolValueWrapper>()._get()
+    }
+
+    pub fn set_beacon_color(&self, r: f32, g: f32, b: f32) {
+        let beacon = self.get_field("Beacon").unwrap::<ObjectWrapper>();
+
+        let set_vector_on_material_fn = beacon.class()
+            .find_function("SetVectorParameterValueOnMaterials")
+            .unwrap();
+
+        let arg_struct = set_vector_on_material_fn.create_argument_struct();
+
+        let fname = FName::from("Color");
+        unsafe {
+            let base_ptr = arg_struct.as_ptr() as *mut u8;
+            let name_field = arg_struct.get_field("ParameterName");
+            let offset = name_field.prop().offset();
+            let fname_ptr = base_ptr.offset(offset) as *mut FName;
+            ptr::write(fname_ptr, fname);
+        }
+
+        let value: StructValueWrapper = arg_struct.get_field("ParameterValue").unwrap();
+        value.get_field("X").unwrap::<&Cell<f32>>().set(r);
+        value.get_field("Y").unwrap::<&Cell<f32>>().set(g);
+        value.get_field("Z").unwrap::<&Cell<f32>>().set(b);
+
+        unsafe { set_vector_on_material_fn.call(beacon.as_ptr(), &arg_struct); }
     }
 }
 #[derive(Debug, Clone)]

@@ -1,5 +1,5 @@
 use std::ffi::c_void;
-use crate::native::{ArrayElement, ObjectPropertyWrapper, ObjectWrapper, SizedArrayElement, StructValueWrapper, UObject};
+use crate::native::{ArrayElement, MulticastDelegateValueWrapper, ObjectPropertyWrapper, ObjectWrapper, SizedArrayElement, StructValueWrapper, UObject};
 use crate::native::reflection::{PropertyWrapper};
 
 #[derive(Debug)]
@@ -52,5 +52,21 @@ impl<'a> DynamicValue<'a> {
         }
         let ptr = self.ptr as *mut *mut UObject;
         unsafe { *ptr = object.as_ptr() }
+    }
+
+    pub fn is_multicast_delegate(&self) -> bool {
+        let class_name = self.prop.class().name();
+        class_name == "MulticastDelegateProperty"
+            || class_name == "MulticastInlineDelegateProperty"
+            || class_name == "MulticastSparseDelegateProperty"
+    }
+
+    /// Unwrap as a multicast delegate (if applicable)
+    pub fn as_multicast_delegate(&self) -> Option<MulticastDelegateValueWrapper<'a>> {
+        if self.is_multicast_delegate() {
+            unsafe { Some(MulticastDelegateValueWrapper::new(self.ptr)) }
+        } else {
+            None
+        }
     }
 }

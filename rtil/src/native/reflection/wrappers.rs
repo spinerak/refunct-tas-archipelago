@@ -8,7 +8,7 @@ use std::sync::atomic::Ordering;
 use itertools::Itertools;
 use crate::native::reflection::{AActor, DynamicValue, UArrayProperty, UClass, UeObjectWrapper, UObject, UObjectProperty, UProperty, UStruct, UStructProperty};
 use crate::native::ue::TArray;
-use crate::native::{ArrayElement, UBoolProperty, UeObjectWrapperType, UField, UFunction, UOBJECT_PROCESSEVENT};
+use crate::native::{ArrayElement, UBoolProperty, UeObjectWrapperType, UField, UFunction, UOBJECT_PROCESSEVENT, UeScope, FMulticastScriptDelegate, UMulticastDelegateProperty};
 
 #[derive(Debug, Clone)]
 pub struct BoolValueWrapper<'a> {
@@ -1026,3 +1026,115 @@ unsafe fn apply_field_info<'a>(ptr: *mut u8, info: FieldInfo<'a>) -> DynamicValu
     DynamicValue::new(value_ptr, info.prop)
 }
 
+#[allow(unused)]
+#[derive(Debug, Clone)]
+pub struct MulticastDelegatePropertyWrapper<'a> {
+    base: PropertyWrapper<'a>,
+}
+
+#[allow(unused)]
+impl<'a> MulticastDelegatePropertyWrapper<'a> {
+    pub unsafe fn new(prop: *mut UMulticastDelegateProperty) -> Self {
+        assert!(!prop.is_null());
+        Self {
+            base: PropertyWrapper::new(prop as *mut UProperty),
+        }
+    }
+
+    pub fn as_ptr(&self) -> *mut UMulticastDelegateProperty {
+        self.base.as_ptr() as *mut UMulticastDelegateProperty
+    }
+
+    /// Get the signature function that defines the delegate's parameters
+    pub fn signature_function(&self) -> Option<FunctionWrapper<'a>> {
+        unsafe {
+            let sig = (*self.as_ptr()).signature_function;
+            if sig.is_null() {
+                None
+            } else {
+                Some(FunctionWrapper::new(sig))
+            }
+        }
+    }
+}
+
+/// Wrapper for inspecting the actual delegate value at runtime
+#[derive(Debug)]
+pub struct MulticastDelegateValueWrapper<'a> {
+    ptr: *mut FMulticastScriptDelegate,
+    _marker: PhantomData<&'a mut FMulticastScriptDelegate>,
+}
+
+impl<'a> MulticastDelegateValueWrapper<'a> {
+    pub unsafe fn new(raw_ptr: *mut c_void) -> Self {
+        let ptr = raw_ptr as *mut FMulticastScriptDelegate;
+        Self {
+            ptr,
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn num_bindings(&self) -> usize {
+        unsafe { (*self.ptr).invocation_list.len() }
+    }
+
+    pub fn iter_bindings(&self) -> impl Iterator<Item = DelegateBinding> + '_ {
+        let len = self.num_bindings();
+        (0..len).map(move |i| unsafe {
+            let delegate = &(&(*self.ptr).invocation_list)[i];
+            DelegateBinding {
+                object_index: delegate.object.object_index,
+                object_serial: delegate.object.object_serial_number,
+                function_name: delegate.function_name.to_string_lossy(),
+            }
+        })
+    }
+
+    pub fn get_binding(&self, index: usize) -> Option<DelegateBinding> {
+        if index >= self.num_bindings() {
+            return None;
+        }
+        unsafe {
+            let delegate = &(&(*self.ptr).invocation_list)[index];
+            Some(DelegateBinding {
+                object_index: delegate.object.object_index,
+                object_serial: delegate.object.object_serial_number,
+                function_name: delegate.function_name.to_string_lossy(),
+            })
+        }
+    }
+
+    pub unsafe fn _set_invocation_list_len(&mut self, new_length: i32) {
+        // This is to enable a very hacky way for us to "disable" a multicast delegate
+        // from triggering: setting the stored array length to 0. However, we have no
+        // easy way to recover that value, so it must be saved to "re-enable" the delegate.
+        (*self.ptr).invocation_list.len = new_length;
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DelegateBinding {
+    pub object_index: i32,
+    pub object_serial: i32,
+    pub function_name: String,
+}
+
+impl<'a> DelegateBinding {
+    /// Try to resolve the bound object from GUObjectArray
+    /// Returns None if the object has been garbage collected
+    pub fn try_resolve_object(&self, scope: &'a UeScope) -> Option<ObjectWrapper<'a>> {
+        let object_array = scope.object_array();
+        let item = object_array.try_get(self.object_index)?;
+
+        if item.serial_number() == self.object_serial {
+            Some(item.object())
+        } else {
+            None
+        }
+    }
+
+    /// Check if this binding is to a valid (non-GC'd) object
+    pub fn is_valid(&self, scope: &'a UeScope) -> bool {
+        self.try_resolve_object(scope).is_some()
+    }
+}
