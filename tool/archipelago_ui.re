@@ -978,7 +978,13 @@ fn get_status_text_lines() -> List<ColorfulText> {
 }
 
 fn get_move_rando_status_lines() -> List<ColorfulText> {
-    let final_platform = if ARCHIPELAGO_STATE.final_platform_known { f"{ARCHIPELAGO_STATE.final_platform_c}-{ARCHIPELAGO_STATE.final_platform_p}" } else { "??-??" };
+    let goal = 
+        if ARCHIPELAGO_STATE.goal_known { 
+            f"{if ARCHIPELAGO_STATE.goal_t == "B" {"Button"} else {"Platform"}} {ARCHIPELAGO_STATE.goal_c}-{ARCHIPELAGO_STATE.goal_p}" 
+        } else { 
+            "????"
+        };
+
     let ledge_grab_state = if ARCHIPELAGO_STATE.ledge_grab { "✔" } else { "✖" };
     let wall_jump_state = if ARCHIPELAGO_STATE.wall_jump >= 2 { "∞" } else if ARCHIPELAGO_STATE.wall_jump == 1 { "1" } else { "✖" };
     let jump_pads_state = if ARCHIPELAGO_STATE.jump_pads { "✔" } else { "✖" };
@@ -996,7 +1002,7 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
             color: if ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass { AP_COLOR_GREEN } else { AP_COLOR_CYAN }
         },
         ColorfulText {
-            text:  f"Go to Platform {final_platform}\n\n",
+            text:  f"Go to {goal}\n\n",
             color: if ARCHIPELAGO_STATE.has_goaled { AP_COLOR_GREEN } else { AP_COLOR_CYAN }
         },
         ColorfulText { text: "Abilities\n", color: COLOR_WHITE },

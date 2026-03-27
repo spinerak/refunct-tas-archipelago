@@ -143,7 +143,7 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                             }
                         },
                         ReboToArchipelago::LocationChecks { locations    } => {
-                            log!("Sending location checks: {:?}", locations);
+                            // log!("Sending location checks: {:?}", locations);
                             sender.as_mut().unwrap()
                                 .location_checks(locations).await?;
                         },

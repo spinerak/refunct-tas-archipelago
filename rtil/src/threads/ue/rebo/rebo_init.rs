@@ -247,6 +247,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_input_mode_ui_only)
         .add_function(flush_pressed_keys)
         .add_function(test_stuff)
+        .add_function(disable_button)
         .add_external_type(Location)
         .add_external_type(Size3D)
         .add_external_type(Rotation)
@@ -549,6 +550,16 @@ fn test_stuff() {
     });
 }
 
+#[rebo::function("Tas::disable_button")]
+fn disable_button(level_index: usize, button_index: usize) {
+    UeScope::with(|scope| {
+        let levels = LEVELS.lock().unwrap();
+        let button = scope.get(levels[level_index].buttons[button_index]);
+        button.set_pressed(true);
+        button.set_collision(false);
+    });
+}
+
 #[rebo::function("Tas::disable_all_buttons")]
 fn disable_all_buttons() {
     let levels = LEVELS.lock().unwrap();
@@ -626,7 +637,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                 if index.element_type == ElementType::Cube && index.cluster_index == 9999 {
                     maybe_remove_extra_cube(index.element_index as i32);
                 }
-                log!("Element pressed {:?}", index);
+                // log!("Element pressed {:?}", index);
                 element_pressed(vm, index)?
             },
             UeEvent::ElementReleased(index) => element_released(vm, index)?,
@@ -2583,6 +2594,7 @@ fn raise_cluster(cluster_index: i32) {
     // set current level to the one before the level we want to trigger
     LevelState::set_level(cluster_index - 1);
     UMyGameInstance::raise_next_level();
+    LevelState::set_level(-1);
 }
 
 

@@ -127,48 +127,60 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     if key.to_small() == KEY_S.to_small() {
         Tas::set_input_mode_game_only();
     }
-    if key.to_small() == KEY_T.to_small() {
-        Tas::test_stuff();
-    }
+    //if key.to_small() == KEY_T.to_small() {
+    //    Tas::test_stuff();
+    //}
+    //if key.to_small() == KEY_Y.to_small() {
+    //    Tas::disable_button(3, 0);
+    //}
+    //if key.to_small() == KEY_U.to_small() {
+    //    Tas::archipelago_raise_cluster(30);
+    //}
+    //if key.to_small() == KEY_I.to_small() {
+    //    Tas::set_level(-1);
+    //}
+    //if key.to_small() == KEY_O.to_small() {
+    //    Tas::set_level(40);
+    //}
 
     //Ledge, jump_pad, WallJump, Swim, Lifts, Pipes
 
-    // if key.to_small() == KEY_1.to_small(){
-    //     ARCHIPELAGO_STATE.ledge_grab = !ARCHIPELAGO_STATE.ledge_grab;
-    //     Tas::abilities_set_ledge_grab(ARCHIPELAGO_STATE.ledge_grab);
-    //     log(f"Ledge Grab set to {ARCHIPELAGO_STATE.ledge_grab}");
-    // }
-    // if key.to_small() == KEY_2.to_small(){
-    //     ARCHIPELAGO_STATE.jump_pads = !ARCHIPELAGO_STATE.jump_pads;
-    //     Tas::abilities_set_jump_pads(ARCHIPELAGO_STATE.jump_pads);
-    //     log(f"Jump Pad set to {ARCHIPELAGO_STATE.jump_pads}");
-    // }
-    // if key.to_small() == KEY_3.to_small(){
-    //     ARCHIPELAGO_STATE.wall_jump = (ARCHIPELAGO_STATE.wall_jump + 1) % 3;
-    //     Tas::abilities_set_wall_jump(ARCHIPELAGO_STATE.wall_jump, true);
-    //     log(f"Wall Jump set to {ARCHIPELAGO_STATE.wall_jump}");
-    // }
-    // if key.to_small() == KEY_4.to_small(){
-    //     ARCHIPELAGO_STATE.swim = !ARCHIPELAGO_STATE.swim;
-    //     Tas::abilities_set_swim(ARCHIPELAGO_STATE.swim);
-    //     log(f"Swim set to {ARCHIPELAGO_STATE.swim}");
-    // }
-    // if key.to_small() == KEY_5.to_small(){
-    //     ARCHIPELAGO_STATE.lifts = !ARCHIPELAGO_STATE.lifts;
-    //     Tas::abilities_set_lifts(ARCHIPELAGO_STATE.lifts);
-    //     log(f"Lifts set to {ARCHIPELAGO_STATE.lifts}");
-    // }
-    // if key.to_small() == KEY_6.to_small(){
-    //     ARCHIPELAGO_STATE.pipes = !ARCHIPELAGO_STATE.pipes;
-    //     Tas::abilities_set_pipes(ARCHIPELAGO_STATE.pipes);
-    //     log(f"Pipes set to {ARCHIPELAGO_STATE.pipes}");
-    // }
-    // if key.to_small() == KEY_7.to_small(){
-    //     let current_loc = Tas::get_location();
-    //     let loc = Location { x: current_loc.x, y: current_loc.y, z: current_loc.z + 10000. };
-    //     Tas::set_location(loc);
-    //     log(f"Teleported up by 10000 units");
-    // }
+     // if key.to_small() == KEY_1.to_small(){
+     //     ARCHIPELAGO_STATE.ledge_grab = !ARCHIPELAGO_STATE.ledge_grab;
+     //     Tas::abilities_set_ledge_grab(ARCHIPELAGO_STATE.ledge_grab);
+     //     log(f"Ledge Grab set to {ARCHIPELAGO_STATE.ledge_grab}");
+     // }
+     // if key.to_small() == KEY_2.to_small(){
+     //     ARCHIPELAGO_STATE.jump_pads = !ARCHIPELAGO_STATE.jump_pads;
+     //     Tas::abilities_set_jump_pads(ARCHIPELAGO_STATE.jump_pads);
+     //     log(f"Jump Pad set to {ARCHIPELAGO_STATE.jump_pads}");
+     // }
+     // if key.to_small() == KEY_3.to_small(){
+     //     ARCHIPELAGO_STATE.wall_jump = (ARCHIPELAGO_STATE.wall_jump + 1) % 3;
+     //     Tas::abilities_set_wall_jump(ARCHIPELAGO_STATE.wall_jump, true);
+     //     log(f"Wall Jump set to {ARCHIPELAGO_STATE.wall_jump}");
+     // }
+     // if key.to_small() == KEY_4.to_small(){
+     //     ARCHIPELAGO_STATE.swim = !ARCHIPELAGO_STATE.swim;
+     //     Tas::abilities_set_swim(ARCHIPELAGO_STATE.swim);
+     //     log(f"Swim set to {ARCHIPELAGO_STATE.swim}");
+     // }
+     // if key.to_small() == KEY_5.to_small(){
+     //     ARCHIPELAGO_STATE.lifts = !ARCHIPELAGO_STATE.lifts;
+     //     Tas::abilities_set_lifts(ARCHIPELAGO_STATE.lifts);
+     //     log(f"Lifts set to {ARCHIPELAGO_STATE.lifts}");
+     // }
+     // if key.to_small() == KEY_6.to_small(){
+     //     ARCHIPELAGO_STATE.pipes = !ARCHIPELAGO_STATE.pipes;
+     //     Tas::abilities_set_pipes(ARCHIPELAGO_STATE.pipes);
+     //     log(f"Pipes set to {ARCHIPELAGO_STATE.pipes}");
+     // }
+     if key.to_small() == KEY_7.to_small(){
+         let current_loc = Tas::get_location();
+         let loc = Location { x: current_loc.x, y: current_loc.y, z: current_loc.z + 10000. };
+         Tas::set_location(loc);
+         log(f"Teleported up by 10000 units");
+     }
 
     match UI_STACK.last() {
         Option::Some(ui) => ui.onkey(key),
