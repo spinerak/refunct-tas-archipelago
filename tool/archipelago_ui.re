@@ -65,11 +65,11 @@ fn create_archipelago_menu() -> Ui {
         onclick: fn(label: Text) { leave_ui(); },
     }));
 
-    // elements.push(
-    //     UiElement::Button(UiButton {
-    //     label: Text { text: "Map Editor" },
-    //     onclick: fn(label: Text) { enter_ui(create_map_editor_menu()); },
-    // }));
+    //elements.push(
+    //    UiElement::Button(UiButton {
+    //    label: Text { text: "Map Editor" },
+    //    onclick: fn(label: Text) { enter_ui(create_map_editor_menu()); },
+    //}));
 
     Ui::new("Archipelago:", elements)
 }
@@ -1196,7 +1196,7 @@ fn archipelago_disconnected_info_hud() {
         lines.push(ColorfulText { text: "Press F1 to enable movement input\n\n", color: AP_COLOR_RED });
     } 
 
-    lines.push(ColorfulText { text: "Archipelago Randomizer\n\n", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: f"Archipelago Randomizer {ARCHIPELAGO_STATE.mod_version}\n\n", color: COLOR_WHITE });
 
     lines.push(ColorfulText { text: "Not connected to an Archipelago server yet,\nuse the menu to ", color: COLOR_WHITE });
     lines.push(ColorfulText { text: "log in\n\n", color: AP_COLOR_YELLOW });

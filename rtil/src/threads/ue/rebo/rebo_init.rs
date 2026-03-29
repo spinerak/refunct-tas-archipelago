@@ -134,6 +134,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_goal_animation_should_play)
         .add_function(disable_all_buttons)
         .add_function(enable_all_buttons)
+        .add_function(enable_button)
 
         .add_function(archipelago_connect)
         .add_function(archipelago_disconnect)
@@ -574,8 +575,19 @@ fn disable_all_buttons() {
     });
 }
 
+#[rebo::function("Tas::enable_button")]
+fn enable_button(level_index: usize, button_index: usize, color: Color) {
+    UeScope::with(|scope| {
+        let levels = LEVELS.lock().unwrap();
+        let button = scope.get(levels[level_index].buttons[button_index]);
+        button.set_pressed(false);
+        button.set_collision(true);
+        button.set_beacon_color(color.red, color.green, color.blue);
+    });
+}
+
 #[rebo::function("Tas::enable_all_buttons")]
-fn enable_all_buttons() {
+fn enable_all_buttons(color: Color) {
     let levels = LEVELS.lock().unwrap();
     UeScope::with(|scope| {
         for level in levels.iter() {
@@ -583,6 +595,7 @@ fn enable_all_buttons() {
                 let button = scope.get(*button_index);
                 button.set_pressed(false);
                 button.set_collision(true);
+                button.set_beacon_color(color.red, color.green, color.blue);
             }
         }
     });
@@ -700,6 +713,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                 Ok(ArchipelagoToRebo::ConnectionAborted) => {
                     log!("ArchipelagoToRebo::ConnectionAborted");
                     archipelago_disconnected(vm)?
+                    
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::RoomInfo(info))) => {
                     log!("RoomInfo message");

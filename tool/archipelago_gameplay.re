@@ -273,7 +273,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "0.9.0",
+        mod_version: "1.0.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -283,7 +283,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
 
 static mut ARCHIPELAGO_STATE = fresh_archipelago_state();
 
-static platforms_with_buttons = List::of(10010101,10010203,10010302,10010404,10010501,10010601,10010701,10010702,10010811,10010906,10011001,10011003,10011108,10011201,10011301,10011403,10011502,10011601,10011702,10011802,10011801,10011905,10012007,10012108,10012202,10012303,10012401,10012505,10012612,10012607,10012609,10012708,10012818,10012808,10012904,10013012,10013102);
+// static platforms_with_buttons = List::of(10010101,10010203,10010302,10010404,10010501,10010601,10010701,10010702,10010811,10010906,10011001,10011003,10011108,10011201,10011301,10011403,10011502,10011601,10011702,10011802,10011801,10011905,10012007,10012108,10012202,10012303,10012401,10012505,10012612,10012607,10012609,10012708,10012818,10012808,10012904,10013012,10013102);
 
 static mut ARCHIPELAGO_COMPONENT = Component {
     id: ARCHIPELAGO_COMPONENT_ID,
@@ -357,6 +357,52 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 
             if index.element_type == ElementType::Button {
                 archipelago_send_check(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+
+                let mut map = Map::new();
+                map.insert(10000101, 10010101);
+                map.insert(10000201, 10010203);
+                map.insert(10000301, 10010302);
+                map.insert(10000401, 10010404);
+                map.insert(10000501, 10010501);
+                map.insert(10000601, 10010601);
+                map.insert(10000701, 10010701);
+                map.insert(10000702, 10010702);
+                map.insert(10000801, 10010811);
+                map.insert(10000901, 10010906);
+                map.insert(10001001, 10011001);
+                map.insert(10001002, 10011003);
+                map.insert(10001101, 10011108);
+                map.insert(10001201, 10011201);
+                map.insert(10001301, 10011301);
+                map.insert(10001401, 10011403);
+                map.insert(10001501, 10011502);
+                map.insert(10001601, 10011601);
+                map.insert(10001701, 10011702);
+                map.insert(10001802, 10011802);
+                map.insert(10001801, 10011801);
+                map.insert(10001901, 10011905);
+                map.insert(10002001, 10012007);
+                map.insert(10002101, 10012108);
+                map.insert(10002201, 10012202);
+                map.insert(10002301, 10012303);
+                map.insert(10002401, 10012401);
+                map.insert(10002501, 10012505);
+                map.insert(10002602, 10012612);
+                map.insert(10002603, 10012607);
+                map.insert(10002601, 10012609);
+                map.insert(10002701, 10012708);
+                map.insert(10002802, 10012818);
+                map.insert(10002801, 10012808);
+                map.insert(10002901, 10012904);
+                map.insert(10003001, 10013012);
+                map.insert(10003101, 10013102);
+
+                let mapped_loc = map.get(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+
+                if mapped_loc != Option::None {
+                    archipelago_send_check(mapped_loc.unwrap());
+                }
+
 
                 if ARCHIPELAGO_STATE.goal_t == "B" {
                     if index.cluster_index == ARCHIPELAGO_STATE.goal_c - 1 && index.element_index == ARCHIPELAGO_STATE.goal_p - 1 && ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass {
@@ -700,7 +746,20 @@ fn archipelago_tick(time: int) {
     
     Tas::archipelago_raise_cluster(c - 1); // 0-indexed clusters
     if ARCHIPELAGO_STATE.gamemode == 0 {
+            
+        Tas::enable_button(c-1, 0, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+        if c == 7 || c == 10 || c == 18 || c == 26 || c == 28 {
+            Tas::enable_button(c-1, 1, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+        }
+        if c == 26 {
+            Tas::enable_button(c-1, 2, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+        }  
+
         archipelago_activate_stepped_on_buttons(c);
+
+        if c == ARCHIPELAGO_STATE.goal_c && ARCHIPELAGO_STATE.goal_t == "B" && ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass {
+            Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+        }
     }
 
     ARCHIPELAGO_STATE.last_level_unlocked = c;
@@ -991,7 +1050,11 @@ fn update_block_blub_in_logic_counts(){
 
 fn archipelago_got_grass(){
     ARCHIPELAGO_STATE.grass += 1;
-    // log("Got grass!");
+    if ARCHIPELAGO_STATE.grass == ARCHIPELAGO_STATE.required_grass && ARCHIPELAGO_STATE.goal_t == "B" {
+        if ARCHIPELAGO_STATE.triggered_clusters.contains(ARCHIPELAGO_STATE.goal_c){
+            Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+        }
+    }
 }
 
 fn archipelago_init(gamemode: int){
@@ -2035,7 +2098,7 @@ fn archipelago_activate_stepped_on_buttons(num: int){
             continue;
         }
         let plat = (id - 10000000) % 100;
-        ap_log_1(f"Activating button at cluster {cluster} plat {plat}");
+        // ap_log_1(f"Activating button at cluster {cluster} plat {plat}");
         Tas::disable_button(cluster-1, plat-1);
     }
 }
@@ -2085,6 +2148,7 @@ fn archipelago_collect_collected_cubes(){
 }
 
 fn archipelago_received_slot_data(key: string, value: string){
+    // ap_log_1(f"Received slot data: {key} = {value}");
     if key == "ap_world_version" {
         ARCHIPELAGO_STATE.apworld_version = value.slice(1, -1);
     }
