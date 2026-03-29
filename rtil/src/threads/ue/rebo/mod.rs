@@ -140,7 +140,7 @@ pub fn init(
     archipelago_rebo_rx: Receiver<ArchipelagoToRebo>, rebo_archipelago_tx: UnboundedSender<ReboToArchipelago>,
 ) {
     log!("init rebo state");
-    log!("checking for a new refunct-tas release");
+    log!("checking for a new refunct-tas-archipelago release");
     let new_version = check_for_new_version();
     log!("rebo waiting until all this* have been acquired");
 
@@ -230,7 +230,7 @@ fn check_for_new_version() -> Option<String> {
         .timeout_global(Some(Duration::from_secs(3)))
         .build().into();
     let res = agent
-        .get("https://github.com/oberien/refunct-tas/releases/latest")
+        .get("https://github.com/spinerak/refunct-tas-archipelago/releases/latest")
         .call();
     match res {
         Ok(response) => {

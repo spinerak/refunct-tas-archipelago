@@ -1,7 +1,7 @@
 [package]
-name = "refunct-tas-ingame-lib"
-version = "0.9.7"
-authors = ["oberien <jaro.fietz@gmx.de>"]
+name = "refunct-tas-archipelago"
+version = "1.0.0"
+authors = ["spineraks", "oberien <jaro.fietz@gmx.de>"]
 edition = "2021"
 
 [dependencies]

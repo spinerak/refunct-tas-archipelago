@@ -4215,8 +4215,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "refunct-tas-ingame-lib"
-version = "0.9.7"
+name = "refunct-tas-archipelago"
+version = "1.0.0"
 dependencies = [
  "archipelago_rs",
  "atomic_float",
