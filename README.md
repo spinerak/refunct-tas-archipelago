@@ -34,11 +34,10 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 ## Troubleshooting
 ### If the mod just crashes...
 - Is Refunct open when you open the mod? We only support the latest version of Refunct via Steam.
-- Please try it 4 or 5 times, sometimes it just crashes
-- Please run `debug.bat`, this should give you an error message.
+- Please try it 4 or 5 times, sometimes it just crashes.
 - On Linux, if the error says `thread 'main' panicked at 'called Result::unwrap()'...`, make sure that you configured `LD_PRELOAD` correctly.
 - If you're still having problems, try updating your graphics drivers (yes this already helped many times).
-- Feel free to ask in the discord (Archipelago -> future-game-design -> Refunct)
+- Feel free to ask in the discord (Archipelago -> future-game-design -> Refunct). We will probably ask for the error message you get when you run `debug.bat` and the log file `Users\user\AppData\Local\Temp\refunct-tas.log` (note that the log file may not exist).
 
 ## Building
 If you want to build the project yourself, follow the steps from the original [refunct-tas](https://github.com/oberien/refunct-tas) project.
