@@ -32,13 +32,24 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 - The final cluster in the game won't appear and will stay underwater in the main game (the final button is weird).
 
 ## Troubleshooting
-### If the mod just crashes...
-- Is Refunct open when you open the mod? We only support the latest version of Refunct via Steam.
-- Please try it 4 or 5 times, sometimes it just crashes.
-- On Linux, if the error says `thread 'main' panicked at 'called Result::unwrap()'...`, make sure that you configured `LD_PRELOAD` correctly.
-- If you're still having problems, try updating your graphics drivers (yes this already helped many times).
-- Feel free to ask in the discord (Archipelago -> future-game-design -> Refunct). We will probably ask for the error message you get when you run `debug.bat` and the log file `Users\user\AppData\Local\Temp\refunct-tas.log` (note that the log file may not exist).
-
+All of these troubleshooting steps are for when the mod crashes on launch.
+### The basics
+- Is Refunct open when you open the mod? We only support the latest version of Refunct via Steam (build id 5753767).
+- Please try it 2 or 3 times, sometimes it just crashes.
+### Advanced
+- There are two ways to learn more about the error.
+  - Run `debug.bat` (after opening Refunct) and it'll print an error.
+  - Find the log file at `Users\user\AppData\Local\Temp\refunct-tas.log` (note that the log file may not exist).
+- **On linux, `debug.bat` says `thread 'main' panicked at 'called Result::unwrap()'...`]**
+  - Make sure that you configured `LD_PRELOAD` correctly.
+- **`debug.bat` says `"failed to fill whole buffer"`**
+  - Do you have Spybot system tray? That program might interfere with Refunct.
+- **Log file ends with `Got code`**
+  - You might have older graphics drivers.
+  - Right-click the game on steam and add this as launch option: `cmd /C "set WGPU_BACKEND=gles&& %command%"`
+  - Or you could try to update your graphics driver (this helped many times).
+### Stay calm and don't panic
+- Feel free to ask in the discord (Archipelago -> future-game-design -> Refunct). We will probably ask for your operating system and the error messages you got, and how/when it crashes. 
 ## Building
 If you want to build the project yourself, follow the steps from the original [refunct-tas](https://github.com/oberien/refunct-tas) project.
 - For Windows: you might need to install "NASM - The Netwide Assembler" and add it to your PATH.
