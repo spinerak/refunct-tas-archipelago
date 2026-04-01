@@ -991,9 +991,8 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
     let swim_state = if ARCHIPELAGO_STATE.swim { "✔" } else { "✖" };
     let lifts_state = if ARCHIPELAGO_STATE.lifts { "✔" } else { "✖" };
     let pipes_state = if ARCHIPELAGO_STATE.pipes { "✔" } else { "✖" };
-
-    let vanilla_state = if ARCHIPELAGO_STATE.unlock_vanilla_minigame { "YES" } else { "NO" };
-    let seeker_state = if ARCHIPELAGO_STATE.unlock_seeker_minigame { "YES" } else { "NO" };
+    let regular_cubes = if ARCHIPELAGO_STATE.cubes_options == 0 || (ARCHIPELAGO_STATE.cubes_options == 1 && ARCHIPELAGO_STATE.red_cubes_bag) { "✔" } else { "✖" };
+    let extra_cubes = if ARCHIPELAGO_STATE.extra_cubes_options == 0 || (ARCHIPELAGO_STATE.extra_cubes_options == 1 && ARCHIPELAGO_STATE.red_cubes_bag) || (ARCHIPELAGO_STATE.extra_cubes_options == 2 && ARCHIPELAGO_STATE.green_cubes_bag) { "✔" } else { "✖" };
 
     let lines = List::of(
         ColorfulText { text: "Archipelago - Move Rando\nGoals\n", color: COLOR_WHITE },
@@ -1031,6 +1030,20 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
             color: if ARCHIPELAGO_STATE.pipes { AP_COLOR_GREEN } else { AP_COLOR_RED }
         },
     );
+    if ARCHIPELAGO_STATE.cubes_options != 9 || ARCHIPELAGO_STATE.extra_cubes_options != 9 {
+        lines.push(
+            ColorfulText {
+                text:  if ARCHIPELAGO_STATE.cubes_options != 9 { f"\n{regular_cubes} Cubes       " } else { "\n              " },
+                color: if ARCHIPELAGO_STATE.cubes_options == 0 || (ARCHIPELAGO_STATE.cubes_options == 1 && ARCHIPELAGO_STATE.red_cubes_bag) { AP_COLOR_GREEN } else { AP_COLOR_RED }
+            }
+        );
+        lines.push(
+            ColorfulText {
+                text:  if ARCHIPELAGO_STATE.extra_cubes_options != 9 { f"{extra_cubes} Ext Cubes" } else { "           " },
+                color: if ARCHIPELAGO_STATE.extra_cubes_options == 0 || (ARCHIPELAGO_STATE.extra_cubes_options == 1 && ARCHIPELAGO_STATE.red_cubes_bag) || (ARCHIPELAGO_STATE.extra_cubes_options == 2 && ARCHIPELAGO_STATE.green_cubes_bag) { AP_COLOR_GREEN } else { AP_COLOR_RED }
+            }
+        );
+    }
     lines
 }
 

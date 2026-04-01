@@ -2,7 +2,6 @@
 struct ArchipelagoState {
     ap_connected: bool,
 
-    last_level_unlocked: int,
     grass: int,
     wall_jump: int,
     ledge_grab: bool,
@@ -143,7 +142,6 @@ fn fresh_archipelago_state() -> ArchipelagoState {
     ArchipelagoState {
         ap_connected: false,
 
-        last_level_unlocked: 1,
         grass: -10000,
         wall_jump: 0,
         ledge_grab: false,
@@ -273,7 +271,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.0.0",
+        mod_version: "0.10.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -637,7 +635,7 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         }
 
         let clusterindex = item_id - 10000000;
-        if clusterindex >= 2 && clusterindex < 33 {
+        if clusterindex >= 1 && clusterindex < 33 {
             if !ARCHIPELAGO_STATE.triggered_clusters.contains(clusterindex) {
                 ARCHIPELAGO_STATE.triggering_clusters.push(clusterindex);
             }
@@ -744,9 +742,11 @@ fn archipelago_tick(time: int) {
     let c = ARCHIPELAGO_STATE.triggering_clusters.get(0).unwrap();
     ARCHIPELAGO_STATE.triggering_clusters.remove(0);
     
-    Tas::archipelago_raise_cluster(c - 1); // 0-indexed clusters
+    if c > 1 {
+        Tas::archipelago_raise_cluster(c - 1); // 0-indexed clusters;
+    }
+
     if ARCHIPELAGO_STATE.gamemode == 0 {
-            
         Tas::enable_button(c-1, 0, Color { red: 1., green: 0., blue: 0., alpha: 1. });
         if c == 7 || c == 10 || c == 18 || c == 26 || c == 28 {
             Tas::enable_button(c-1, 1, Color { red: 1., green: 0., blue: 0., alpha: 1. });
@@ -761,8 +761,6 @@ fn archipelago_tick(time: int) {
             Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
         }
     }
-
-    ARCHIPELAGO_STATE.last_level_unlocked = c;
 
     if !ARCHIPELAGO_STATE.triggered_clusters.contains(c) {
         ARCHIPELAGO_STATE.triggered_clusters.push(c);
@@ -1120,7 +1118,7 @@ fn archipelago_start(){
 }
 
 fn archipelago_main_start(){
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+    Tas::set_goal_animation_should_play(false);
     ARCHIPELAGO_STATE.wall_jump = 0;
     ARCHIPELAGO_STATE.ledge_grab = false;
     ARCHIPELAGO_STATE.swim = false;
@@ -1255,7 +1253,6 @@ fn archipelago_vanilla_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
 
 }
 
@@ -1267,7 +1264,6 @@ fn archipelago_seeker_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
 
     // for loop
     let list = List::of(2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31);
@@ -1304,7 +1300,6 @@ fn archipelago_button_galore_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
 }
 
 fn archipelago_og_randomizer_start(){
@@ -1315,7 +1310,6 @@ fn archipelago_og_randomizer_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
 }
 
 fn archipelago_block_brawl_start(){
@@ -1327,7 +1321,6 @@ fn archipelago_block_brawl_start(){
     Tas::abilities_set_lifts(true);
     Tas::deactivate_all_buttons();
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.block_brawl_cubes_collected = 0;
     ARCHIPELAGO_STATE.block_brawl_cubes_total = 0;
 
@@ -1459,7 +1452,6 @@ fn archipelago_block_blub_start(){
     Tas::abilities_set_lifts(true);
     Tas::disable_all_buttons();
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
 
     ARCHIPELAGO_STATE.block_blub_cubes_collected = 0;
     ARCHIPELAGO_STATE.block_blub_cubes_total = 0;
@@ -1592,7 +1584,6 @@ fn archipelago_frogger_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
     Tas::disable_all_buttons();
 
     // start location, spawn block below it, player in the middle, a platform that is longer x-wise than z-wise
@@ -1673,7 +1664,6 @@ fn archipelago_hillside_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
     Tas::disable_all_buttons();
 
     // start location, spawn block below it, player in the middle, a platform that is longer x-wise than z-wise
@@ -1851,7 +1841,6 @@ fn archipelago_the_climb_start(mode: int){
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
     Tas::disable_all_buttons();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.started = 2;
 
     let mut i:float = -1.;

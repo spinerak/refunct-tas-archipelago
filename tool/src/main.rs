@@ -30,7 +30,13 @@ fn main() {
                 inject::inject();
                 println!("DLL Injected");
                 println!("Create tas...");
-                tas = Tas::new().unwrap();
+                match Tas::new() {
+                    Ok(val) => tas = val,
+                    Err(e) => {
+                        println!("Error creating TAS: {:?}", e);
+                        return;
+                    }
+                }
                 println!("TAS created successfully.");
             }
         }
