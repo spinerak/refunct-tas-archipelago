@@ -48,6 +48,12 @@ All of these troubleshooting steps are for when the mod crashes on launch.
   - You might have older graphics drivers.
   - Right-click the game on steam and add this as launch option: `cmd /C "set WGPU_BACKEND=gles&& %command%"`
   - Or you could try to update your graphics driver (this helped many times).
+- **`debug.bat` says `ParseIntError { kind: InvalidDigit }`**
+  - Refunct probably has multiple processes open (some kind of overlay)?
+  - Please run Refunct, then open a cmd, and run `powershell -NoProfile -Command "Get-Process -Name 'Refunct-Win32-Shipping'"`. If it shows two or more lines, then this does seem to be the case.
+  - Try to kill one of the processes (try the one with the lowest handles/cpu first) using `taskkill /Pid 8132` where `8132` is the ID. If Refunct doesn't crash, you got the correct one
+  - Now try to run the mod again.
+     
 ### Stay calm and don't panic
 - Feel free to ask in the discord (Archipelago -> future-game-design -> Refunct). We will probably ask for your operating system and the error messages you got, and how/when it crashes. 
 ## Building
