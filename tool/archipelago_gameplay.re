@@ -46,7 +46,6 @@ struct ArchipelagoState {
     progress_seeker_minigame: string,
     seeker_platforms: List<int>,
     seeker_extra_pressed: List<int>,
-    seeker_done_triggering: int,
 
 
     unlock_button_galore_minigame: bool,
@@ -187,7 +186,6 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         progress_seeker_minigame: "0/10",
         seeker_platforms: List::new(),
         seeker_extra_pressed: List::new(),
-        seeker_done_triggering: 0,
 
 
         unlock_button_galore_minigame: false,
@@ -500,7 +498,6 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             if index.element_type == ElementType::Platform {
                 let loc_id = 10010000 + (index.cluster_index + 1) * 100 + index.element_index + 1;
                 if ARCHIPELAGO_STATE.seeker_platforms.contains(loc_id) && !ARCHIPELAGO_STATE.seeker_extra_pressed.contains(loc_id) {
-                    // log(f"$Seeker Platform {index.cluster_index + 1}-{index.element_index + 1}");
                     ARCHIPELAGO_STATE.seeker_extra_pressed.push(loc_id);
                     archipelago_send_check(loc_id + 20000);
                 }
@@ -742,15 +739,9 @@ fn archipelago_tick(time: int) {
         return;
     }
     if ARCHIPELAGO_STATE.triggering_clusters.len() == 0 {
-        if ARCHIPELAGO_STATE.gamemode == 3 && ARCHIPELAGO_STATE.seeker_done_triggering == 1 {
-            Tas::activate_all_buttons();
-            ARCHIPELAGO_STATE.seeker_done_triggering = 2;
-        }
         return;
     }
-    if ARCHIPELAGO_STATE.gamemode == 3 && ARCHIPELAGO_STATE.seeker_done_triggering == 0 {
-        ARCHIPELAGO_STATE.seeker_done_triggering = 1;
-    }
+    
     ARCHIPELAGO_STATE.last_tick_time = time;
 
     let c = ARCHIPELAGO_STATE.triggering_clusters.get(0).unwrap();
@@ -759,6 +750,8 @@ fn archipelago_tick(time: int) {
     if c > 1 {
         Tas::archipelago_raise_cluster(c - 1); // 0-indexed clusters;
     }
+
+
 
     if ARCHIPELAGO_STATE.gamemode == 0 {
         Tas::enable_button(c-1, 0, Color { red: 1., green: 0., blue: 0., alpha: 1. });
@@ -777,6 +770,8 @@ fn archipelago_tick(time: int) {
                 Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
             }
         }
+    } else {
+        Tas::disable_all_buttons();
     }
 
     if !ARCHIPELAGO_STATE.triggered_clusters.contains(c) {
@@ -1151,7 +1146,7 @@ fn archipelago_main_start(){
     Tas::abilities_set_pipes(false);
     Tas::abilities_set_lifts(false);
 
-    Tas::set_level(-1);
+    Tas::set_level(35);
 
     archipelago_activate_stepped_on_platforms();
     archipelago_collect_collected_cubes();
@@ -1270,6 +1265,7 @@ fn archipelago_vanilla_start(){
 }
 
 fn archipelago_seeker_start(){
+    Tas::deactivate_all_buttons();
     Tas::abilities_set_swim(true);
     Tas::abilities_set_wall_jump(2, false);
     Tas::abilities_set_ledge_grab(true);
@@ -1924,14 +1920,14 @@ fn archipelago_checked_location(id: int){
         ARCHIPELAGO_STATE.progress_vanilla_minigame = f"{number_pressed}/{vanilla_locations.len()}";
     }
     if id >= 10030000 && id < 10040000 {
-        if ARCHIPELAGO_STATE.seeker_extra_pressed.contains(id - 20000) {
-            return;
+        if !ARCHIPELAGO_STATE.seeker_extra_pressed.contains(id - 20000) {
+            ARCHIPELAGO_STATE.seeker_extra_pressed.push(id - 20000);
         }
-        ARCHIPELAGO_STATE.seeker_extra_pressed.push(id - 20000);
         if ARCHIPELAGO_STATE.seeker_extra_pressed.len() == 10 {
             ARCHIPELAGO_STATE.done_seeker_minigame = true;
         }
         ARCHIPELAGO_STATE.progress_seeker_minigame = f"{ARCHIPELAGO_STATE.seeker_extra_pressed.len()}/10";
+        
     }
     let button_galore_locations = List::of(10040101, 10040201, 10040301, 10040401, 10040501, 10040601, 10040701, 10040702, 10040801, 10040901, 10041001, 10041002, 10041101, 10041201, 10041301, 10041401, 10041501, 10041601, 10041701, 10041801, 10041802, 10041901, 10042001, 10042101, 10042201, 10042301, 10042401, 10042501, 10042601, 10042602, 10042603, 10042701, 10042801, 10042802, 10042901, 10043001, 10043101);
     if button_galore_locations.contains(id) {

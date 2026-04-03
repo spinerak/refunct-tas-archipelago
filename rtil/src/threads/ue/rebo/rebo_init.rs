@@ -2612,7 +2612,7 @@ fn raise_cluster(cluster_index: i32) {
     // set current level to the one before the level we want to trigger
     LevelState::set_level(cluster_index - 1);
     UMyGameInstance::raise_next_level();
-    LevelState::set_level(-1);
+    LevelState::set_level(-2);
 }
 
 
