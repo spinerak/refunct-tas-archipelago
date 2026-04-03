@@ -608,7 +608,7 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         }
         if item_id == 9999997 {  // Goal Known
             ARCHIPELAGO_STATE.goal_known = true;
-            if !ARCHIPELAGO_STATE.goal_known_start && ARCHIPELAGO_STATE.goal_t == "B" {
+            if !ARCHIPELAGO_STATE.goal_known_start && ARCHIPELAGO_STATE.goal_t == "B" && ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass {
                 Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
             }
         }
