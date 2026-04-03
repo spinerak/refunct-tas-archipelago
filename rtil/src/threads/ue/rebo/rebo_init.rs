@@ -587,15 +587,19 @@ fn enable_button(level_index: usize, button_index: usize, color: Color) {
 }
 
 #[rebo::function("Tas::enable_all_buttons")]
-fn enable_all_buttons(color: Color) {
+fn enable_all_buttons() {
     let levels = LEVELS.lock().unwrap();
     UeScope::with(|scope| {
-        for level in levels.iter() {
+        for (level_index, level) in levels.iter().enumerate() {
             for button_index in level.buttons.iter() {
                 let button = scope.get(*button_index);
                 button.set_pressed(false);
                 button.set_collision(true);
-                button.set_beacon_color(color.red, color.green, color.blue);
+                if level_index == 30 { //yellow
+                    button.set_beacon_color(1.0, 1.0, 0.0);
+                }else {
+                    button.set_beacon_color(1.0, 0.0, 0.0);
+                }
             }
         }
     });

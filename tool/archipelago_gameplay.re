@@ -13,6 +13,7 @@ struct ArchipelagoState {
     goal_t: string,
     goal_c: int,
     goal_p: int,
+    goal_known_start: bool,
     goal_known: bool,
     received_items: List<int>,
     started: int,
@@ -153,6 +154,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         goal_t: "?",
         goal_c: 100,
         goal_p: 1,
+        goal_known_start: false,
         goal_known: false,
         received_items: List::new(),
         started: 0,
@@ -293,6 +295,9 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     draw_hud_text: archipelago_hud_text,
     draw_hud_always: archipelago_hud_color_coded,
     on_new_game: fn() {
+        Tas::set_goal_animation_should_play(true); // so it works for minigames :3
+        Tas::enable_all_buttons();
+
         Tas::destroy_cubes(true, true);
         Tas::destroy_platforms(true, 2);
         Tas::destroy_spawners();
@@ -303,6 +308,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             ARCHIPELAGO_STATE.started = 0;
             Tas::set_level(0);
             ARCHIPELAGO_STATE.og_randomizer_index = -1;
+        }
+
+        
+        if ARCHIPELAGO_STATE.gamemode == 0 {
+            Tas::reset_cubes(true, true);
+            spawn_extra_cubes();
         }
 
         Tas::abilities_set_swim(true);
@@ -329,7 +340,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     },
     on_reset: fn(old: int, new: int) {},
     on_element_pressed: fn(index: ElementIndex) {
-        ap_log(List::of(ColorfulText { text: f"Pressed {index.element_type} {index.element_index+1} in cluster {index.cluster_index+1}", color: AP_COLOR_GREEN }));
+        // ap_log(List::of(ColorfulText { text: f"Pressed {index.element_type} {index.element_index+1} in cluster {index.cluster_index+1}", color: AP_COLOR_GREEN }));
 
         if index.cluster_index == 9999 {
             got_cube_block_brawl(index.element_index);
@@ -600,6 +611,9 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         }
         if item_id == 9999997 {  // Goal Known
             ARCHIPELAGO_STATE.goal_known = true;
+            if !ARCHIPELAGO_STATE.goal_known_start && ARCHIPELAGO_STATE.goal_t == "B" {
+                Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+            }
         }
 
         if item_id == 9999989 && !ARCHIPELAGO_STATE.red_cubes_bag {  // Red Cubes Bag
@@ -757,8 +771,11 @@ fn archipelago_tick(time: int) {
 
         archipelago_activate_stepped_on_buttons(c);
 
-        if c == ARCHIPELAGO_STATE.goal_c && ARCHIPELAGO_STATE.goal_t == "B" && ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass {
-            Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+        // no need to check platform because we're triggering the cluster
+        if c == ARCHIPELAGO_STATE.goal_c && ARCHIPELAGO_STATE.goal_t == "B" {
+            if ARCHIPELAGO_STATE.goal_known{
+                Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+            }
         }
     }
 
@@ -1135,10 +1152,6 @@ fn archipelago_main_start(){
     Tas::abilities_set_lifts(false);
 
     Tas::set_level(-1);
-
-    Tas::reset_cubes(true, true);
-
-    spawn_extra_cubes();
 
     archipelago_activate_stepped_on_platforms();
     archipelago_collect_collected_cubes();
@@ -1847,7 +1860,7 @@ fn archipelago_the_climb_start(mode: int){
     let mut xs = -500.00146;
     let mut ys = -573.4705;
     let mut zs = -250.;
-    while zs < 9750. {
+    while zs < 9900. {
         let mut loc = Location { x: xs, y: ys, z: zs };
         if mode == 1 {
             loc = Tas::spawn_platform_rando_location_2(xs, ys, zs, i);
@@ -1911,10 +1924,10 @@ fn archipelago_checked_location(id: int){
         ARCHIPELAGO_STATE.progress_vanilla_minigame = f"{number_pressed}/{vanilla_locations.len()}";
     }
     if id >= 10030000 && id < 10040000 {
-        if ARCHIPELAGO_STATE.seeker_extra_pressed.contains(id) {
+        if ARCHIPELAGO_STATE.seeker_extra_pressed.contains(id - 20000) {
             return;
         }
-        ARCHIPELAGO_STATE.seeker_extra_pressed.push(id);
+        ARCHIPELAGO_STATE.seeker_extra_pressed.push(id - 20000);
         if ARCHIPELAGO_STATE.seeker_extra_pressed.len() == 10 {
             ARCHIPELAGO_STATE.done_seeker_minigame = true;
         }
@@ -2073,9 +2086,9 @@ fn archipelago_retrieved(key: string, value: string){
 }
 
 fn archipelago_send_check(id: int){
-   // if ARCHIPELAGO_STATE.checked_locations.contains(id) {
-   //     return;
-   // }
+    if ARCHIPELAGO_STATE.checked_locations.contains(id) {
+        return;
+    }
     Tas::archipelago_send_check(id);
     archipelago_checked_location(id);
 }
@@ -2161,8 +2174,10 @@ fn archipelago_received_slot_data(key: string, value: string){
     if key == "goal_known" {
         let known = value == "true";
         if known {
+            ARCHIPELAGO_STATE.goal_known_start = true;
             ARCHIPELAGO_STATE.goal_known = true;
         } else {
+            ARCHIPELAGO_STATE.goal_known_start = false;
             ARCHIPELAGO_STATE.goal_known = false;
         }
     }
