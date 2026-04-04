@@ -840,10 +840,6 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "Back" },
-            onclick: fn(label: Text) { leave_ui(); },
-        }),
-        UiElement::Button(UiButton {
             label: Text { text: {
                 if ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame {
                     "Refunct Mountain"
@@ -860,6 +856,10 @@ fn create_archipelago_gamemodes_menu() -> Ui {
                 archipelago_init(12);
                 leave_ui();
             },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "Back" },
+            onclick: fn(label: Text) { leave_ui(); },
         }),
     ))
 }
@@ -963,6 +963,12 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: f"\nCubes collected: {ARCHIPELAGO_STATE.block_blub_cubes_collected} / {ARCHIPELAGO_STATE.block_blub_cubes_total}", color: COLOR_WHITE },
 
                 ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block_blub} pts", color: COLOR_WHITE },
+            ),
+            12 => List::of(
+                ColorfulText { text: "Archipelago - Refunct Mountain\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: "✔ Jump  ✔ Jump Pads  ✔ Dash (press E)", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_refunct_mountain_minigame}", color: COLOR_WHITE },
             ),
 
             _ => List::of(
