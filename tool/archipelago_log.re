@@ -74,6 +74,10 @@ fn ap_log_internal(texts: List<ColorfulText>, force: bool) {
     AP_LOG.messages.push(ArchipelagoLogMessage { texts: filtered_texts, timestamp: current_time_millis(), force: force });
 }
 
+fn ap_log_1(text: string){
+    ap_log(List::of(ColorfulText { text: text, color: COLOR_WHITE }));
+}
+
 fn ap_log(texts: List<ColorfulText>) {
     ap_log_internal(texts, false);
 }

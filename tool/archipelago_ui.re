@@ -621,6 +621,18 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
         });
         added_minigame_header = true;
     }
+    
+    if ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame && !ARCHIPELAGO_STATE.done_refunct_mountain_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nRefunct Mountain",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+
     lines
 }
 
@@ -828,6 +840,24 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame {
+                    "Refunct Mountain"
+                } else {
+                    "Refunct Mountain (locked)"
+                }
+            } },
+            onclick: fn(label: Text) {
+                if !ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame {
+                    // log("Refunct Mountain gamemode is locked!");
+                    return;
+                }
+                // log("Set gamemode to Refunct Mountain");
+                archipelago_init(12);
+                leave_ui();
+            },
+        }),
+        UiElement::Button(UiButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
         }),
@@ -869,8 +899,6 @@ fn get_status_text_lines() -> List<ColorfulText> {
             3 => List::of(
                 ColorfulText { text: "Archipelago - Seeker\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Find the empty platforms!\n", color: AP_COLOR_CYAN },
-                ColorfulText { text: "Final platform is not a check\n", color: COLOR_WHITE },
-                ColorfulText { text: "but pressing it gives a nice view!", color: COLOR_WHITE },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_seeker_minigame}", color: COLOR_WHITE },
             ),
             4 => List::of(
@@ -936,6 +964,12 @@ fn get_status_text_lines() -> List<ColorfulText> {
 
                 ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block_blub} pts", color: COLOR_WHITE },
             ),
+            12 => List::of(
+                ColorfulText { text: "Archipelago - Refunct Mountain\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: "✔ Jump  ✔ Jump Pads  ✔ Dash (press E)", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_refunct_mountain_minigame}", color: COLOR_WHITE },
+            ),
 
             _ => List::of(
                 ColorfulText { text: "Archipelago\n", color: COLOR_WHITE },
@@ -978,16 +1012,21 @@ fn get_status_text_lines() -> List<ColorfulText> {
 }
 
 fn get_move_rando_status_lines() -> List<ColorfulText> {
-    let final_platform = if ARCHIPELAGO_STATE.final_platform_known { f"{ARCHIPELAGO_STATE.final_platform_c}-{ARCHIPELAGO_STATE.final_platform_p}" } else { "??-??" };
+    let goal = 
+        if ARCHIPELAGO_STATE.goal_known { 
+            f"{if ARCHIPELAGO_STATE.goal_t == "B" {"Button"} else {"Platform"}} {ARCHIPELAGO_STATE.goal_c}-{ARCHIPELAGO_STATE.goal_p}" 
+        } else { 
+            "????"
+        };
+
     let ledge_grab_state = if ARCHIPELAGO_STATE.ledge_grab { "✔" } else { "✖" };
     let wall_jump_state = if ARCHIPELAGO_STATE.wall_jump >= 2 { "∞" } else if ARCHIPELAGO_STATE.wall_jump == 1 { "1" } else { "✖" };
     let jump_pads_state = if ARCHIPELAGO_STATE.jump_pads { "✔" } else { "✖" };
     let swim_state = if ARCHIPELAGO_STATE.swim { "✔" } else { "✖" };
     let lifts_state = if ARCHIPELAGO_STATE.lifts { "✔" } else { "✖" };
     let pipes_state = if ARCHIPELAGO_STATE.pipes { "✔" } else { "✖" };
-
-    let vanilla_state = if ARCHIPELAGO_STATE.unlock_vanilla_minigame { "YES" } else { "NO" };
-    let seeker_state = if ARCHIPELAGO_STATE.unlock_seeker_minigame { "YES" } else { "NO" };
+    let regular_cubes = if ARCHIPELAGO_STATE.cubes_options == 0 || (ARCHIPELAGO_STATE.cubes_options == 1 && ARCHIPELAGO_STATE.red_cubes_bag) { "✔" } else { "✖" };
+    let extra_cubes = if ARCHIPELAGO_STATE.extra_cubes_options == 0 || (ARCHIPELAGO_STATE.extra_cubes_options == 1 && ARCHIPELAGO_STATE.red_cubes_bag) || (ARCHIPELAGO_STATE.extra_cubes_options == 2 && ARCHIPELAGO_STATE.green_cubes_bag) { "✔" } else { "✖" };
 
     let lines = List::of(
         ColorfulText { text: "Archipelago - Move Rando\nGoals\n", color: COLOR_WHITE },
@@ -996,7 +1035,7 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
             color: if ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass { AP_COLOR_GREEN } else { AP_COLOR_CYAN }
         },
         ColorfulText {
-            text:  f"Go to Platform {final_platform}\n\n",
+            text:  f"Go to {goal}\n\n",
             color: if ARCHIPELAGO_STATE.has_goaled { AP_COLOR_GREEN } else { AP_COLOR_CYAN }
         },
         ColorfulText { text: "Abilities\n", color: COLOR_WHITE },
@@ -1025,6 +1064,20 @@ fn get_move_rando_status_lines() -> List<ColorfulText> {
             color: if ARCHIPELAGO_STATE.pipes { AP_COLOR_GREEN } else { AP_COLOR_RED }
         },
     );
+    if ARCHIPELAGO_STATE.cubes_options != 9 || ARCHIPELAGO_STATE.extra_cubes_options != 9 {
+        lines.push(
+            ColorfulText {
+                text:  if ARCHIPELAGO_STATE.cubes_options != 9 { f"\n{regular_cubes} Cubes       " } else { "\n              " },
+                color: if ARCHIPELAGO_STATE.cubes_options == 0 || (ARCHIPELAGO_STATE.cubes_options == 1 && ARCHIPELAGO_STATE.red_cubes_bag) { AP_COLOR_GREEN } else { AP_COLOR_RED }
+            }
+        );
+        lines.push(
+            ColorfulText {
+                text:  if ARCHIPELAGO_STATE.extra_cubes_options != 9 { f"{extra_cubes} Ext Cubes" } else { "           " },
+                color: if ARCHIPELAGO_STATE.extra_cubes_options == 0 || (ARCHIPELAGO_STATE.extra_cubes_options == 1 && ARCHIPELAGO_STATE.red_cubes_bag) || (ARCHIPELAGO_STATE.extra_cubes_options == 2 && ARCHIPELAGO_STATE.green_cubes_bag) { AP_COLOR_GREEN } else { AP_COLOR_RED }
+            }
+        );
+    }
     lines
 }
 
@@ -1190,7 +1243,7 @@ fn archipelago_disconnected_info_hud() {
         lines.push(ColorfulText { text: "Press F1 to enable movement input\n\n", color: AP_COLOR_RED });
     } 
 
-    lines.push(ColorfulText { text: "Archipelago Randomizer\n\n", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: f"Archipelago Randomizer {ARCHIPELAGO_STATE.mod_version}\n\n", color: COLOR_WHITE });
 
     lines.push(ColorfulText { text: "Not connected to an Archipelago server yet,\nuse the menu to ", color: COLOR_WHITE });
     lines.push(ColorfulText { text: "log in\n\n", color: AP_COLOR_YELLOW });

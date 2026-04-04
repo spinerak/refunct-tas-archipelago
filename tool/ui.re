@@ -124,45 +124,66 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     if key.to_small() == KEY_P.to_small() {
         Tas::get_location_and_log();
     }
+    if key.to_small() == KEY_S.to_small() {
+        Tas::set_input_mode_game_only();
+    }
+    //if key.to_small() == KEY_T.to_small() {
+    //    Tas::test_stuff();
+    //}
+    //if key.to_small() == KEY_Y.to_small() {
+    //    Tas::disable_button(3, 0);
+    //}
+    //if key.to_small() == KEY_U.to_small() {
+    //    Tas::archipelago_raise_cluster(30);
+    //}
+    //if key.to_small() == KEY_I.to_small() {
+    //    Tas::set_level(-1);
+    //}
+    //if key.to_small() == KEY_O.to_small() {
+    //    Tas::set_level(40);
+    //}
+    if (LSHIFT_PRESSED || RSHIFT_PRESSED) && (LCTRL_PRESSED || RCTRL_PRESSED) && key.to_small() == KEY_M.to_small() {
+        enter_ui(create_map_editor_menu());
+    }
 
     //Ledge, jump_pad, WallJump, Swim, Lifts, Pipes
 
-    // if key.to_small() == KEY_1.to_small(){
-    //     ARCHIPELAGO_STATE.ledge_grab = !ARCHIPELAGO_STATE.ledge_grab;
-    //     Tas::abilities_set_ledge_grab(ARCHIPELAGO_STATE.ledge_grab);
-    //     log(f"Ledge Grab set to {ARCHIPELAGO_STATE.ledge_grab}");
-    // }
-    // if key.to_small() == KEY_2.to_small(){
-    //     ARCHIPELAGO_STATE.jump_pads = !ARCHIPELAGO_STATE.jump_pads;
-    //     Tas::abilities_set_jump_pads(ARCHIPELAGO_STATE.jump_pads);
-    //     log(f"Jump Pad set to {ARCHIPELAGO_STATE.jump_pads}");
-    // }
-    // if key.to_small() == KEY_3.to_small(){
-    //     ARCHIPELAGO_STATE.wall_jump = (ARCHIPELAGO_STATE.wall_jump + 1) % 3;
-    //     Tas::abilities_set_wall_jump(ARCHIPELAGO_STATE.wall_jump, true);
-    //     log(f"Wall Jump set to {ARCHIPELAGO_STATE.wall_jump}");
-    // }
-    // if key.to_small() == KEY_4.to_small(){
-    //     ARCHIPELAGO_STATE.swim = !ARCHIPELAGO_STATE.swim;
-    //     Tas::abilities_set_swim(ARCHIPELAGO_STATE.swim);
-    //     log(f"Swim set to {ARCHIPELAGO_STATE.swim}");
-    // }
-    // if key.to_small() == KEY_5.to_small(){
-    //     ARCHIPELAGO_STATE.lifts = !ARCHIPELAGO_STATE.lifts;
-    //     Tas::abilities_set_lifts(ARCHIPELAGO_STATE.lifts);
-    //     log(f"Lifts set to {ARCHIPELAGO_STATE.lifts}");
-    // }
-    // if key.to_small() == KEY_6.to_small(){
-    //     ARCHIPELAGO_STATE.pipes = !ARCHIPELAGO_STATE.pipes;
-    //     Tas::abilities_set_pipes(ARCHIPELAGO_STATE.pipes);
-    //     log(f"Pipes set to {ARCHIPELAGO_STATE.pipes}");
-    // }
-    // if key.to_small() == KEY_7.to_small(){
-    //     let current_loc = Tas::get_location();
-    //     let loc = Location { x: current_loc.x, y: current_loc.y, z: current_loc.z + 10000. };
-    //     Tas::set_location(loc);
-    //     log(f"Teleported up by 10000 units");
-    // }
+     // if key.to_small() == KEY_1.to_small(){
+     //     ARCHIPELAGO_STATE.ledge_grab = !ARCHIPELAGO_STATE.ledge_grab;
+     //     Tas::abilities_set_ledge_grab(ARCHIPELAGO_STATE.ledge_grab);
+     //     log(f"Ledge Grab set to {ARCHIPELAGO_STATE.ledge_grab}");
+     // }
+     // if key.to_small() == KEY_2.to_small(){
+     //     ARCHIPELAGO_STATE.jump_pads = !ARCHIPELAGO_STATE.jump_pads;
+     //     Tas::abilities_set_jump_pads(ARCHIPELAGO_STATE.jump_pads);
+     //     log(f"Jump Pad set to {ARCHIPELAGO_STATE.jump_pads}");
+     // }
+     // if key.to_small() == KEY_3.to_small(){
+     //     ARCHIPELAGO_STATE.wall_jump = (ARCHIPELAGO_STATE.wall_jump + 1) % 3;
+     //     Tas::abilities_set_wall_jump(ARCHIPELAGO_STATE.wall_jump, true);
+     //     log(f"Wall Jump set to {ARCHIPELAGO_STATE.wall_jump}");
+     // }
+     // if key.to_small() == KEY_4.to_small(){
+     //     ARCHIPELAGO_STATE.swim = !ARCHIPELAGO_STATE.swim;
+     //     Tas::abilities_set_swim(ARCHIPELAGO_STATE.swim);
+     //     log(f"Swim set to {ARCHIPELAGO_STATE.swim}");
+     // }
+     // if key.to_small() == KEY_5.to_small(){
+     //     ARCHIPELAGO_STATE.lifts = !ARCHIPELAGO_STATE.lifts;
+     //     Tas::abilities_set_lifts(ARCHIPELAGO_STATE.lifts);
+     //     log(f"Lifts set to {ARCHIPELAGO_STATE.lifts}");
+     // }
+     // if key.to_small() == KEY_6.to_small(){
+     //     ARCHIPELAGO_STATE.pipes = !ARCHIPELAGO_STATE.pipes;
+     //     Tas::abilities_set_pipes(ARCHIPELAGO_STATE.pipes);
+     //     log(f"Pipes set to {ARCHIPELAGO_STATE.pipes}");
+     // }
+     // if key.to_small() == KEY_7.to_small(){
+     //     let current_loc = Tas::get_location();
+     //     let loc = Location { x: current_loc.x, y: current_loc.y, z: current_loc.z + 10000. };
+     //     Tas::set_location(loc);
+     //     log(f"Teleported up by 10000 units");
+     // }
 
     match UI_STACK.last() {
         Option::Some(ui) => ui.onkey(key),
@@ -259,6 +280,7 @@ static COLOR_RED = Color { red: 1., green: 0., blue: 0., alpha: 1. };
 static COLOR_GREEN = Color { red: 0., green: 1., blue: 0., alpha: 1. };
 static COLOR_YELLOW = Color { red: 1., green: 1., blue: 0., alpha: 1. };
 static COLOR_WHITE = Color { red: 1., green: 1., blue: 1., alpha: 1. };
+static COLOR_DARK_GRAY = Color { red: 0.2, green: 0.2, blue: 0.2, alpha: 1. };
 static COLOR_BLUE = Color { red: 0., green: 0., blue: 1., alpha: 1. };
 
 impl Ui {
@@ -304,38 +326,25 @@ impl Ui {
             Option::Some(f) => f(),
             Option::None => (),
         }
-        Tas::draw_text(DrawText {
-            text: self.name.text,
-            color: COLOR_BLACK,
-            x: 8.,
-            y: 8.,
-            scale: SETTINGS.ui_scale,
-            scale_position: true,
-        });
-        Tas::draw_text(DrawText {
-            text: self.name.text,
-            color: COLOR_BLACK,
-            x: 12.,
-            y: 12.,
-            scale: SETTINGS.ui_scale,
-            scale_position: true,
-        });
-        Tas::draw_text(DrawText {
-            text: self.name.text,
-            color: COLOR_BLACK,
-            x: 8.,
-            y: 12.,
-            scale: SETTINGS.ui_scale,
-            scale_position: true,
-        });
-        Tas::draw_text(DrawText {
-            text: self.name.text,
-            color: COLOR_BLACK,
-            x: 12.,
-            y: 8.,
-            scale: SETTINGS.ui_scale,
-            scale_position: true,
-        });
+
+        if self.elements.len() > 0 {
+            let mut text_width = 0.0;
+            let text_size_main = Tas::get_text_size(f"{self.name.text}", SETTINGS.ui_scale);
+            text_width = float::max(text_size_main.width, text_width);
+            for element in self.elements {
+                let text_size = Tas::get_text_size(element.text(), SETTINGS.ui_scale);
+                text_width = float::max(text_size.width, text_width);
+            }
+
+            let _size = Tas::get_text_size("TEST", SETTINGS.ui_scale);
+            let line_height = _size.height;
+            let text_height = line_height * self.elements.len().to_float();
+            
+            Tas::draw_rect(AP_COLOR_GRAY_BG,
+            0., 0.,
+            text_width + 20., text_height + 25.);
+        }
+        
         Tas::draw_text(DrawText {
             text: self.name.text,
             color: COLOR_WHITE,
@@ -347,8 +356,8 @@ impl Ui {
 
         let mut i = 0;
         for element in self.elements {
-            let color = if self.selected == i { COLOR_BLUE } else { COLOR_BLACK };
-            element.draw(padding + i.to_float() * padding, color);
+            let color = if self.selected == i { COLOR_GREEN } else { COLOR_WHITE };
+            element.draw(10. + padding + i.to_float() * padding, color);
             i = i + 1;
         }
     }
@@ -391,6 +400,15 @@ impl UiElement {
             UiElement::Chooser(chooser) => chooser.draw(y, color),
         }
     }
+    fn text(self) -> string {
+        match self {
+            UiElement::Button(button) => button.text(),
+            UiElement::Input(input) => input.text(),
+            UiElement::FloatInput(input) => input.text(),
+            UiElement::Slider(slider) => slider.text(),
+            UiElement::Chooser(chooser) => chooser.text(),
+        }
+    }
 }
 
 impl UiButton {
@@ -400,13 +418,16 @@ impl UiButton {
     }
     fn draw(self, y: float, color: Color) {
         Tas::draw_text(DrawText {
-            text: f"    {self.label.text}",
+            text: self.text(),
             color: color,
             x: 0.,
             y: y,
             scale: SETTINGS.ui_scale,
             scale_position: true,
         })
+    }
+    fn text(self) -> string {
+        f"    {self.label.text}"
     }
 }
 impl Input {
@@ -432,13 +453,16 @@ impl Input {
     }
     fn draw(self, y: float, color: Color) {
         Tas::draw_text(DrawText {
-            text: f"    {self.label.text}: {self.input}",
+            text: self.text(),
             color: color,
             x: 0.,
             y: y,
             scale: SETTINGS.ui_scale,
             scale_position: true,
         })
+    }
+    fn text(self) -> string {
+        f"    {self.label.text}: {self.input}"
     }
 }
 
@@ -471,7 +495,7 @@ impl FloatInput {
     }
     fn draw(self, y: float, color: Color) {
         Tas::draw_text(DrawText {
-            text: f"    {self.label.text}: {self.input}",
+            text: self.text(),
             color: color,
             x: 0.,
             y: y,
@@ -479,6 +503,10 @@ impl FloatInput {
             scale_position: true,
         })
     }
+    fn text(self) -> string {
+        f"    {self.label.text}: {self.input}"
+    }
+
 }
 
 impl Slider {
@@ -493,13 +521,16 @@ impl Slider {
     }
     fn draw(self, y: float, color: Color) {
         Tas::draw_text(DrawText {
-            text: f"    {self.label.text}: < {self.content.text} >",
+            text: self.text(),
             color: color,
             x: 0.,
             y: y,
             scale: SETTINGS.ui_scale,
             scale_position: true,
         })
+    }
+    fn text(self) -> string {
+        f"    {self.label.text}: < {self.content.text} >"
     }
 }
 
@@ -525,13 +556,16 @@ impl Chooser {
     }
     fn draw(self, y: float, color: Color) {
         Tas::draw_text(DrawText {
-            text: f"    {self.label.text}: < {self.options.get(self.selected).unwrap().text} >",
+            text: self.text(),
             color: color,
             x: 0.,
             y: y,
             scale: SETTINGS.ui_scale,
             scale_position: true,
         })
+    }
+    fn text(self) -> string {
+        f"    {self.label.text}: < {self.options.get(self.selected).unwrap().text} >"
     }
 }
 

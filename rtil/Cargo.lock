@@ -183,7 +183,7 @@ checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
 [[package]]
 name = "archipelago_rs"
 version = "0.2.0"
-source = "git+https://github.com/nepcore/archipelago_rs?rev=35d2a7972b50d27476028add3c8e64bedf45c648#35d2a7972b50d27476028add3c8e64bedf45c648"
+source = "git+https://github.com/nepcore/archipelago_rs?rev=bae5df74772213e7c317b0cf40324c34b155bd37#bae5df74772213e7c317b0cf40324c34b155bd37"
 dependencies = [
  "bimap",
  "bitflags 2.10.0",
@@ -4215,8 +4215,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "refunct-tas-ingame-lib"
-version = "0.9.7"
+name = "refunct-tas-archipelago"
+version = "1.0.0"
 dependencies = [
  "archipelago_rs",
  "atomic_float",

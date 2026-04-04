@@ -2,7 +2,6 @@
 struct ArchipelagoState {
     ap_connected: bool,
 
-    last_level_unlocked: int,
     grass: int,
     wall_jump: int,
     ledge_grab: bool,
@@ -11,17 +10,20 @@ struct ArchipelagoState {
     pipes: bool,
     lifts: bool,
     required_grass: int,
-    final_platform_c: int,
-    final_platform_p: int,
-    final_platform_known: bool,
+    goal_t: string,
+    goal_c: int,
+    goal_p: int,
+    goal_known_start: bool,
+    goal_known: bool,
     received_items: List<int>,
     started: int,
     triggered_clusters: List<int>,
+    stepped_on_buttons: List<int>,
     stepped_on_platforms: List<int>,
     collected_cubes: List<int>,
     cubes_options: int,
     extra_cubes_options: int,
-    
+
     highest_index_received: int,
     has_goaled: bool,
     gamemode: int,
@@ -42,9 +44,8 @@ struct ArchipelagoState {
     unlock_seeker_minigame: bool,
     done_seeker_minigame: bool,
     progress_seeker_minigame: string,
-    seeker_pressed_platforms: List<int>,
+    seeker_platforms: List<int>,
     seeker_extra_pressed: List<int>,
-    seeker_done_triggering: int,
 
 
     unlock_button_galore_minigame: bool,
@@ -125,6 +126,11 @@ struct ArchipelagoState {
     block_blub_yellow_ids: List<int>,
     done_block_blub_minigame: bool,
     block_blub_check_in_logic: int,
+    
+
+    unlock_refunct_mountain_minigame: bool,
+    done_refunct_mountain_minigame: bool,
+    progress_refunct_mountain_minigame: string,
 
 
     last_platform_c: Option<int>,
@@ -141,7 +147,6 @@ fn fresh_archipelago_state() -> ArchipelagoState {
     ArchipelagoState {
         ap_connected: false,
 
-        last_level_unlocked: 1,
         grass: -10000,
         wall_jump: 0,
         ledge_grab: false,
@@ -150,17 +155,20 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         pipes: false,
         lifts: false,
         required_grass: 1000,
-        final_platform_c: 100,
-        final_platform_p: 1,
-        final_platform_known: false,
+        goal_t: "?",
+        goal_c: 100,
+        goal_p: 1,
+        goal_known_start: false,
+        goal_known: false,
         received_items: List::new(),
         started: 0,
         triggered_clusters: List::new(),
+        stepped_on_buttons: List::new(),
         stepped_on_platforms: List::new(),
         collected_cubes: List::new(),
         cubes_options: -1,
         extra_cubes_options: -1,
-        
+
         highest_index_received: -1,
         has_goaled: false,
         gamemode: 0,
@@ -181,9 +189,8 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         unlock_seeker_minigame: false,
         done_seeker_minigame: false,
         progress_seeker_minigame: "0/10",
-        seeker_pressed_platforms: List::new(),
+        seeker_platforms: List::new(),
         seeker_extra_pressed: List::new(),
-        seeker_done_triggering: 0,
 
 
         unlock_button_galore_minigame: false,
@@ -265,11 +272,16 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         done_block_blub_minigame: false,
         block_blub_check_in_logic: 0,
 
+        
+        unlock_refunct_mountain_minigame: false,
+        done_refunct_mountain_minigame: false,
+        progress_refunct_mountain_minigame: "0/37",
+
 
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "0.9.0",
+        mod_version: "1.0.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -279,11 +291,11 @@ fn fresh_archipelago_state() -> ArchipelagoState {
 
 static mut ARCHIPELAGO_STATE = fresh_archipelago_state();
 
-static platforms_with_buttons = List::of(10010101,10010203,10010302,10010404,10010501,10010601,10010701,10010702,10010811,10010906,10011001,10011003,10011108,10011201,10011301,10011403,10011502,10011601,10011702,10011802,10011801,10011905,10012007,10012108,10012202,10012303,10012401,10012505,10012612,10012607,10012609,10012708,10012818,10012808,10012904,10013012,10013102);
+// static platforms_with_buttons = List::of(10010101,10010203,10010302,10010404,10010501,10010601,10010701,10010702,10010811,10010906,10011001,10011003,10011108,10011201,10011301,10011403,10011502,10011601,10011702,10011802,10011801,10011905,10012007,10012108,10012202,10012303,10012401,10012505,10012612,10012607,10012609,10012708,10012818,10012808,10012904,10013012,10013102);
 
 static mut ARCHIPELAGO_COMPONENT = Component {
     id: ARCHIPELAGO_COMPONENT_ID,
-    conflicts_with: List::of(ARCHIPELAGO_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID),
+    conflicts_with: List::of(MAP_EDITOR_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID),
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
     on_tick: fn() {},
@@ -291,6 +303,9 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     draw_hud_text: archipelago_hud_text,
     draw_hud_always: archipelago_hud_color_coded,
     on_new_game: fn() {
+        Tas::set_goal_animation_should_play(true); // so it works for minigames :3
+        Tas::enable_all_buttons();
+
         Tas::destroy_cubes(true, true);
         Tas::destroy_platforms(true, 2);
         Tas::destroy_spawners();
@@ -301,6 +316,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             ARCHIPELAGO_STATE.started = 0;
             Tas::set_level(0);
             ARCHIPELAGO_STATE.og_randomizer_index = -1;
+        }
+
+        
+        if ARCHIPELAGO_STATE.gamemode == 0 {
+            Tas::reset_cubes(true, true);
+            spawn_extra_cubes();
         }
 
         Tas::abilities_set_swim(true);
@@ -327,7 +348,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     },
     on_reset: fn(old: int, new: int) {},
     on_element_pressed: fn(index: ElementIndex) {
-        // log(f"[AP] Pressed {index.element_type} {index.element_index} in cluster {index.cluster_index}");
+        // ap_log(List::of(ColorfulText { text: f"Pressed {index.element_type} {index.element_index+1} in cluster {index.cluster_index+1}", color: AP_COLOR_GREEN }));
+
         if index.cluster_index == 9999 {
             got_cube_block_brawl(index.element_index);
             got_cube_block_blub(index.element_index);
@@ -349,18 +371,82 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         }
 
         if ARCHIPELAGO_STATE.gamemode == 0 {
-            if index.element_type == ElementType::Platform {
 
+            if index.element_type == ElementType::Button {
+                archipelago_send_check(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+
+                let mut map = Map::new();
+                map.insert(10000101, 10010101);
+                map.insert(10000201, 10010203);
+                map.insert(10000301, 10010302);
+                map.insert(10000401, 10010404);
+                map.insert(10000501, 10010501);
+                map.insert(10000601, 10010601);
+                map.insert(10000701, 10010701);
+                map.insert(10000702, 10010702);
+                map.insert(10000801, 10010811);
+                map.insert(10000901, 10010906);
+                map.insert(10001001, 10011001);
+                map.insert(10001002, 10011003);
+                map.insert(10001101, 10011108);
+                map.insert(10001201, 10011201);
+                map.insert(10001301, 10011301);
+                map.insert(10001401, 10011403);
+                map.insert(10001501, 10011502);
+                map.insert(10001601, 10011601);
+                map.insert(10001701, 10011702);
+                map.insert(10001802, 10011802);
+                map.insert(10001801, 10011801);
+                map.insert(10001901, 10011905);
+                map.insert(10002001, 10012007);
+                map.insert(10002101, 10012108);
+                map.insert(10002201, 10012202);
+                map.insert(10002301, 10012303);
+                map.insert(10002401, 10012401);
+                map.insert(10002501, 10012505);
+                map.insert(10002602, 10012612);
+                map.insert(10002603, 10012607);
+                map.insert(10002601, 10012609);
+                map.insert(10002701, 10012708);
+                map.insert(10002802, 10012818);
+                map.insert(10002801, 10012808);
+                map.insert(10002901, 10012904);
+                map.insert(10003001, 10013012);
+                map.insert(10003101, 10013102);
+
+                let mapped_loc = map.get(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+
+                if mapped_loc != Option::None {
+                    archipelago_send_check(mapped_loc.unwrap());
+                }
+
+
+                if ARCHIPELAGO_STATE.goal_t == "B" {
+                    if index.cluster_index == ARCHIPELAGO_STATE.goal_c - 1 && index.element_index == ARCHIPELAGO_STATE.goal_p - 1 && ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass {
+                        Tas::archipelago_goal();
+                        if !ARCHIPELAGO_STATE.has_goaled {
+                            let loc = Location { x: 2625., y: -2250., z: 1357. };
+                            Tas::set_location(loc);
+                            ARCHIPELAGO_STATE.has_goaled = true;
+                            Tas::trigger_goal_animation();
+                        }
+                    }
+                }
+            }
+
+            if index.element_type == ElementType::Platform {
                 // log(f"$Platform {index.cluster_index + 1}-{index.element_index + 1}");
                 archipelago_send_check(10010000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
 
-                if index.cluster_index == ARCHIPELAGO_STATE.final_platform_c - 1 && index.element_index == ARCHIPELAGO_STATE.final_platform_p - 1 && ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass {
-                    Tas::archipelago_goal();
-                    if !ARCHIPELAGO_STATE.has_goaled {
-                        let loc = Location { x: 2625., y: -2250., z: 1357. };
-                        Tas::set_location(loc);
-                        ARCHIPELAGO_STATE.has_goaled = true;
-                        Tas::archipelago_trigger_goal_animation();
+                if ARCHIPELAGO_STATE.goal_t == "P" {
+                    if index.cluster_index == ARCHIPELAGO_STATE.goal_c - 1 && index.element_index == ARCHIPELAGO_STATE.goal_p - 1 && ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass {
+                        Tas::archipelago_goal();
+                        if !ARCHIPELAGO_STATE.has_goaled {
+                            let loc = Location { x: 2625., y: -2250., z: 1357. };
+                            Tas::set_location(loc);
+                            ARCHIPELAGO_STATE.has_goaled = true;
+                            Tas::trigger_goal_animation();
+                        }
                     }
                 }
             }
@@ -421,10 +507,9 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         if ARCHIPELAGO_STATE.gamemode == 3 {
             if index.element_type == ElementType::Platform {
                 let loc_id = 10010000 + (index.cluster_index + 1) * 100 + index.element_index + 1;
-                if !platforms_with_buttons.contains(loc_id) && !ARCHIPELAGO_STATE.seeker_pressed_platforms.contains(loc_id) && !ARCHIPELAGO_STATE.seeker_extra_pressed.contains(loc_id) {
-                    // log(f"$Seeker Platform {index.cluster_index + 1}-{index.element_index + 1}");
+                if ARCHIPELAGO_STATE.seeker_platforms.contains(loc_id) && !ARCHIPELAGO_STATE.seeker_extra_pressed.contains(loc_id) {
                     ARCHIPELAGO_STATE.seeker_extra_pressed.push(loc_id);
-                    archipelago_send_check(10030000 + ARCHIPELAGO_STATE.seeker_extra_pressed.len());
+                    archipelago_send_check(loc_id + 20000);
                 }
             }
         }
@@ -440,9 +525,21 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                 // log(f"Vanilla mode - sending button press {10050000 + (index.cluster_index + 1) * 100 + index.element_index + 1}");
             }
         }
+
+        if ARCHIPELAGO_STATE.gamemode == 12 {
+            if index.element_type == ElementType::Button {
+                archipelago_send_check(10110000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+            }
+        }
     },
     on_element_released: fn(index: ElementIndex) {},
-    on_key_down: fn(key: KeyCode, is_repeat: bool) {},
+    on_key_down: fn(key: KeyCode, is_repeat: bool) {
+        if ARCHIPELAGO_STATE.gamemode == 12 {
+            if key.to_small() == KEY_E.to_small() {
+                Tas::dash();
+            }
+        }
+    },
     on_key_down_always: fn(key: KeyCode, is_repeat: bool) {},
     on_key_up: fn(key: KeyCode) {},
     on_key_up_always: fn(key: KeyCode) {},
@@ -457,7 +554,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 
 static mut ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT = Component {
     id: ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID,
-    conflicts_with: List::of(MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID),
+    conflicts_with: List::of(MAP_EDITOR_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID),
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
     on_tick: fn() {},
@@ -493,7 +590,7 @@ fn archipelago_disconnected() {
 };
 
 fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) {
-    
+
     if item_id == 9999999 {  // Grass
         archipelago_got_grass();
         return;
@@ -531,8 +628,11 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
             ARCHIPELAGO_STATE.lifts = true;
             Tas::abilities_set_lifts(true);
         }
-        if item_id == 9999997 {  // Final Platform Known
-            ARCHIPELAGO_STATE.final_platform_known = true;
+        if item_id == 9999997 {  // Goal Known
+            ARCHIPELAGO_STATE.goal_known = true;
+            if !ARCHIPELAGO_STATE.goal_known_start && ARCHIPELAGO_STATE.goal_t == "B" && ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass {
+                Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+            }
         }
 
         if item_id == 9999989 && !ARCHIPELAGO_STATE.red_cubes_bag {  // Red Cubes Bag
@@ -568,7 +668,7 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         }
 
         let clusterindex = item_id - 10000000;
-        if clusterindex >= 2 && clusterindex < 32 {
+        if clusterindex >= 1 && clusterindex < 33 {
             if !ARCHIPELAGO_STATE.triggered_clusters.contains(clusterindex) {
                 ARCHIPELAGO_STATE.triggering_clusters.push(clusterindex);
             }
@@ -661,24 +761,40 @@ fn archipelago_tick(time: int) {
         return;
     }
     if ARCHIPELAGO_STATE.triggering_clusters.len() == 0 {
-        if ARCHIPELAGO_STATE.gamemode == 3 && ARCHIPELAGO_STATE.seeker_done_triggering == 1 {
-            Tas::archipelago_activate_buttons_ap();
-            ARCHIPELAGO_STATE.seeker_done_triggering = 2;
-        }
         return;
     }
-    if ARCHIPELAGO_STATE.gamemode == 3 && ARCHIPELAGO_STATE.seeker_done_triggering == 0 {
-        ARCHIPELAGO_STATE.seeker_done_triggering = 1;
-    }
+    
     ARCHIPELAGO_STATE.last_tick_time = time;
 
     let c = ARCHIPELAGO_STATE.triggering_clusters.get(0).unwrap();
     ARCHIPELAGO_STATE.triggering_clusters.remove(0);
     
-    let last_unlocked = ARCHIPELAGO_STATE.last_level_unlocked;
-    Tas::archipelago_raise_cluster(c - 2, last_unlocked - 1);
+    if c > 1 {
+        Tas::archipelago_raise_cluster(c - 1); // 0-indexed clusters;
+    }
 
-    ARCHIPELAGO_STATE.last_level_unlocked = c;
+
+
+    if ARCHIPELAGO_STATE.gamemode == 0 {
+        Tas::enable_button(c-1, 0, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+        if c == 7 || c == 10 || c == 18 || c == 26 || c == 28 {
+            Tas::enable_button(c-1, 1, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+        }
+        if c == 26 {
+            Tas::enable_button(c-1, 2, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+        }  
+
+        archipelago_activate_stepped_on_buttons(c);
+
+        // no need to check platform because we're triggering the cluster
+        if c == ARCHIPELAGO_STATE.goal_c && ARCHIPELAGO_STATE.goal_t == "B" {
+            if ARCHIPELAGO_STATE.goal_known{
+                Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+            }
+        }
+    } else {
+        Tas::disable_all_buttons();
+    }
 
     if !ARCHIPELAGO_STATE.triggered_clusters.contains(c) {
         ARCHIPELAGO_STATE.triggered_clusters.push(c);
@@ -771,6 +887,10 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
         ARCHIPELAGO_STATE.unlock_block_blub = true;
         ARCHIPELAGO_STATE.unlock_block_blub_yellows = true;
         update_block_blub_in_logic_counts();
+        return;
+    }
+    if item_id == 9999910 {  // Refunct Mountain Minigame
+        ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame = true;
         return;
     }
 
@@ -966,7 +1086,11 @@ fn update_block_blub_in_logic_counts(){
 
 fn archipelago_got_grass(){
     ARCHIPELAGO_STATE.grass += 1;
-    // log("Got grass!");
+    if ARCHIPELAGO_STATE.grass == ARCHIPELAGO_STATE.required_grass && ARCHIPELAGO_STATE.goal_t == "B" {
+        if ARCHIPELAGO_STATE.triggered_clusters.contains(ARCHIPELAGO_STATE.goal_c){
+            Tas::enable_button(ARCHIPELAGO_STATE.goal_c-1, ARCHIPELAGO_STATE.goal_p-1, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+        }
+    }
 }
 
 fn archipelago_init(gamemode: int){
@@ -980,14 +1104,11 @@ fn archipelago_init(gamemode: int){
         Tas::set_level(30);
         // log("Setting level to 30 for Button Galore gamemode");
     }
-
-    Tas::archipelago_gather_all_buttons();
-
 }
 
 fn archipelago_start(){
     ARCHIPELAGO_STATE.grass = 0;
-    
+
     if ARCHIPELAGO_STATE.gamemode == 0 {
         archipelago_main_start();
     }
@@ -1024,7 +1145,10 @@ fn archipelago_start(){
     if ARCHIPELAGO_STATE.gamemode == 11 {
         archipelago_block_blub_start();
     }
-    
+    if ARCHIPELAGO_STATE.gamemode == 12 {
+        archipelago_refunct_mountain_start();
+    }
+
     let mut i = 0;
     for item in ARCHIPELAGO_STATE.received_items {
         archipelago_process_item(item, 0, i);
@@ -1035,7 +1159,7 @@ fn archipelago_start(){
 }
 
 fn archipelago_main_start(){
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+    Tas::set_goal_animation_should_play(false);
     ARCHIPELAGO_STATE.wall_jump = 0;
     ARCHIPELAGO_STATE.ledge_grab = false;
     ARCHIPELAGO_STATE.swim = false;
@@ -1051,30 +1175,26 @@ fn archipelago_main_start(){
     Tas::abilities_set_pipes(false);
     Tas::abilities_set_lifts(false);
 
-    Tas::archipelago_deactivate_buttons_ap();
+    Tas::set_level(35);
 
-    Tas::reset_cubes(true, true);
-
-    spawn_extra_cubes();
-    
     archipelago_activate_stepped_on_platforms();
     archipelago_collect_collected_cubes();
 }
 
-fn spawn_extra_cubes(){    
+fn spawn_extra_cubes(){
     if ARCHIPELAGO_STATE.extra_cubes_options == 9{
         return;
     }
     let cubes_to_spawn_locs = List::of(
-        -4562.5,  -875.,  1375.,  
-        -1985.,  -2262.5,  2090.,  
-        -5062.5,  -3312.5,  62.5,  
-        -3237.5,  -3744.,  35.,  
-        625.,  1625.,  800.,  
-        1415.,  2625.,  215.,  
-        6.3806667,  2880.,  965.,  
-        1250.,  -3750.,  62.5,  
-        1695.,  4636.,  2000.,  
+        -4562.5,  -875.,  1375.,
+        -1985.,  -2262.5,  2090.,
+        -5062.5,  -3312.5,  62.5,
+        -3237.5,  -3744.,  35.,
+        625.,  1625.,  800.,
+        1415.,  2625.,  215.,
+        6.3806667,  2880.,  965.,
+        1250.,  -3750.,  62.5,
+        1695.,  4636.,  2000.,
         2187.5,  6375.,  62.5
     );
 
@@ -1138,7 +1258,7 @@ fn spawn_extra_cubes(){
 
         i += 1;
     }
-    
+
 }
 
 
@@ -1170,11 +1290,20 @@ fn archipelago_vanilla_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+}
 
+fn archipelago_refunct_mountain_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(0, false);
+    Tas::abilities_set_ledge_grab(false);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(false);
+    Tas::abilities_set_lifts(false);
+    collect_all_vanilla_cubes();
 }
 
 fn archipelago_seeker_start(){
+    Tas::deactivate_all_buttons();
     Tas::abilities_set_swim(true);
     Tas::abilities_set_wall_jump(2, false);
     Tas::abilities_set_ledge_grab(true);
@@ -1182,7 +1311,6 @@ fn archipelago_seeker_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
 
     // for loop
     let list = List::of(2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31);
@@ -1191,12 +1319,18 @@ fn archipelago_seeker_start(){
         ARCHIPELAGO_STATE.triggering_clusters.push(i);
     }
 
-    for p in ARCHIPELAGO_STATE.seeker_pressed_platforms{
-        let q = p;
-        let cluster = (q - 10010000) / 100;
-        let plat = (q - 10010000) % 100;
-        Tas::trigger_element_by_type(cluster-1, "Platform", plat-1);
+    let all_platforms = List::of(10010102, 10010103, 10010104, 10010105, 10010106, 10010107, 10010201, 10010202, 10010204, 10010205, 10010206, 10010207, 10010301, 10010303, 10010304, 10010305, 10010306, 10010307, 10010308, 10010309, 10010401, 10010402, 10010403, 10010405, 10010406, 10010407, 10010408, 10010409, 10010502, 10010503, 10010504, 10010505, 10010506, 10010602, 10010603, 10010604, 10010605, 10010703, 10010704, 10010801, 10010802, 10010803, 10010804, 10010805, 10010806, 10010807, 10010808, 10010809, 10010810, 10010901, 10010902, 10010903, 10010904, 10010905, 10010907, 10010908, 10010909, 10010910, 10011002, 10011004, 10011005, 10011006, 10011007, 10011008, 10011009, 10011101, 10011102, 10011103, 10011104, 10011105, 10011106, 10011107, 10011202, 10011203, 10011204, 10011205, 10011302, 10011303, 10011304, 10011401, 10011402, 10011501, 10011503, 10011504, 10011602, 10011603, 10011701, 10011703, 10011704, 10011803, 10011804, 10011805, 10011806, 10011807, 10011808, 10011809, 10011810, 10011811, 10011901, 10011902, 10011903, 10011904, 10012001, 10012002, 10012003, 10012004, 10012005, 10012006, 10012008, 10012009, 10012010, 10012101, 10012102, 10012103, 10012104, 10012105, 10012106, 10012107, 10012109, 10012110, 10012111, 10012112, 10012113, 10012114, 10012115, 10012201, 10012301, 10012302, 10012304, 10012402, 10012403, 10012404, 10012405, 10012406, 10012407, 10012408, 10012409, 10012501, 10012502, 10012503, 10012504, 10012506, 10012507, 10012508, 10012601, 10012602, 10012603, 10012604, 10012605, 10012606, 10012608, 10012610, 10012611, 10012613, 10012614, 10012701, 10012702, 10012703, 10012704, 10012705, 10012706, 10012707, 10012801, 10012802, 10012803, 10012804, 10012805, 10012806, 10012807, 10012809, 10012810, 10012811, 10012812, 10012813, 10012814, 10012815, 10012816, 10012817, 10012819, 10012820, 10012901, 10012902, 10012903, 10012905, 10012906, 10012907, 10012908, 10012909, 10012910, 10012911, 10012912, 10012913, 10012914, 10012915, 10012916, 10012917, 10012918, 10013001, 10013002, 10013003, 10013004, 10013005, 10013006, 10013007, 10013008, 10013009, 10013010, 10013011, 10013013, 10013014, 10013101, 10013103, 10013104, 10013105, 10010101, 10010203, 10010302, 10010404, 10010501, 10010601, 10010701, 10010702, 10010811, 10010906, 10011001, 10011003, 10011108, 10011201, 10011301, 10011403, 10011502, 10011601, 10011702, 10011801, 10011802, 10011905, 10012007, 10012108, 10012202, 10012303, 10012401, 10012505, 10012607, 10012609, 10012612, 10012708, 10012808, 10012818, 10012904, 10013012, 10013102);
+
+
+    for p in all_platforms {
+        if !ARCHIPELAGO_STATE.seeker_platforms.contains(p) {
+            let q = p;
+            let cluster = (q - 10010000) / 100;
+            let plat = (q - 10010000) % 100;
+            Tas::trigger_element_by_type(cluster-1, "Platform", plat-1);
+        }
     }
+
     for p in ARCHIPELAGO_STATE.seeker_extra_pressed{
         let q = p;
         let cluster = (q - 10010000) / 100;
@@ -1213,7 +1347,6 @@ fn archipelago_button_galore_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
 }
 
 fn archipelago_og_randomizer_start(){
@@ -1224,7 +1357,6 @@ fn archipelago_og_randomizer_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
 }
 
 fn archipelago_block_brawl_start(){
@@ -1234,9 +1366,8 @@ fn archipelago_block_brawl_start(){
     Tas::abilities_set_jump_pads(true);
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
-    Tas::archipelago_deactivate_buttons_ap();
+    Tas::deactivate_all_buttons();
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
     ARCHIPELAGO_STATE.block_brawl_cubes_collected = 0;
     ARCHIPELAGO_STATE.block_brawl_cubes_total = 0;
 
@@ -1366,9 +1497,8 @@ fn archipelago_block_blub_start(){
     Tas::abilities_set_jump_pads(true);
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
-    Tas::archipelago_deactivate_buttons_ap();
+    Tas::disable_all_buttons();
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
 
     ARCHIPELAGO_STATE.block_blub_cubes_collected = 0;
     ARCHIPELAGO_STATE.block_blub_cubes_total = 0;
@@ -1501,8 +1631,7 @@ fn archipelago_frogger_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
-    Tas::archipelago_deactivate_buttons_ap();
+    Tas::disable_all_buttons();
 
     // start location, spawn block below it, player in the middle, a platform that is longer x-wise than z-wise
     Tas::set_location(Location { x: 10000., y: 0., z: 6000. }); 
@@ -1582,8 +1711,7 @@ fn archipelago_hillside_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
-    Tas::archipelago_deactivate_buttons_ap();
+    Tas::disable_all_buttons();
 
     // start location, spawn block below it, player in the middle, a platform that is longer x-wise than z-wise
     Tas::set_location(Location { x: 9250., y: 0., z: 6000. }); 
@@ -1759,15 +1887,14 @@ fn archipelago_the_climb_start(mode: int){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
-    Tas::archipelago_deactivate_buttons_ap();
-    ARCHIPELAGO_STATE.last_level_unlocked = 1;
+    Tas::disable_all_buttons();
     ARCHIPELAGO_STATE.started = 2;
 
     let mut i:float = -1.;
     let mut xs = -500.00146;
     let mut ys = -573.4705;
     let mut zs = -250.;
-    while zs < 9750. {
+    while zs < 9900. {
         let mut loc = Location { x: xs, y: ys, z: zs };
         if mode == 1 {
             loc = Tas::spawn_platform_rando_location_2(xs, ys, zs, i);
@@ -1807,6 +1934,9 @@ fn archipelago_checked_location(id: int){
         return;
     }
     ARCHIPELAGO_STATE.checked_locations.push(id);
+    if id >= 10000000 && id < 10010000 {
+        ARCHIPELAGO_STATE.stepped_on_buttons.push(id);
+    }
     if id >= 10010000 && id < 10020000 {
         ARCHIPELAGO_STATE.stepped_on_platforms.push(id);
     }
@@ -1827,19 +1957,15 @@ fn archipelago_checked_location(id: int){
         }
         ARCHIPELAGO_STATE.progress_vanilla_minigame = f"{number_pressed}/{vanilla_locations.len()}";
     }
-    let seeker_locations = List::of(10030001, 10030002, 10030003, 10030004, 10030005, 10030006, 10030007, 10030008, 10030009, 10030010);
-    if seeker_locations.contains(id) {
-        let mut number_pressed = 0;
-        for lid in seeker_locations {
-            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
-                number_pressed += 1;
-            }
+    if id >= 10030000 && id < 10040000 {
+        if !ARCHIPELAGO_STATE.seeker_extra_pressed.contains(id - 20000) {
+            ARCHIPELAGO_STATE.seeker_extra_pressed.push(id - 20000);
         }
-        if number_pressed == seeker_locations.len() {
+        if ARCHIPELAGO_STATE.seeker_extra_pressed.len() == 10 {
             ARCHIPELAGO_STATE.done_seeker_minigame = true;
-            ap_log(List::of(ColorfulText { text:"Completed Seeker Minigame!", color: AP_COLOR_GREEN }));
         }
-        ARCHIPELAGO_STATE.progress_seeker_minigame = f"{number_pressed}/{seeker_locations.len()}";
+        ARCHIPELAGO_STATE.progress_seeker_minigame = f"{ARCHIPELAGO_STATE.seeker_extra_pressed.len()}/10";
+        
     }
     let button_galore_locations = List::of(10040101, 10040201, 10040301, 10040401, 10040501, 10040601, 10040701, 10040702, 10040801, 10040901, 10041001, 10041002, 10041101, 10041201, 10041301, 10041401, 10041501, 10041601, 10041701, 10041801, 10041802, 10041901, 10042001, 10042101, 10042201, 10042301, 10042401, 10042501, 10042601, 10042602, 10042603, 10042701, 10042801, 10042802, 10042901, 10043001, 10043101);
     if button_galore_locations.contains(id) {
@@ -1935,6 +2061,23 @@ fn archipelago_checked_location(id: int){
     if block_blub_locations.contains(id) {
         update_block_blub_in_logic_counts();
     }
+    
+    let refunct_mountain_locations = List::of(10110101, 10110201, 10110301, 10110401, 10110501, 10110601, 10110701, 10110702, 10110801, 10110901, 10111001, 10111002, 10111101, 10111201, 10111301, 10111401, 10111501, 10111601, 10111701, 10111801, 10111802, 10111901, 10112001, 10112101, 10112201, 10112301, 10112401, 10112501, 10112601, 10112602, 10112603, 10112701, 10112801, 10112802, 10112901, 10113001, 10113101);
+    if refunct_mountain_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in refunct_mountain_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }else{
+                // log(f"Refunct Mountain - still need to press location {lid}");
+            }
+        }
+        if number_pressed == refunct_mountain_locations.len() {
+            ARCHIPELAGO_STATE.done_refunct_mountain_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Refunct Mountain Minigame!", color: AP_COLOR_GREEN }));
+        }
+        ARCHIPELAGO_STATE.progress_refunct_mountain_minigame = f"{number_pressed}/{refunct_mountain_locations.len()}";
+    }
 
 }
 
@@ -2000,6 +2143,19 @@ fn archipelago_send_check(id: int){
     Tas::archipelago_send_check(id);
     archipelago_checked_location(id);
 }
+
+fn archipelago_activate_stepped_on_buttons(num: int){
+    for id in ARCHIPELAGO_STATE.stepped_on_buttons {
+        let cluster = (id - 10000000) / 100;
+        if cluster != num {
+            continue;
+        }
+        let plat = (id - 10000000) % 100;
+        // ap_log_1(f"Activating button at cluster {cluster} plat {plat}");
+        Tas::disable_button(cluster-1, plat-1);
+    }
+}
+
 fn archipelago_activate_stepped_on_platforms(){
     for id in ARCHIPELAGO_STATE.stepped_on_platforms {
         let cluster = (id - 10010000) / 100;
@@ -2040,11 +2196,12 @@ fn archipelago_collect_collected_cubes(){
                 Tas::set_cube_collision(cube, false);
             }
         }
-        
+
     }
 }
 
 fn archipelago_received_slot_data(key: string, value: string){
+    // ap_log_1(f"Received slot data: {key} = {value}");
     if key == "ap_world_version" {
         ARCHIPELAGO_STATE.apworld_version = value.slice(1, -1);
     }
@@ -2053,27 +2210,33 @@ fn archipelago_received_slot_data(key: string, value: string){
         ARCHIPELAGO_STATE.required_grass = value.parse_int().unwrap();
     }
 
-    if key == "finish_platform_c" {
-        ARCHIPELAGO_STATE.final_platform_c = value.parse_int().unwrap();
+    if key == "goal_t"{
+        ARCHIPELAGO_STATE.goal_t = value.slice(1, -1);
     }
 
-    if key == "finish_platform_p" {
-        ARCHIPELAGO_STATE.final_platform_p = value.parse_int().unwrap();
+    if key == "goal_c" {
+        ARCHIPELAGO_STATE.goal_c = value.parse_int().unwrap();
     }
 
-    if key == "final_platform_known" {
+    if key == "goal_p" {
+        ARCHIPELAGO_STATE.goal_p = value.parse_int().unwrap();
+    }
+
+    if key == "goal_known" {
         let known = value == "true";
         if known {
-            ARCHIPELAGO_STATE.final_platform_known = true;
+            ARCHIPELAGO_STATE.goal_known_start = true;
+            ARCHIPELAGO_STATE.goal_known = true;
         } else {
-            ARCHIPELAGO_STATE.final_platform_known = false;
+            ARCHIPELAGO_STATE.goal_known_start = false;
+            ARCHIPELAGO_STATE.goal_known = false;
         }
     }
 
-    if key == "seeker_pressed_platforms" {
-        ARCHIPELAGO_STATE.seeker_pressed_platforms = List::new();
+    if key == "seeker_platforms" {
+        ARCHIPELAGO_STATE.seeker_platforms = List::new();
         for p in value.slice(1, -1).split(",") {
-            ARCHIPELAGO_STATE.seeker_pressed_platforms.push(p.parse_int().unwrap());
+            ARCHIPELAGO_STATE.seeker_platforms.push(p.parse_int().unwrap());
         }
     }
 

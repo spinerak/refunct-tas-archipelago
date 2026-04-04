@@ -428,8 +428,8 @@ impl Key {
     }
     pub fn as_iced_physical(&self) -> IcedPhysical {
         match self.key_code {
-            KeyCode::Unknown(key_code, character_code) => {
-                log!("unknown key; key_code: {key_code}, character_code: {character_code}");
+            KeyCode::Unknown(key_code, _character_code) => {
+                // log!("unknown key; key_code: {key_code}, character_code: {character_code}");
                 match self.source {
                     Source::Linux => IcedPhysical::Unidentified(IcedNativeCode::Xkb(key_code as u32)),
                     Source::Windows => IcedPhysical::Unidentified(IcedNativeCode::Windows(key_code as u16)),
@@ -532,8 +532,8 @@ impl Key {
             return IcedKey::Character(SmolStr::new_inline(&character));
         }
         match self.key_code {
-            KeyCode::Unknown(key_code, character_code) => {
-                log!("unknown key; key_code: {key_code}, character_code: {character_code}");
+            KeyCode::Unknown(_key_code, _character_code) => {
+                // log!("unknown key; key_code: {key_code}, character_code: {character_code}");
                 IcedKey::Unidentified
             },
             KeyCode::LeftWin => IcedKey::Named(IcedNamed::Super),

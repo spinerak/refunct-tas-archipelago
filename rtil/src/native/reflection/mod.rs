@@ -262,9 +262,10 @@ pub struct _UDelegateProperty {
     //pub signature_function: *mut UFunction,
 }
 #[repr(C)]
-pub struct _UMulticastDelegateProperty {
+#[allow(unused)]
+pub struct UMulticastDelegateProperty {
     pub base_uproperty: UProperty,
-    //pub signature_function: *mut UFunction,
+    pub signature_function: *mut UFunction,
 }
 // {UMulticastInlineDelegateProperty, UMulticastSparseDelegateProperty} : UMulticastDelegateProperty
 #[repr(C)]
@@ -275,3 +276,24 @@ pub struct _UEnumProperty {
     //pub enum_: *mut UEnum,
 }
 
+// TODO: isn't this just UntypedObjectIndex?
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct FWeakObjectPtr {
+    pub object_index: i32,
+    pub object_serial_number: i32,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct FScriptDelegate {
+    pub object: FWeakObjectPtr,
+    pub function_name: FName,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct FMulticastScriptDelegate {
+    /// The invocation list - array of bound delegates
+    pub invocation_list: TArray<FScriptDelegate>,
+}

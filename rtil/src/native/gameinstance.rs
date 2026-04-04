@@ -24,5 +24,12 @@ impl UMyGameInstance {
         params.get_field("Reset").unwrap::<BoolValueWrapper>().set(false);
         unsafe { restart_game.call(UMyGameInstance::get_umygameinstance(), &params); }
     }
+
+    pub fn raise_next_level() {
+        let obj = unsafe { ObjectWrapper::new(UMyGameInstance::get_umygameinstance() as *mut UObject) };
+        let restart_game = obj.class().find_function("SpawnNextLevel").unwrap();
+        let params = restart_game.create_argument_struct();
+        unsafe { restart_game.call(UMyGameInstance::get_umygameinstance(), &params); }
+    }
 }
 
