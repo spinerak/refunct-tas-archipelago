@@ -158,6 +158,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(abilities_set_pipes)
         .add_function(abilities_set_lifts)
         .add_function(abilities_set_swim)
+        .add_function(dash)
         .add_function(set_start_seconds)
         .add_function(set_start_partial_seconds)
         .add_function(set_end_seconds)
@@ -891,8 +892,6 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
         let before = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
         
         let _ = archipelago_tick(vm, before)?;
-
-
         
         tick();
 
@@ -1082,6 +1081,12 @@ pub fn tick(){
     if last == bits {
         // Already ticked this frame
         return;
+    }
+    
+    if AMyCharacter::get_player().movement_mode() == 1 {
+        let mut state = STATE.lock().unwrap();
+        let state = state.as_mut().unwrap();
+        state.dashes_left = 1;
     }
 
     LAST_PROCESSED_DELTA_BITS.store(bits, Ordering::Relaxed);
@@ -1550,6 +1555,47 @@ fn get_text_size(text: String, scale: f32) -> TextSize {
 fn get_viewport_size() -> Size {
     let (width, height) = AMyCharacter::get_player().get_viewport_size();
     Size { width, height }
+}
+
+#[rebo::function("Tas::dash")]
+fn dash() {
+    let mut state = STATE.lock().unwrap();
+    let state = state.as_mut().unwrap();
+    if state.dashes_left == 0 {
+        return;
+    }
+    state.dashes_left -= 1;
+
+    let dash_velocity = 1500.0;
+    let rot = AMyCharacter::get_player().rotation();
+    // let mut pitch = rot.0;
+    let yaw = rot.1;
+    let roll = rot.2;
+
+    let pitch: f32 = 55.0;
+    
+    let pitch_rad = pitch.to_radians();
+    let yaw_rad = yaw.to_radians();
+    let roll_rad = roll.to_radians();
+    let dash_x = dash_velocity * pitch_rad.cos() * yaw_rad.cos();
+    let dash_y = dash_velocity * pitch_rad.cos() * yaw_rad.sin();
+    let dash_z = dash_velocity * pitch_rad.sin();
+
+
+    log!("Player rotation pitch={}, yaw={}, roll={}", pitch, yaw, roll);
+    log!("Player rotation pitch_rad={}, yaw_rad={}, roll_rad={}", pitch_rad, yaw_rad, roll_rad);
+    log!("Dash vector x={}, y={}, z={}", dash_x, dash_y, dash_z);
+
+    let current_location = AMyCharacter::get_player().location();
+    AMyCharacter::get_player().set_location(
+        current_location.0,
+        current_location.1,
+        current_location.2 + 1.,
+    );
+    
+    // AMyCharacter::get_player().set_velocity(0.0, 0.0, 0.0); // reset current velocity before dashing
+    // AMyCharacter::get_player().set_acceleration(0.0, 0.0, 0.0); // reset current velocity before dashing
+    AMyCharacter::get_player().set_velocity(dash_x, dash_y, dash_z);
 }
 
 #[rebo::function("Tas::spawn_platform_rando_location")]

@@ -621,6 +621,18 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
         });
         added_minigame_header = true;
     }
+    
+    if ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame && !ARCHIPELAGO_STATE.done_refunct_mountain_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nRefunct Mountain",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+
     lines
 }
 
@@ -830,6 +842,24 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         UiElement::Button(UiButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame {
+                    "Refunct Mountain"
+                } else {
+                    "Refunct Mountain (locked)"
+                }
+            } },
+            onclick: fn(label: Text) {
+                if !ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame {
+                    // log("Refunct Mountain gamemode is locked!");
+                    return;
+                }
+                // log("Set gamemode to Refunct Mountain");
+                archipelago_init(12);
+                leave_ui();
+            },
         }),
     ))
 }

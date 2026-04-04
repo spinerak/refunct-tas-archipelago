@@ -126,6 +126,11 @@ struct ArchipelagoState {
     block_blub_yellow_ids: List<int>,
     done_block_blub_minigame: bool,
     block_blub_check_in_logic: int,
+    
+
+    unlock_refunct_mountain_minigame: bool,
+    done_refunct_mountain_minigame: bool,
+    progress_refunct_mountain_minigame: string,
 
 
     last_platform_c: Option<int>,
@@ -266,6 +271,11 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         block_blub_yellow_ids: List::new(),
         done_block_blub_minigame: false,
         block_blub_check_in_logic: 0,
+
+        
+        unlock_refunct_mountain_minigame: false,
+        done_refunct_mountain_minigame: false,
+        progress_refunct_mountain_minigame: "0/37",
 
 
         last_platform_c: Option::None,
@@ -515,9 +525,21 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                 // log(f"Vanilla mode - sending button press {10050000 + (index.cluster_index + 1) * 100 + index.element_index + 1}");
             }
         }
+
+        if ARCHIPELAGO_STATE.gamemode == 12 {
+            if index.element_type == ElementType::Button {
+                archipelago_send_check(10110000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+            }
+        }
     },
     on_element_released: fn(index: ElementIndex) {},
-    on_key_down: fn(key: KeyCode, is_repeat: bool) {},
+    on_key_down: fn(key: KeyCode, is_repeat: bool) {
+        if ARCHIPELAGO_STATE.gamemode == 12 {
+            if key.to_small() == KEY_E.to_small() {
+                Tas::dash();
+            }
+        }
+    },
     on_key_down_always: fn(key: KeyCode, is_repeat: bool) {},
     on_key_up: fn(key: KeyCode) {},
     on_key_up_always: fn(key: KeyCode) {},
@@ -867,6 +889,10 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
         update_block_blub_in_logic_counts();
         return;
     }
+    if item_id == 9999910 {  // Refunct Mountain Minigame
+        ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame = true;
+        return;
+    }
 
     ARCHIPELAGO_STATE.received_items.push(item_id);
     if ARCHIPELAGO_STATE.started < 2 {
@@ -1119,6 +1145,9 @@ fn archipelago_start(){
     if ARCHIPELAGO_STATE.gamemode == 11 {
         archipelago_block_blub_start();
     }
+    if ARCHIPELAGO_STATE.gamemode == 12 {
+        archipelago_refunct_mountain_start();
+    }
 
     let mut i = 0;
     for item in ARCHIPELAGO_STATE.received_items {
@@ -1261,7 +1290,16 @@ fn archipelago_vanilla_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
+}
 
+fn archipelago_refunct_mountain_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(0, false);
+    Tas::abilities_set_ledge_grab(false);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(false);
+    Tas::abilities_set_lifts(false);
+    collect_all_vanilla_cubes();
 }
 
 fn archipelago_seeker_start(){
@@ -2022,6 +2060,23 @@ fn archipelago_checked_location(id: int){
     );
     if block_blub_locations.contains(id) {
         update_block_blub_in_logic_counts();
+    }
+    
+    let refunct_mountain_locations = List::of(10110101, 10110201, 10110301, 10110401, 10110501, 10110601, 10110701, 10110702, 10110801, 10110901, 10111001, 10111002, 10111101, 10111201, 10111301, 10111401, 10111501, 10111601, 10111701, 10111801, 10111802, 10111901, 10112001, 10112101, 10112201, 10112301, 10112401, 10112501, 10112601, 10112602, 10112603, 10112701, 10112801, 10112802, 10112901, 10113001, 10113101);
+    if refunct_mountain_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in refunct_mountain_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }else{
+                // log(f"Refunct Mountain - still need to press location {lid}");
+            }
+        }
+        if number_pressed == refunct_mountain_locations.len() {
+            ARCHIPELAGO_STATE.done_refunct_mountain_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Refunct Mountain Minigame!", color: AP_COLOR_GREEN }));
+        }
+        ARCHIPELAGO_STATE.progress_refunct_mountain_minigame = f"{number_pressed}/{refunct_mountain_locations.len()}";
     }
 
 }
