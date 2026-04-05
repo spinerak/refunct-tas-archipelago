@@ -1,6 +1,6 @@
 [package]
 name = "refunct-tas-archipelago"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["spineraks", "oberien <jaro.fietz@gmx.de>"]
 edition = "2021"
 
