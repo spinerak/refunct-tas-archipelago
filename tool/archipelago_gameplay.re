@@ -1963,6 +1963,7 @@ fn archipelago_checked_location(id: int){
         }
         if ARCHIPELAGO_STATE.seeker_extra_pressed.len() == 10 {
             ARCHIPELAGO_STATE.done_seeker_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Seeker Minigame!", color: AP_COLOR_GREEN }));
         }
         ARCHIPELAGO_STATE.progress_seeker_minigame = f"{ARCHIPELAGO_STATE.seeker_extra_pressed.len()}/10";
         
