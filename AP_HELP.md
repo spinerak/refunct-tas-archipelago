@@ -13,7 +13,7 @@ Refunct is a "custom game", which means it's not on the Archipelago website yet.
 - Open the ArchipelagoLauncher (you can find this in your Archipelago installation).
 - In the launcher, press Generate to generate your game.
 - In the launcher, press Host to host your game. Pick the output zip that was just generated (in the outputs folder in your Archipelago installation).
-- If you followed these steps, remember that the host is `localhost`, port is `38281` and your name is `Player1`.
+- If you followed these steps, remember that the Server (host) is `localhost`, port is `38281` and your name is `Player1`.
 - You're now good to follow the [Refunct specific instructions](https://github.com/spinerak/refunct-tas-archipelago/blob/master/README.md)!
 
 ## Settings
