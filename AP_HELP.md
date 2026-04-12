@@ -28,5 +28,5 @@ Refunct is a "custom game", which means it's not on the Archipelago website yet.
 - When you create a room, you should see the address of it, for example `archipelago.gg:12345`. Follow the Refunct specific instructions with host `archipelago.gg`, whatever port it says on the website, and then the name you chose in the yaml.
 
 ## Links!
-- Archipelago: archipelago.gg
+- Archipelago: https://archipelago.gg/
 - Custom Archipelago worlds: https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds
