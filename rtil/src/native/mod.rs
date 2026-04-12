@@ -90,25 +90,123 @@ pub struct Hooks {
 }
 
 pub fn init() -> Hooks {
-    #[cfg(windows)] windows::init();
-    #[cfg(unix)] linux::init();
-    uworld::init();
-    map_editor::init();
-    font::init();
+    log!("native::init() ENTER");
 
+    // =====================
+    // PLATFORM INIT
+    // =====================
+    #[cfg(windows)]
+    {
+        log!("Calling windows::init()");
+        windows::init();
+        log!("Returned from windows::init()");
+    }
+
+    #[cfg(unix)]
+    {
+        log!("Calling linux::init()");
+        linux::init();
+        log!("Returned from linux::init()");
+    }
+
+    // =====================
+    // SUBSYSTEM INIT
+    // =====================
+    log!("Calling uworld::init()");
+    uworld::init();
+    log!("Returned from uworld::init()");
+
+    log!("Calling map_editor::init()");
+    map_editor::init();
+    log!("Returned from map_editor::init()");
+
+    log!("Calling font::init()");
+    font::init();
+    log!("Returned from font::init()");
+
+    // =====================
+    // HOOK CREATION
+    // =====================
+    log!("Starting hook creation (unsafe block)");
 
     unsafe {
+        log!("Hook: FSlateApplication");
+        let fslateapplication = FSlateApplication::hook();
+        log!("✔ FSlateApplication hooked");
+
+        log!("Hook: AMYCHARACTER_FORCEDUNCROUCH");
+        let _amycharacter_forceduncreouch = RawHook::create(
+            AMYCHARACTER_FORCEDUNCROUCH.load(Ordering::Relaxed),
+            newgame::new_game_hook
+        ).enabled();
+        log!("✔ AMYCHARACTER_FORCEDUNCROUCH hooked");
+
+        log!("Hook: UENGINE_UPDATETIMEANDHANDLEMAXTICKRATE");
+        let _tick = RawHook::create(
+            UENGINE_UPDATETIMEANDHANDLEMAXTICKRATE.load(Ordering::Relaxed),
+            tick::tick_hook
+        ).enabled();
+        log!("✔ UENGINE tick hooked");
+
+        log!("Hook: ALiftBase");
+        let aliftbase = ALiftBase::hook();
+        log!("✔ ALiftBase hooked");
+
+        log!("Hook: AMYHUD_DRAWHUD");
+        let _amyhud_drawhud = TypedHook::create(
+            AMYHUD_DRAWHUD.load(Ordering::Relaxed),
+            hud::draw_hud_hook
+        ).enabled();
+        log!("✔ AMYHUD_DRAWHUD hooked");
+
+        log!("Hook: AHUD_DRAWMATERIALSIMPLE");
+        let _ahud_drawmaterialsimple = TypedHook::create(
+            AHUD_DRAWMATERIALSIMPLE.load(Ordering::Relaxed),
+            hud::draw_material_simple_hook
+        ).enabled();
+        log!("✔ AHUD_DRAWMATERIALSIMPLE hooked");
+
+        log!("Hook: UGAMEUSERSETTINGS_APPLYRESOLUTIONSETTINGS");
+        let _ugameusersettings_applyresolutionsettings = RawHook::create(
+            UGAMEUSERSETTINGS_APPLYRESOLUTIONSETTINGS.load(Ordering::Relaxed),
+            gameusersettings::apply_resolution_settings
+        ).enabled();
+        log!("✔ UGAMEUSERSETTINGS hooked");
+
+        log!("Hook: UUSERWIDGET_ADDTOSCREEN");
+        let _uuserwidget_addtoscreen = RawHook::create(
+            UUSERWIDGET_ADDTOSCREEN.load(Ordering::Relaxed),
+            uworld::add_to_screen_hook
+        ).enabled();
+        log!("✔ UUSERWIDGET hooked");
+
+        log!("Hook: AMYCHARACTER_TICK");
+        let _amycharacter_tick = RawHook::create(
+            AMYCHARACTER_TICK.load(Ordering::Relaxed),
+            character::tick_hook
+        ).enabled();
+        log!("✔ AMYCHARACTER_TICK hooked");
+
+        log!("Hook: AMYCHARACTER_FELLOUTOFWORLD");
+        let _amycharacter_felloutofworld = RawHook::create(
+            AMYCHARACTER_FELLOUTOFWORLD.load(Ordering::Relaxed),
+            character::felloutofworld_hook
+        ).enabled();
+        log!("✔ AMYCHARACTER_FELLOUTOFWORLD hooked");
+
+        log!("All hooks created successfully");
+
         Hooks {
-            fslateapplication: FSlateApplication::hook(),
-            _amycharacter_forceduncreouch: RawHook::create(AMYCHARACTER_FORCEDUNCROUCH.load(Ordering::Relaxed), newgame::new_game_hook).enabled(),
-            _tick: RawHook::create(UENGINE_UPDATETIMEANDHANDLEMAXTICKRATE.load(Ordering::Relaxed), tick::tick_hook).enabled(),
-            aliftbase: ALiftBase::hook(),
-            _amyhud_drawhud: TypedHook::create(AMYHUD_DRAWHUD.load(Ordering::Relaxed), hud::draw_hud_hook).enabled(),
-            _ahud_drawmaterialsimple: TypedHook::create(AHUD_DRAWMATERIALSIMPLE.load(Ordering::Relaxed), hud::draw_material_simple_hook).enabled(),
-            _ugameusersettings_applyresolutionsettings: RawHook::create(UGAMEUSERSETTINGS_APPLYRESOLUTIONSETTINGS.load(Ordering::Relaxed), gameusersettings::apply_resolution_settings).enabled(),
-            _uuserwidget_addtoscreen: RawHook::create(UUSERWIDGET_ADDTOSCREEN.load(Ordering::Relaxed), uworld::add_to_screen_hook).enabled(),
-            _amycharacter_tick: RawHook::create(AMYCHARACTER_TICK.load(Ordering::Relaxed), character::tick_hook).enabled(),
-            _amycharacter_felloutofworld: RawHook::create(AMYCHARACTER_FELLOUTOFWORLD.load(Ordering::Relaxed), character::felloutofworld_hook).enabled(),
+            fslateapplication,
+            _amycharacter_forceduncreouch,
+            _tick,
+            aliftbase,
+            _amyhud_drawhud,
+            _ahud_drawmaterialsimple,
+            _ugameusersettings_applyresolutionsettings,
+            _uuserwidget_addtoscreen,
+            _amycharacter_tick,
+            _amycharacter_felloutofworld,
         }
     }
 }

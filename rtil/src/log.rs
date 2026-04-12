@@ -25,7 +25,9 @@ macro_rules! log {
 }
 
 pub static LOGFILE: Lazy<Mutex<File>> = Lazy::new(|| {
-    let mut path = ::std::env::temp_dir();
+    let mut path = ::std::env::home_dir()
+        .or_else(|| Some(::std::env::temp_dir()))
+        .unwrap();
     path.push("refunct-tas.log");
     Mutex::new(OpenOptions::new()
     .create(true).write(true).truncate(true)

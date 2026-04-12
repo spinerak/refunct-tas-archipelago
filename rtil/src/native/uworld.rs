@@ -381,31 +381,143 @@ pub fn add_to_screen_hook<IA: IsaAbi>(hook: &RawHook<IA, ()>, args: ArgsRef<'_, 
 }
 
 pub fn init() {
+    log!("init() start");
+
     UeScope::with(|scope| {
-        for item in scope.iter_global_object_array() {
+        log!("Entered UeScope");
+
+        log!("About to call iter_global_object_array()");
+
+        let iter = scope.iter_global_object_array();
+
+        log!("Successfully obtained iterator from iter_global_object_array()");
+
+        let mut counter = 0;
+
+        for item in iter {
+            counter += 1;
+            log!("Loop iteration {}", counter);
+
             let object = item.object();
+            log!("Got object");
+
             let name = object.name();
-            let class_name = object.class().name();
-            if class_name == "MaterialInstanceDynamic" && name != "Default__MaterialInstanceDynamic" {
-                CLOUDS_INDEX.set(scope.object_index(&object)).ok().unwrap();
+            log!("Object name: {}", name);
+
+            let class = object.class();
+            log!("Got class");
+
+            let class_name = class.name();
+            log!("Class name: {}", class_name);
+
+            // MaterialInstanceDynamic
+            if class_name == "MaterialInstanceDynamic" {
+                log!("Matched MaterialInstanceDynamic");
+
+                if name != "Default__MaterialInstanceDynamic" {
+                    log!("Valid MaterialInstanceDynamic (not default)");
+
+                    let index = scope.object_index(&object);
+                    log!("MaterialInstanceDynamic index: {:?}", index);
+
+                    let res = CLOUDS_INDEX.set(index);
+                    log!("Set CLOUDS_INDEX result: {:?}", res);
+
+                    res.ok().unwrap();
+                    log!("CLOUDS_INDEX set successfully");
+                }
             }
-            if class_name == "jump6_C" && name != "Default__jump6_C" {
-                JUMP6_INDEX.set(scope.object_index(&object)).ok().unwrap();
+
+            // jump6_C
+            if class_name == "jump6_C" {
+                log!("Matched jump6_C");
+
+                if name != "Default__jump6_C" {
+                    log!("Valid jump6_C (not default)");
+
+                    let index = scope.object_index(&object);
+                    log!("jump6_C index: {:?}", index);
+
+                    let res = JUMP6_INDEX.set(index);
+                    log!("Set JUMP6_INDEX result: {:?}", res);
+
+                    res.ok().unwrap();
+                    log!("JUMP6_INDEX set successfully");
+                }
             }
-            if class_name == "GameEngine" && name != "Default__GameEngine" {
-                ENGINE_INDEX.set(scope.object_index(&object)).ok().unwrap();
+
+            // GameEngine
+            if class_name == "GameEngine" {
+                log!("Matched GameEngine");
+
+                if name != "Default__GameEngine" {
+                    log!("Valid GameEngine (not default)");
+
+                    let index = scope.object_index(&object);
+                    log!("GameEngine index: {:?}", index);
+
+                    let res = ENGINE_INDEX.set(index);
+                    log!("Set ENGINE_INDEX result: {:?}", res);
+
+                    res.ok().unwrap();
+                    log!("ENGINE_INDEX set successfully");
+                }
             }
-            if class_name == "CameraComponent" && name == "FirstPersonCamera" {
-                let fun = object.class().find_function("GetOwner").unwrap();
-                let params = fun.create_argument_struct();
-                unsafe {
-                    fun.call(object.as_ptr(), &params);
-                    let owner = params.get_field("ReturnValue").unwrap::<ObjectWrapper>();
-                    if owner.name() != "Default__MyCharacter" && owner.name() != "Default__BP_MyCharacter_C" {
-                        CAMERA_INDEX.set(scope.object_index(&object)).ok().unwrap();
+
+            // CameraComponent
+            if class_name == "CameraComponent" {
+                log!("Matched CameraComponent");
+
+                if name == "FirstPersonCamera" {
+                    log!("Matched FirstPersonCamera");
+
+                    let fun = match object.class().find_function("GetOwner") {
+                        Some(f) => {
+                            log!("Found GetOwner function");
+                            f
+                        }
+                        None => {
+                            log!("GetOwner function NOT found");
+                            continue;
+                        }
+                    };
+
+                    let params = fun.create_argument_struct();
+                    log!("Created argument struct");
+
+                    unsafe {
+                        log!("About to call GetOwner");
+
+                        fun.call(object.as_ptr(), &params);
+                        log!("Called GetOwner");
+
+                        let owner = params.get_field("ReturnValue").unwrap::<ObjectWrapper>();
+                        log!("Got ReturnValue field");
+
+                        let owner_name = owner.name();
+                        log!("Owner name: {}", owner_name);
+
+                        if owner_name != "Default__MyCharacter"
+                            && owner_name != "Default__BP_MyCharacter_C"
+                        {
+                            log!("Valid camera owner");
+
+                            let index = scope.object_index(&object);
+                            log!("Camera index: {:?}", index);
+
+                            let res = CAMERA_INDEX.set(index);
+                            log!("Set CAMERA_INDEX result: {:?}", res);
+
+                            res.ok().unwrap();
+                            log!("CAMERA_INDEX set successfully");
+                        }
                     }
                 }
             }
         }
-    })
+
+        log!("Finished loop, total iterations: {}", counter);
+    });
+
+    log!("init() end");
 }

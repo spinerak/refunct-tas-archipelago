@@ -43,21 +43,60 @@ pub extern "C" fn initialize() {
         log!("got exe: {:?}", exe);
         let file = exe.file_name().unwrap();
         log!("got exe file name: {:?}", file);
-        if cfg!(unix) && file == "Refunct-Linux-Shipping" || cfg!(windows) && file == "Refunct-Win32-Shipping.exe" {
+        if cfg!(unix) && file == "Refunct-Linux-Shipping"
+            || cfg!(windows) && file == "Refunct-Win32-Shipping.exe"
+        {
+            log!("Platform: unix={} windows={}", cfg!(unix), cfg!(windows));
+
             thread::spawn(|| {
-                log!("Starting initialize");
+                log!("Thread spawned → Starting initialize");
+
                 // on Linux we need to wait for the packer to finish
                 if cfg!(unix) {
+                    log!("Unix detected → sleeping before init...");
                     ::std::thread::sleep(::std::time::Duration::from_secs(7));
+                    log!("Woke up from sleep");
                 }
-                // hook stuff
+
+                // =====================
+                // SUSPEND THREADS
+                // =====================
                 #[cfg(windows)]
-                let handles = native::suspend_threads();
-                let hooks = native::init();
+                log!("About to suspend threads");
+
                 #[cfg(windows)]
-                native::resume_threads(handles);
-                // start threads
+                let handles = {
+                    let h = native::suspend_threads();
+                    log!("Suspended threads successfully");
+                    h
+                };
+
+                // =====================
+                // INIT (YOUR CRASH ZONE)
+                // =====================
+                log!("Calling native::init()");
+                let hooks = {
+                    let h = native::init();
+                    log!("native::init() returned");
+                    h
+                };
+
+                // =====================
+                // RESUME THREADS
+                // =====================
+                #[cfg(windows)]
+                {
+                    log!("Resuming threads...");
+                    native::resume_threads(handles);
+                    log!("Threads resumed");
+                }
+
+                // =====================
+                // START THREADS
+                // =====================
+                log!("Calling threads::start()");
                 threads::start(hooks);
+                log!("threads::start() returned (this may never happen if it loops)");
             });
         }
     });

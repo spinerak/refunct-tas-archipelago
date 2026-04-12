@@ -3114,9 +3114,12 @@ pub fn apply_map_internal(map: &RefunctMap) {
         let orig = get_indexed_element(&*ORIGINAL_MAP, index);
         let (_, _, rz) = level.relative_location();
         let (rpitch, ryaw, rroll) = level.relative_rotation();
-        let target_location = FVector { x: target.x, y: target.y, z: target.z + rz };
+        let size_multiplier = 0.5;
+        log!("target x and target sizex: {}, {}", target.x, target.sizex);
+        let target_location = FVector { x: target.x + 0.5 * (1.0 - size_multiplier) * target.sizex, y: target.y + 0.5 * (1.0 - size_multiplier) * target.sizey, z: target.z + rz };
+        log!("target_location: {}, {}, {}", target_location.x, target_location.y, target_location.z);
         let target_rotation = FRotator { pitch: target.pitch + rpitch, yaw: target.yaw + ryaw, roll: target.roll + rroll };
-        let target_scale = FVector { x: target.sizex / orig.sizex, y: target.sizey / orig.sizey, z: target.sizez / orig.sizez };
+        let target_scale = FVector { x: target.sizex / orig.sizex * size_multiplier, y: target.sizey / orig.sizey * size_multiplier, z: target.sizez / orig.sizez };
         USceneComponent::set_world_location_and_rotation(target_location, target_rotation, &actor);
         USceneComponent::set_world_scale(target_scale, &actor);
     }
