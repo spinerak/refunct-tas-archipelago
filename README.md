@@ -13,7 +13,7 @@ How does it work, what are items and locations?
 Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_HELP.md) helps.
 
 ## Here's how to play Refunct in Archipelago.
-- You need to own the original game Refunct (via Steam for example).
+- You need to own the original game Refunct (via Steam).
 - Download the `practice-windows.zip` or `practice-linux.zip` from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest). Unzip the contents into any folder.
 - **\[Linux only]** Change the launch command for Refunct in Steam to `LD_PRELOAD="/path/to/practice-linux/librtil.so:libssl.so.3:libcrypto.so.3" %command%` (replace `/path/to/practice-linux` with the path to the unpacked `practice-linux` folder)
 - Do the usual [Archipelago custom games things](https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds): get your yaml and apworld from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest), generate and host.
@@ -26,10 +26,8 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 
 ## Other stuff
 - Softlocked? Press New Game, your progress is saved.
-- Buttons and platforms underneath buttons are not checks in the main game. (Red) buttons don't do anything.
 - Universal Tracker can help you to figure out which platforms are accessible. The mini-map should help!
 - You should be able to quit a game and continue it later, just follow the steps again. Minigames do save checks but do not save progress.
-- The final cluster in the game won't appear and will stay underwater in the main game (the final button is weird).
 
 ## Troubleshooting
 All of these troubleshooting steps are for when the mod crashes on launch.
