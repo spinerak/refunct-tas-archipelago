@@ -157,7 +157,9 @@ impl UWorld {
             assert!(!ptr.is_null(), "UWorld::SpawnActor returned null");
             APawn::spawn_default_controller(ptr as *const APawn);
             AActor::set_actor_enable_collision(ptr as *const AActor, true);
+            // log!("Spawned AMyCharacter at {:p}", ptr);
             let my_character = AMyCharacter::new(ptr);
+            // log!("Spawned AMyCharacter with player name '{}'", my_character.get_player_name());
             my_character
         }
     }

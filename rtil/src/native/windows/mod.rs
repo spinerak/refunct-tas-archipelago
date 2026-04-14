@@ -16,10 +16,17 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 // Entry Point
 #[no_mangle]
 #[allow(non_snake_case, unused_variables)]
-pub extern "stdcall" fn DllMain(module: u32, reason: u32, reserved: *mut c_void) {
-    match reason {
-        1 => crate::initialize(),
-        _ => ()
+pub extern "system" fn DllMain(module: u32, reason: u32, reserved: *mut c_void) {
+    log!("DllMain called with reason: {}", reason);
+
+    if reason == 1 {
+        log!("DllMain: PROCESS_ATTACH -> calling initialize()");
+        std::thread::spawn(|| {
+            log!("Initialize thread started");
+            crate::initialize();
+            log!("Initialize thread finished");
+        });
+        log!("DllMain: initialize() returned");
     }
 }
 
@@ -38,9 +45,16 @@ pub fn suspend_threads() -> ThreadHandles {
     let handles = get_thread_handles_except_current();
     log!("Suspend threads");
     unsafe {
-        for thread in handles.0.iter().copied() {
-            log!("Suspending thread {:p}", thread);
-            SuspendThread(thread);
+        for (i, thread) in handles.0.iter().copied().enumerate() {
+            log!("Suspending thread #{} handle {:p}", i, thread);
+
+            let result = SuspendThread(thread);
+
+            log!(" -> result = {}", result);
+
+            if result == u32::MAX {
+                log!(" !!! SuspendThread FAILED for {:p}", thread);
+            }
         }
     }
     handles
@@ -48,9 +62,16 @@ pub fn suspend_threads() -> ThreadHandles {
 pub fn resume_threads(handles: ThreadHandles) {
     log!("Resume threads");
     unsafe {
-        for thread in handles.0.iter().copied() {
-            log!("Resuming thread {:p}", thread);
-            ResumeThread(thread);
+        for (i, thread) in handles.0.iter().copied().enumerate() {
+            log!("Resuming thread #{} handle {:p}", i, thread);
+
+            let result = ResumeThread(thread);
+
+            log!(" -> result = {}", result);
+
+            if result == u32::MAX {
+                log!(" !!! ResumeThread FAILED for {:p}", thread);
+            }
         }
     }
 }
@@ -86,9 +107,15 @@ fn get_thread_handles_except_current() -> ThreadHandles {
                 // > The TH32CS_SNAPTHREAD value always creates a system-wide snapshot even if a
                 // > process identifier is passed to CreateToolhelp32Snapshot.
                 if te.th32OwnerProcessID == current_process_id && te.th32ThreadID != current_thread_id {
+                    log!("Found thread ID {}", te.th32ThreadID);
+
                     let thread = OpenThread(THREAD_ALL_ACCESS, FALSE, te.th32ThreadID);
+
                     if !thread.is_null() {
+                        log!(" -> Opened handle {:p}", thread);
                         thread_handles.push(thread);
+                    } else {
+                        log!(" -> FAILED to open thread {}", te.th32ThreadID);
                     }
                 }
             }

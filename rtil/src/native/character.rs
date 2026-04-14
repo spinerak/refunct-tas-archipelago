@@ -69,6 +69,7 @@ unsafe impl Send for AMyCharacter {}
 
 impl AMyCharacter {
     pub(in crate::native) fn static_class() -> *const UClass {
+        // log!("AMyCharacter::static_class called");
         let fun: extern "C" fn() -> *const UClass
             = unsafe { ::std::mem::transmute(AMYCHARACTER_STATICCLASS.load(Ordering::SeqCst)) };
         fun()
@@ -87,6 +88,7 @@ impl AMyCharacter {
     }
 
     pub unsafe fn new(ptr: *mut AMyCharacterUE) -> AMyCharacter {
+        // log!("AMyCharacter::new called with ptr {:p}", ptr);
         AMyCharacter(ptr)
     }
 
@@ -134,6 +136,7 @@ impl AMyCharacter {
     }
 
     pub fn get_player_name(&self) -> String {
+        // log!("AMyCharacter::get_player_name called");
         unsafe { (*self.player_state()).player_name.to_string_lossy() }
     }
     pub fn get_steamid(&self) -> u64 {
