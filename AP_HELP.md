@@ -9,7 +9,7 @@ The games connect to a server and items are sent around automatically! That mean
 But you can also just play one game, for example... Refunct!
 ## How to play single-player Refunct with Archipelago
 Refunct is a "custom game", which means it's not on the Archipelago website yet. Here's how you play the Refunct Archipelago Randomizer:
-- Download the [latest Archipelago Release](https://github.com/ArchipelagoMW/Archipelago/releases/latest), in Assets (near the bottom). Choose `Setup.Archipelago.0.6.7.exe` if you are on Windows.
+- Download the [latest Archipelago Release](https://github.com/ArchipelagoMW/Archipelago/releases/latest), in Assets (near the bottom). Choose `Setup.Archipelago......exe` if you are on Windows.
 - Download the refunct.apworld from the [latest Refunct release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest) and place it in the `custom_worlds` folder in your Archipelago installation.
 - Download the Refunct.yaml from the [latest Refunct release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest) and place it in the `Players` folder in your Archipelago installation.
 - Open the ArchipelagoLauncher (you can find this in your Archipelago installation).
