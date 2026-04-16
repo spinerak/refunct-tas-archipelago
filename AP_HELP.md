@@ -1,4 +1,6 @@
 ## Refunct Archipelago Randomizer
+<img width="770" height="442" alt="image" src="https://github.com/user-attachments/assets/df7c9a4b-1bcf-4ef4-8e3c-bb5b932cd8c0" />
+
 This is a quick file to introduce you to Archipelago and its Refunct randomizer.
 
 Archipelago is a multiworld randomizer, where items from multiple games can be combined into one itempool to create a massive randomizer!
