@@ -992,8 +992,7 @@ fn get_status_text_lines() -> List<ColorfulText> {
 
     if ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version && 
         ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version.slice(0,-1) &&
-        ARCHIPELAGO_STATE.apworld_version.slice(0,-1) != ARCHIPELAGO_STATE.mod_version &&
-        ARCHIPELAGO_STATE.apworld_version.slice(0,-1) != ARCHIPELAGO_STATE.mod_version.slice(0,-1) {
+        ARCHIPELAGO_STATE.apworld_version.slice(0,-1) != ARCHIPELAGO_STATE.mod_version {
         lines.push(ColorfulText {
             text:  "\n\nVERSION MISMATCH",
             color: AP_COLOR_RED

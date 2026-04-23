@@ -303,6 +303,9 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     draw_hud_text: archipelago_hud_text,
     draw_hud_always: archipelago_hud_color_coded,
     on_new_game: fn() {
+        if !ARCHIPELAGO_STATE.ap_connected {
+            return;
+        }
         Tas::set_goal_animation_should_play(true); // so it works for minigames :3
         Tas::enable_all_buttons();
 
@@ -1175,7 +1178,7 @@ fn archipelago_main_start(){
     Tas::abilities_set_pipes(false);
     Tas::abilities_set_lifts(false);
 
-    Tas::set_level(35);
+    Tas::set_level(-10000);
 
     archipelago_activate_stepped_on_platforms();
     archipelago_collect_collected_cubes();
