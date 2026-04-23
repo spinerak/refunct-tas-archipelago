@@ -100,15 +100,15 @@ pub fn init() -> Hooks {
     unsafe {
         Hooks {
             fslateapplication: FSlateApplication::hook(),
-            _amycharacter_forceduncreouch: RawHook::create(AMYCHARACTER_FORCEDUNCROUCH.load(Ordering::Relaxed), newgame::new_game_hook).enabled(),
-            _tick: RawHook::create(UENGINE_UPDATETIMEANDHANDLEMAXTICKRATE.load(Ordering::Relaxed), tick::tick_hook).enabled(),
+            _amycharacter_forceduncreouch: RawHook::create(AMYCHARACTER_FORCEDUNCROUCH.load(Ordering::SeqCst), newgame::new_game_hook).enabled(),
+            _tick: RawHook::create(UENGINE_UPDATETIMEANDHANDLEMAXTICKRATE.load(Ordering::SeqCst), tick::tick_hook).enabled(),
             aliftbase: ALiftBase::hook(),
-            _amyhud_drawhud: TypedHook::create(AMYHUD_DRAWHUD.load(Ordering::Relaxed), hud::draw_hud_hook).enabled(),
-            _ahud_drawmaterialsimple: TypedHook::create(AHUD_DRAWMATERIALSIMPLE.load(Ordering::Relaxed), hud::draw_material_simple_hook).enabled(),
-            _ugameusersettings_applyresolutionsettings: RawHook::create(UGAMEUSERSETTINGS_APPLYRESOLUTIONSETTINGS.load(Ordering::Relaxed), gameusersettings::apply_resolution_settings).enabled(),
-            _uuserwidget_addtoscreen: RawHook::create(UUSERWIDGET_ADDTOSCREEN.load(Ordering::Relaxed), uworld::add_to_screen_hook).enabled(),
-            _amycharacter_tick: RawHook::create(AMYCHARACTER_TICK.load(Ordering::Relaxed), character::tick_hook).enabled(),
-            _amycharacter_felloutofworld: RawHook::create(AMYCHARACTER_FELLOUTOFWORLD.load(Ordering::Relaxed), character::felloutofworld_hook).enabled(),
+            _amyhud_drawhud: TypedHook::create(AMYHUD_DRAWHUD.load(Ordering::SeqCst), hud::draw_hud_hook).enabled(),
+            _ahud_drawmaterialsimple: TypedHook::create(AHUD_DRAWMATERIALSIMPLE.load(Ordering::SeqCst), hud::draw_material_simple_hook).enabled(),
+            _ugameusersettings_applyresolutionsettings: RawHook::create(UGAMEUSERSETTINGS_APPLYRESOLUTIONSETTINGS.load(Ordering::SeqCst), gameusersettings::apply_resolution_settings).enabled(),
+            _uuserwidget_addtoscreen: RawHook::create(UUSERWIDGET_ADDTOSCREEN.load(Ordering::SeqCst), uworld::add_to_screen_hook).enabled(),
+            _amycharacter_tick: RawHook::create(AMYCHARACTER_TICK.load(Ordering::SeqCst), character::tick_hook).enabled(),
+            _amycharacter_felloutofworld: RawHook::create(AMYCHARACTER_FELLOUTOFWORLD.load(Ordering::SeqCst), character::felloutofworld_hook).enabled(),
         }
     }
 }

@@ -17,16 +17,16 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 #[no_mangle]
 #[allow(non_snake_case, unused_variables)]
 pub extern "system" fn DllMain(module: u32, reason: u32, reserved: *mut c_void) {
-    log!("DllMain called with reason: {}", reason);
+    // log!("DllMain called with reason: {}", reason);
 
     if reason == 1 {
-        log!("DllMain: PROCESS_ATTACH -> calling initialize()");
+        // log!("DllMain: PROCESS_ATTACH -> calling initialize()");
         std::thread::spawn(|| {
-            log!("Initialize thread started");
+            // log!("Initialize thread started");
             crate::initialize();
-            log!("Initialize thread finished");
+            // log!("Initialize thread finished");
         });
-        log!("DllMain: initialize() returned");
+        // log!("DllMain: initialize() returned");
     }
 }
 
@@ -34,7 +34,7 @@ pub struct ThreadHandles(Vec<HANDLE>);
 
 impl Drop for ThreadHandles {
     fn drop(&mut self) {
-        log!("closing thread handles");
+        // log!("closing thread handles");
         for handle in self.0.drain(..) {
             unsafe { CloseHandle(handle); }
         }
@@ -43,14 +43,14 @@ impl Drop for ThreadHandles {
 
 pub fn suspend_threads() -> ThreadHandles {
     let handles = get_thread_handles_except_current();
-    log!("Suspend threads");
+    // log!("Suspend threads");
     unsafe {
-        for (i, thread) in handles.0.iter().copied().enumerate() {
-            log!("Suspending thread #{} handle {:p}", i, thread);
+        for (_i, thread) in handles.0.iter().copied().enumerate() {
+            // log!("Suspending thread #{} handle {:p}", i, thread);
 
             let result = SuspendThread(thread);
 
-            log!(" -> result = {}", result);
+            // log!(" -> result = {}", result);
 
             if result == u32::MAX {
                 log!(" !!! SuspendThread FAILED for {:p}", thread);
@@ -60,14 +60,14 @@ pub fn suspend_threads() -> ThreadHandles {
     handles
 }
 pub fn resume_threads(handles: ThreadHandles) {
-    log!("Resume threads");
+    // log!("Resume threads");
     unsafe {
-        for (i, thread) in handles.0.iter().copied().enumerate() {
-            log!("Resuming thread #{} handle {:p}", i, thread);
+        for (_i, thread) in handles.0.iter().copied().enumerate() {
+            // log!("Resuming thread #{} handle {:p}", i, thread);
 
             let result = ResumeThread(thread);
 
-            log!(" -> result = {}", result);
+            // log!(" -> result = {}", result);
 
             if result == u32::MAX {
                 log!(" !!! ResumeThread FAILED for {:p}", thread);
@@ -107,12 +107,12 @@ fn get_thread_handles_except_current() -> ThreadHandles {
                 // > The TH32CS_SNAPTHREAD value always creates a system-wide snapshot even if a
                 // > process identifier is passed to CreateToolhelp32Snapshot.
                 if te.th32OwnerProcessID == current_process_id && te.th32ThreadID != current_thread_id {
-                    log!("Found thread ID {}", te.th32ThreadID);
+                    // log!("Found thread ID {}", te.th32ThreadID);
 
                     let thread = OpenThread(THREAD_ALL_ACCESS, FALSE, te.th32ThreadID);
 
                     if !thread.is_null() {
-                        log!(" -> Opened handle {:p}", thread);
+                        // log!(" -> Opened handle {:p}", thread);
                         thread_handles.push(thread);
                     } else {
                         log!(" -> FAILED to open thread {}", te.th32ThreadID);
@@ -140,7 +140,7 @@ macro_rules! find {
         )*
         pub(in crate::native) fn init() {
             let base = base_address();
-            log!("Got Base address: {:#x}", base);
+            // log!("Got Base address: {:#x}", base);
             $(
                 $name.store(base + self::consts::$name, Ordering::SeqCst);
             )*

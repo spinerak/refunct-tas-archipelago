@@ -99,8 +99,10 @@ impl AMyCharacter {
     pub fn get_player() -> AMyCharacter {
         let current_player = CURRENT_PLAYER.load(Ordering::SeqCst);
         if current_player.is_null() {
+            let bt = std::backtrace::Backtrace::force_capture().to_string();
             let msg = concat!("called AMyCharacter::get_player while current player's AMyCharacter-pointer wasn't initialized yet");
-            log!("{}", msg);
+
+            log!("{}\n{}", msg, bt);
             panic!("{}", msg);
         }
         AMyCharacter(current_player)
@@ -361,7 +363,9 @@ struct FUniqueNetIdSteam {
 }
 
 pub fn tick_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, mut args: ArgsRef<'_, IA>) {
+    log!("tick_hook called");
     let this = args.load::<*mut AMyCharacterUE>();
+    log!("args: this = {:p}", this);
     CURRENT_PLAYER.store(this, Ordering::SeqCst);
     let my_character = AMyCharacter::get_player();
     log!("Got AMyCharacter: {:p}", this);
@@ -374,9 +378,11 @@ pub fn tick_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, mut args: ArgsRef<'
     hook.disable();
     unsafe { hook.call_original_function(args) };
     REBO_DOESNT_START_SEMAPHORE.release();
+    log!("tick_hook called end");
 }
 
 pub fn felloutofworld_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, args: ArgsRef<'_, IA>) {
+    log!("called felloutofworld_hook");
     AMyCharacter::set_velocity(&mut AMyCharacter::get_player(), 0., 0., 0.);
     AMyCharacter::set_rotation(&mut AMyCharacter::get_player(), 0., 90., 0.);
     //let death_hook = DEATH_HOOK.load(Ordering::SeqCst);
