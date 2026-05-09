@@ -388,7 +388,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     },
     on_reset: fn(old: int, new: int) {},
     on_element_pressed: fn(index: ElementIndex) {
-        ap_log(List::of(ColorfulText { text: f"Pressed {index.element_type} {index.element_index+1} in cluster {index.cluster_index+1}", color: AP_COLOR_GREEN }));
+        // ap_log(List::of(ColorfulText { text: f"Pressed {index.element_type} {index.element_index+1} in cluster {index.cluster_index+1}", color: AP_COLOR_GREEN }));
 
         if index.cluster_index == 9999 {
             got_cube_block_brawl(index.element_index);
