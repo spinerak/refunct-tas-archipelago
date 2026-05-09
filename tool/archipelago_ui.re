@@ -609,6 +609,16 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
         });
         added_minigame_header = true;
     }
+    if ARCHIPELAGO_STATE.unlock_climb_narrow && !ARCHIPELAGO_STATE.done_climb_narrow_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nClimb Narrow",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
     
 
     if ARCHIPELAGO_STATE.block_blub_check_in_logic > 0 {
@@ -628,6 +638,17 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
         }
         lines.push(ColorfulText {
             text:  "\nRefunct Mountain",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+    
+    if ARCHIPELAGO_STATE.unlock_rando_mountain_minigame && !ARCHIPELAGO_STATE.done_rando_mountain_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nRando Mountain",
             color: AP_COLOR_GREEN
         });
         added_minigame_header = true;
@@ -858,6 +879,41 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_rando_mountain_minigame {
+                    "Rando Mountain"
+                } else {
+                    "Rando Mountain (locked)"
+                }
+            } },
+            onclick: fn(label: Text) {
+                if !ARCHIPELAGO_STATE.unlock_rando_mountain_minigame {
+                    // log("Rando Mountain gamemode is locked!");
+                    return;
+                }
+                // log("Set gamemode to Rando Mountain");
+                archipelago_init(13);
+                leave_ui();
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_climb_narrow {
+                    "Climb Narrow"
+                } else {
+                    "Climb Narrow (locked)"
+                }
+            } },
+            onclick: fn(label: Text) { 
+                if !ARCHIPELAGO_STATE.unlock_climb_narrow {
+                    // log("Climb Narrow gamemode is locked!");
+                    return;
+                }
+                archipelago_init(14); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
         }),
@@ -969,6 +1025,20 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: "✔ Jump  ✔ Jump Pads  ✔ Dash (press E)", color: AP_COLOR_GREEN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_refunct_mountain_minigame}", color: COLOR_WHITE },
+            ),
+            13 => List::of(
+                ColorfulText { text: "Archipelago - Rando Mountain\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: "✔ Jump  ✔ Dash (press E)\n", color: AP_COLOR_GREEN },
+                ColorfulText { text: if ARCHIPELAGO_STATE.rando_mountain_can_swim { "✔ Swim" } else { "✖ Swim" }, color: if ARCHIPELAGO_STATE.rando_mountain_can_swim { AP_COLOR_GREEN } else { AP_COLOR_RED } },
+                ColorfulText { text: "  ✖ Anything else", color: AP_COLOR_RED },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_rando_mountain_minigame}", color: COLOR_WHITE },
+            ),
+            14 => List::of(
+                ColorfulText { text: "Archipelago - Climb Narrow\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Current height: {ARCHIPELAGO_STATE.climb_current_height:3.0}m\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Highest: {ARCHIPELAGO_STATE.climb_narrow_highscore:3.0}m", color: AP_COLOR_CYAN },
             ),
 
             _ => List::of(

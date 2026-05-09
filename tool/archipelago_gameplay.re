@@ -102,6 +102,11 @@ struct ArchipelagoState {
     progress_climb_chaos_minigame: string,
     climb_chaos_highscore: float,
 
+    unlock_climb_narrow: bool,
+    done_climb_narrow_minigame: bool,
+    progress_climb_narrow_minigame: string,
+    climb_narrow_highscore: float,
+
 
     block_blub_alt: bool,
     score_block_blub_reds: int,
@@ -131,6 +136,16 @@ struct ArchipelagoState {
     unlock_refunct_mountain_minigame: bool,
     done_refunct_mountain_minigame: bool,
     progress_refunct_mountain_minigame: string,
+    
+    unlock_rando_mountain_minigame: bool,
+    done_rando_mountain_minigame: bool,
+    progress_rando_mountain_minigame: string,
+    rando_mountain_order: List<int>,
+    rando_mountain_index: int,
+    rando_mountain_prev_level: int,
+    rando_mountain_prev_prev_level: int,
+    rando_mountain_prev_prev_prev_level: int,
+    rando_mountain_can_swim: bool,
 
 
     last_platform_c: Option<int>,
@@ -247,6 +262,11 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         progress_climb_chaos_minigame: "0m/100m",
         climb_chaos_highscore: 0.0,
 
+        unlock_climb_narrow: false,
+        done_climb_narrow_minigame: false,
+        progress_climb_narrow_minigame: "0m/100m",
+        climb_narrow_highscore: 0.0,
+
 
         block_blub_alt: false,
         score_block_blub_reds: 0,
@@ -277,11 +297,21 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         done_refunct_mountain_minigame: false,
         progress_refunct_mountain_minigame: "0/37",
 
+        unlock_rando_mountain_minigame: false,
+        done_rando_mountain_minigame: false,
+        progress_rando_mountain_minigame: "0/37",
+        rando_mountain_order: List::new(),
+        rando_mountain_index: 0,
+        rando_mountain_prev_level: 0,
+        rando_mountain_prev_prev_level: 0,
+        rando_mountain_prev_prev_prev_level: 0,
+        rando_mountain_can_swim: false,
+
 
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.0.2a",
+        mod_version: "1.1.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -321,6 +351,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             ARCHIPELAGO_STATE.og_randomizer_index = -1;
         }
 
+        if ARCHIPELAGO_STATE.gamemode == 13 {
+            ARCHIPELAGO_STATE.started = 0;
+            Tas::set_level(0);
+            ARCHIPELAGO_STATE.rando_mountain_index = -1;
+        }
+
         
         if ARCHIPELAGO_STATE.gamemode == 0 {
             Tas::reset_cubes(true, true);
@@ -333,6 +369,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         ARCHIPELAGO_STATE.triggered_clusters.clear();
 
         ARCHIPELAGO_STATE.og_randomizer_index = -1;
+        ARCHIPELAGO_STATE.rando_mountain_index = -1;
 
         ARCHIPELAGO_STATE.climb_current_height = 0.0;
 
@@ -351,7 +388,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     },
     on_reset: fn(old: int, new: int) {},
     on_element_pressed: fn(index: ElementIndex) {
-        // ap_log(List::of(ColorfulText { text: f"Pressed {index.element_type} {index.element_index+1} in cluster {index.cluster_index+1}", color: AP_COLOR_GREEN }));
+        ap_log(List::of(ColorfulText { text: f"Pressed {index.element_type} {index.element_index+1} in cluster {index.cluster_index+1}", color: AP_COLOR_GREEN }));
 
         if index.cluster_index == 9999 {
             got_cube_block_brawl(index.element_index);
@@ -454,6 +491,20 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                 }
             }
 
+            if index.element_type == ElementType::Springpad {
+                let mut map = Map::new();
+                map.insert(10002401, 10012405);
+                map.insert(10002501, 10012501);
+                map.insert(10002502, 10012507);
+                map.insert(10002701, 10012704);
+
+                let mapped_loc = map.get(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+
+                if mapped_loc != Option::None {
+                    archipelago_send_check(mapped_loc.unwrap());
+                }
+            }
+
             if index.element_type == ElementType::Cube {
                 /*
                 In Vanilla:
@@ -515,6 +566,19 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                     archipelago_send_check(loc_id + 20000);
                 }
             }
+            if index.element_type == ElementType::Springpad {
+                let mut map = Map::new();
+                map.insert(10002401, 10032405);
+                map.insert(10002501, 10032501);
+                map.insert(10002502, 10032507);
+                map.insert(10002701, 10032704);
+
+                let mapped_loc = map.get(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+
+                if mapped_loc != Option::None {
+                    archipelago_send_check(mapped_loc.unwrap());
+                }
+            }
         }
 
         if ARCHIPELAGO_STATE.gamemode == 4 {
@@ -529,6 +593,18 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             }
         }
 
+        if ARCHIPELAGO_STATE.gamemode == 13 {
+            if ARCHIPELAGO_STATE.rando_mountain_index == -1 {
+                ap_rando_mountain_change_level();
+            }
+            if index.element_type == ElementType::Button {
+                // log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
+                archipelago_send_check(10120000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+                // log(f"$Button {index.cluster_index + 1}-{index.element_index + 1}");
+                // log(f"Vanilla mode - sending button press {10120000 + (index.cluster_index + 1) * 100 + index.element_index + 1}");
+            }
+        }
+
         if ARCHIPELAGO_STATE.gamemode == 12 {
             if index.element_type == ElementType::Button {
                 archipelago_send_check(10110000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
@@ -537,7 +613,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     },
     on_element_released: fn(index: ElementIndex) {},
     on_key_down: fn(key: KeyCode, is_repeat: bool) {
-        if ARCHIPELAGO_STATE.gamemode == 12 {
+        if ARCHIPELAGO_STATE.gamemode == 12 || ARCHIPELAGO_STATE.gamemode == 13 {
             if key.to_small() == KEY_E.to_small() {
                 Tas::dash();
             }
@@ -595,6 +671,11 @@ fn archipelago_disconnected() {
 fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) {
 
     if item_id == 9999999 {  // Grass
+        archipelago_got_grass();
+        return;
+    }
+    // exotic grass names :)
+    if item_id >= 9090000 && item_id <= 9099999 {
         archipelago_got_grass();
         return;
     }
@@ -716,7 +797,7 @@ fn archipelago_tick(time: int) {
     if time - ARCHIPELAGO_STATE.last_tick_time < 400 {
         return;
     }
-    if ARCHIPELAGO_STATE.gamemode == 6 || ARCHIPELAGO_STATE.gamemode == 7 || ARCHIPELAGO_STATE.gamemode == 8 {
+    if ARCHIPELAGO_STATE.gamemode == 6 || ARCHIPELAGO_STATE.gamemode == 7 || ARCHIPELAGO_STATE.gamemode == 8 || ARCHIPELAGO_STATE.gamemode == 14 {
         if ARCHIPELAGO_STATE.started != 2 {
             return;
         }
@@ -759,6 +840,17 @@ fn archipelago_tick(time: int) {
                     }
                 }
                 ARCHIPELAGO_STATE.climb_chaos_highscore = ARCHIPELAGO_STATE.climb_current_height;
+            }
+        } else if ARCHIPELAGO_STATE.gamemode == 14 {
+            ARCHIPELAGO_STATE.progress_climb_narrow_minigame = f"{ARCHIPELAGO_STATE.climb_current_height:3.0}m/100m";
+            if ARCHIPELAGO_STATE.climb_current_height > ARCHIPELAGO_STATE.climb_narrow_highscore {
+                for milestone in list_of_milestones {
+                    let milestone_height = list_of_milestone_heights.get(milestone - 1).unwrap();
+                    if ARCHIPELAGO_STATE.climb_narrow_highscore < milestone_height && ARCHIPELAGO_STATE.climb_current_height >= milestone_height {
+                        archipelago_send_check(10094000 + milestone);
+                    }
+                }
+                ARCHIPELAGO_STATE.climb_narrow_highscore = ARCHIPELAGO_STATE.climb_current_height;
             }
         }
         return;
@@ -868,6 +960,10 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
         ARCHIPELAGO_STATE.unlock_climb_chaos = true;
         return;
     }
+    if item_id == 9999934 {  // Climb Narrow Minigame
+        ARCHIPELAGO_STATE.unlock_climb_narrow = true;
+        return;
+    }
     if item_id == 9999921 {
         ARCHIPELAGO_STATE.unlock_block_blub = true;
         ARCHIPELAGO_STATE.unlock_block_blub_reds = true;
@@ -894,6 +990,10 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
     }
     if item_id == 9999910 {  // Refunct Mountain Minigame
         ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame = true;
+        return;
+    }
+    if item_id == 9999911 {  // Rando Mountain Minigame
+        ARCHIPELAGO_STATE.unlock_rando_mountain_minigame = true;
         return;
     }
 
@@ -1105,7 +1205,7 @@ fn archipelago_init(gamemode: int){
 
     if gamemode == 2 || gamemode == 11 {
         Tas::set_level(30);
-        // log("Setting level to 30 for Button Galore gamemode");
+        log("Setting level to 30 for Button Galore gamemode");
     }
 }
 
@@ -1150,6 +1250,12 @@ fn archipelago_start(){
     }
     if ARCHIPELAGO_STATE.gamemode == 12 {
         archipelago_refunct_mountain_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 13 {
+        archipelago_rando_mountain_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 14 {
+        archipelago_the_climb_start(4);
     }
 
     let mut i = 0;
@@ -1300,6 +1406,17 @@ fn archipelago_refunct_mountain_start(){
     Tas::abilities_set_wall_jump(0, false);
     Tas::abilities_set_ledge_grab(false);
     Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(false);
+    Tas::abilities_set_lifts(false);
+    collect_all_vanilla_cubes();
+}
+
+fn archipelago_rando_mountain_start(){
+    Tas::abilities_set_swim(false);
+    ARCHIPELAGO_STATE.rando_mountain_can_swim = false;
+    Tas::abilities_set_wall_jump(0, false);
+    Tas::abilities_set_ledge_grab(false);
+    Tas::abilities_set_jump_pads(false);
     Tas::abilities_set_pipes(false);
     Tas::abilities_set_lifts(false);
     collect_all_vanilla_cubes();
@@ -1897,29 +2014,36 @@ fn archipelago_the_climb_start(mode: int){
     let mut xs = -500.00146;
     let mut ys = -573.4705;
     let mut zs = -250.;
+    let mut yaw = 0.;
     while zs < 9900. {
-        let mut loc = Location { x: xs, y: ys, z: zs };
+        let mut loc = LocationY { x: xs, y: ys, z: zs, yaw: yaw };
         if mode == 1 {
             loc = Tas::spawn_platform_rando_location_2(xs, ys, zs, i);
         } else if mode == 2 {
             loc = Tas::spawn_platform_rando_location_3(xs, ys, zs, i);
-        } else {
+        } else if mode == 3 {
             loc = Tas::spawn_platform_rando_location_4(xs, ys, zs, i);
+        } else {
+            loc = Tas::spawn_platform_rando_location_5(xs, ys, zs, yaw, i);
         }
         i += 1.;
         xs = loc.x;
         ys = loc.y;
         zs = loc.z;
+        yaw = loc.yaw;
     }
 }
 
 fn ap_on_level_change_function(old: int, new: int) {
-    if ARCHIPELAGO_STATE.gamemode == 2 || ARCHIPELAGO_STATE.gamemode == 11 {
+    if ARCHIPELAGO_STATE.gamemode == 2 || ARCHIPELAGO_STATE.gamemode == 11 || ARCHIPELAGO_STATE.gamemode == 12 {
         // log(f"[AP] on_level_change: {old} -> {new}");
         Tas::set_level(30);
     }
     if ARCHIPELAGO_STATE.gamemode == 4 && ARCHIPELAGO_STATE.started == 2 {
         ap_OG_randomizer_change_level();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 13 && ARCHIPELAGO_STATE.started == 2 {
+        ap_rando_mountain_change_level();
     }
 }
 
@@ -1929,6 +2053,26 @@ fn ap_OG_randomizer_change_level(){
     if ARCHIPELAGO_STATE.og_randomizer_index < ARCHIPELAGO_STATE.og_randomizer_order.len() {
         let next_level = ARCHIPELAGO_STATE.og_randomizer_order.get(ARCHIPELAGO_STATE.og_randomizer_index).unwrap();
         Tas::set_level(next_level - 2);
+    }
+}
+
+fn ap_rando_mountain_change_level(){
+    // log(f"[AP] Rando Mountain changing level from index {ARCHIPELAGO_STATE.rando_mountain_index}");
+    ARCHIPELAGO_STATE.rando_mountain_index += 1;
+    if ARCHIPELAGO_STATE.rando_mountain_index < ARCHIPELAGO_STATE.rando_mountain_order.len() {
+        if ARCHIPELAGO_STATE.rando_mountain_prev_level == 18 {
+            Tas::abilities_set_swim(true);
+            ARCHIPELAGO_STATE.rando_mountain_can_swim = true;
+        }
+        if ARCHIPELAGO_STATE.rando_mountain_prev_prev_prev_level == 18 {
+            Tas::abilities_set_swim(false);
+            ARCHIPELAGO_STATE.rando_mountain_can_swim = false;
+        }
+        let next_level = ARCHIPELAGO_STATE.rando_mountain_order.get(ARCHIPELAGO_STATE.rando_mountain_index).unwrap();
+        Tas::set_level(next_level - 2);
+        ARCHIPELAGO_STATE.rando_mountain_prev_prev_prev_level = ARCHIPELAGO_STATE.rando_mountain_prev_prev_level;
+        ARCHIPELAGO_STATE.rando_mountain_prev_prev_level = ARCHIPELAGO_STATE.rando_mountain_prev_level;
+        ARCHIPELAGO_STATE.rando_mountain_prev_level = next_level;
     }
 }
 
@@ -2055,6 +2199,21 @@ fn archipelago_checked_location(id: int){
         }
         ARCHIPELAGO_STATE.progress_climb_chaos_minigame = f"{number_pressed*10}m/{climb_chaos_locations.len()*10}m";
     }
+
+    let climb_narrow_locations = List::of(10094001, 10094002, 10094003, 10094004, 10094005, 10094006, 10094007, 10094008, 10094009, 10094010);
+    if climb_narrow_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in climb_narrow_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }
+        }
+        if number_pressed == climb_narrow_locations.len() {
+            ARCHIPELAGO_STATE.done_climb_narrow_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Climb Narrow Minigame!", color: AP_COLOR_GREEN }));
+        }
+        ARCHIPELAGO_STATE.progress_climb_narrow_minigame = f"{number_pressed*10}m/{climb_narrow_locations.len()*10}m";
+    }
     
     let block_blub_locations = List::of( 
         10101003, 10101015, 10101021, 10101030, 10101042, 10101060, 10101084, 10101120,
@@ -2081,6 +2240,23 @@ fn archipelago_checked_location(id: int){
             ap_log(List::of(ColorfulText { text:"Completed Refunct Mountain Minigame!", color: AP_COLOR_GREEN }));
         }
         ARCHIPELAGO_STATE.progress_refunct_mountain_minigame = f"{number_pressed}/{refunct_mountain_locations.len()}";
+    }
+    
+    let rando_mountain_locations = List::of(10120101, 10120201, 10120301, 10120401, 10120501, 10120601, 10120701, 10120702, 10120801, 10120901, 10121001, 10121002, 10121101, 10121201, 10121301, 10121401, 10121501, 10121601, 10121701, 10121801, 10121802, 10121901, 10122001, 10122101, 10122201, 10122301, 10122401, 10122501, 10122601, 10122602, 10122603, 10122701, 10122801, 10122802, 10122901, 10123001, 10123101);
+    if rando_mountain_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in rando_mountain_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }else{
+                // log(f"Rando Mountain - still need to press location {lid}");
+            }
+        }
+        if number_pressed == rando_mountain_locations.len() {
+            ARCHIPELAGO_STATE.done_rando_mountain_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Rando Mountain Minigame!", color: AP_COLOR_GREEN }));
+        }
+        ARCHIPELAGO_STATE.progress_rando_mountain_minigame = f"{number_pressed}/{rando_mountain_locations.len()}";
     }
 
 }
@@ -2248,6 +2424,13 @@ fn archipelago_received_slot_data(key: string, value: string){
         ARCHIPELAGO_STATE.og_randomizer_order = List::new();
         for p in value.slice(1, -1).split(",") {
             ARCHIPELAGO_STATE.og_randomizer_order.push(p.parse_int().unwrap());
+        }
+    }
+
+    if key == "rando_mountain_order" {
+        ARCHIPELAGO_STATE.rando_mountain_order = List::new();
+        for p in value.slice(1, -1).split(",") {
+            ARCHIPELAGO_STATE.rando_mountain_order.push(p.parse_int().unwrap());
         }
     }
 

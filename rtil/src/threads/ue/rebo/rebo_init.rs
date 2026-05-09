@@ -97,6 +97,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(spawn_platform_rando_location_2)
         .add_function(spawn_platform_rando_location_3)
         .add_function(spawn_platform_rando_location_4)
+        .add_function(spawn_platform_rando_location_5)
         .add_function(spawn_platform_rando_location_uw)
         .add_function(spawn_cube_rando_location)
         .add_function(spawn_cube_rando_location_uw)
@@ -251,6 +252,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(test_stuff)
         .add_function(disable_button)
         .add_external_type(Location)
+        .add_external_type(LocationY)
         .add_external_type(Size3D)
         .add_external_type(Rotation)
         .add_external_type(Velocity)
@@ -1304,6 +1306,13 @@ struct Location {
     y: f32,
     z: f32,
 }
+#[derive(Debug, Clone, Copy, rebo::ExternalType, Serialize, Deserialize)]
+struct LocationY {
+    x: f32,
+    y: f32,
+    z: f32,
+    yaw: f32,
+}
 #[rebo::function("Tas::get_location")]
 fn get_location() -> Location {
     let (x, y, z) = AMyCharacter::get_player().location();
@@ -1651,10 +1660,10 @@ fn spawn_platform_rando_location_uw() -> i32 {
     id
 }
 #[rebo::function("Tas::spawn_platform_rando_location_2")]
-fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32) -> Location {
+fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32) -> LocationY {
     let rx = lx + 700. * (rand::random::<f32>()-0.4);
     let ry = ly + 600. * (rand::random::<f32>()-0.4);
-    let rz = lz + 500. * (rand::random::<f32>()-0.48 + i / 1000.);
+    let rz = lz + 500. * (rand::random::<f32>()-0.46 + i / 1500.);
     let loc = Location { x: rx, y: ry, z: rz};
     let rot = Rotation {
         pitch: 0.0,
@@ -1662,11 +1671,11 @@ fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32) -> Locatio
         roll: 0.0,
     };
     spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. });
-    Location { x: rx, y: ry, z: rz }
+    LocationY { x: rx, y: ry, z: rz, yaw: 0.0 }
 }
 
 #[rebo::function("Tas::spawn_platform_rando_location_3")]
-fn spawn_platform_rando_location_3(lx: f32, ly: f32, lz: f32, i: f32) -> Location {
+fn spawn_platform_rando_location_3(lx: f32, ly: f32, lz: f32, i: f32) -> LocationY {
     // Simulate clustered randomness by averaging multiple uniform random values
     let rx = lx + (500.0 * rand::random::<f32>()) * ((0.8 - 0.01 * i) * i + rand::random::<f32>()).sin();
     let ry = ly + (500.0 * rand::random::<f32>()) * ((0.6 - 0.01 * i) * i + rand::random::<f32>()).cos();
@@ -1678,11 +1687,11 @@ fn spawn_platform_rando_location_3(lx: f32, ly: f32, lz: f32, i: f32) -> Locatio
         roll: 0.0,
     };
     spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. });
-    Location { x: rx, y: ry, z: rz }
+    LocationY { x: rx, y: ry, z: rz, yaw: 0.0 }
 }
 
 #[rebo::function("Tas::spawn_platform_rando_location_4")]
-fn spawn_platform_rando_location_4(lx: f32, ly: f32, lz: f32, _i: f32) -> Location {
+fn spawn_platform_rando_location_4(lx: f32, ly: f32, lz: f32, _i: f32) -> LocationY {
     // Simulate clustered randomness by averaging multiple uniform random values
     let rx = lx + 400.0 * (rand::random::<f32>() + rand::random::<f32>() + rand::random::<f32>() - 1.5);
     let ry = ly + 400.0 * (rand::random::<f32>() + rand::random::<f32>() + rand::random::<f32>() - 1.5);
@@ -1694,7 +1703,26 @@ fn spawn_platform_rando_location_4(lx: f32, ly: f32, lz: f32, _i: f32) -> Locati
         roll: 0.0,
     };
     spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. });
-    Location { x: rx, y: ry, z: rz }
+    LocationY { x: rx, y: ry, z: rz, yaw: 0.0 }
+}
+
+#[rebo::function("Tas::spawn_platform_rando_location_5")]
+fn spawn_platform_rando_location_5(lx: f32, ly: f32, lz: f32, yaw: f32, _i: f32) -> LocationY {
+    let rx = lx;
+    let ry = ly;
+    let rz = lz;
+    let loc = Location { x: rx, y: ry, z: rz};
+    let rot = Rotation {
+        pitch: 5.0 + 15.0 * rand::random::<f32>(),
+        yaw: yaw - 90.0 + rand::random::<f32>() * 180.0,
+        roll: 0.0,
+    };
+    spawn_platform(loc, rot, Size3D { x: 5.0, y: 0.2, z: 0.2 });
+    let length = 5.0 * 250.0;
+    let endx = rx + length * rot.pitch.to_radians().cos() * rot.yaw.to_radians().cos();
+    let endy = ry + length * rot.pitch.to_radians().cos() * rot.yaw.to_radians().sin();
+    let endz = rz + length * rot.pitch.to_radians().sin();
+    LocationY { x: endx, y: endy, z: endz, yaw: rot.yaw }
 }
 
 #[rebo::function("Tas::spawn_cube_rando_location")]
