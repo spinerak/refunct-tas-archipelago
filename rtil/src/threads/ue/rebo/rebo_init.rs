@@ -16,13 +16,12 @@ use once_cell::sync::Lazy;
 use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX, CubeWrapper, PlatformWrapper};
 use crate::native::{try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo};
-use super::{STATE, livesplit::{Game, NewGameGlitch, SplitsSaveError, SplitsLoadError}};
+use super::STATE;
 use serde::{Serialize, Deserialize};
 use crate::threads::ue::{Suspend, UeEvent, rebo::YIELDER};
 use crate::native::{ElementIndex, ElementType, ue::{FRotator, FLinearColor}, UEngine, TimeOfDay, UWidgetBlueprintLibrary};
 use opener;
 use chrono::{DateTime, Local};
-use crate::threads::ue::rebo::livesplit;
 use crate::threads::ue::iced_ui::Clipboard;
 use crate::threads::ue::iced_ui::rebo_elements::{IcedButton, IcedColumn, IcedElement, IcedRow, IcedText, IcedWindow};
 use std::cell::RefCell;
@@ -213,38 +212,6 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_reticle_height)
         .add_function(get_camera_mode)
         .add_function(set_camera_mode)
-        .add_function(livesplit::livesplit_start)
-        .add_function(livesplit::livesplit_split)
-        .add_function(livesplit::livesplit_reset)
-        .add_function(livesplit::livesplit_get_game_time)
-        .add_function(livesplit::livesplit_set_game_time)
-        .add_function(livesplit::livesplit_pause_game_time)
-        .add_function(livesplit::livesplit_create_segment)
-        .add_function(livesplit::livesplit_get_game_name)
-        .add_function(livesplit::livesplit_set_game_info)
-        .add_function(livesplit::livesplit_get_category_name)
-        .add_function(livesplit::livesplit_get_segments)
-        .add_function(livesplit::livesplit_get_attempt_count)
-        .add_function(livesplit::livesplit_save_splits)
-        .add_function(livesplit::livesplit_load_splits)
-        .add_function(livesplit::livesplit_get_color)
-        .add_function(livesplit::livesplit_set_color)
-        .add_function(livesplit::livesplit_get_total_playtime)
-        .add_function(livesplit::livesplit_get_total_playtime_digits_format)
-        .add_function(livesplit::livesplit_set_total_playtime_digits_format)
-        .add_function(livesplit::livesplit_get_total_playtime_accuracy)
-        .add_function(livesplit::livesplit_set_total_playtime_accuracy)
-        .add_function(livesplit::livesplit_get_sum_of_best_segments)
-        .add_function(livesplit::livesplit_get_sum_of_best_digits_format)
-        .add_function(livesplit::livesplit_set_sum_of_best_digits_format)
-        .add_function(livesplit::livesplit_get_sum_of_best_accuracy)
-        .add_function(livesplit::livesplit_set_sum_of_best_accuracy)
-        .add_function(livesplit::livesplit_get_current_pace)
-        .add_function(livesplit::livesplit_get_current_pace_digits_format)
-        .add_function(livesplit::livesplit_set_current_pace_digits_format)
-        .add_function(livesplit::livesplit_get_current_pace_accuracy)
-        .add_function(livesplit::livesplit_set_current_pace_accuracy)
-        .add_function(livesplit::get_pb_chance)
         .add_function(set_game_rendering_enabled)
         .add_function(set_input_mode_game_only)
         .add_function(set_input_mode_ui_only)
@@ -276,15 +243,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_external_type(ElementIndex)
         .add_external_type(Bounds)
         .add_external_type(TimeOfDay)
-        .add_external_type(Game)
         .add_external_type(Segment)
-        .add_external_type(NewGameGlitch)
-        .add_external_type(SplitsSaveError)
-        .add_external_type(SplitsLoadError)
-        .add_external_type(livesplit::DigitsFormat)
-        .add_external_type(livesplit::Accuracy)
-        .add_external_type(livesplit::Comparison)
-        .add_external_type(livesplit::LiveSplitLayoutColor)
         .add_external_type(IcedWindow)
         .add_external_type(IcedElement)
         .add_external_type(IcedButton)

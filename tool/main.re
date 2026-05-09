@@ -10,7 +10,6 @@ include "newgame.re";
 include "practice.re";
 include "windshieldwipers.re";
 include "tas.re";
-include "timer.re";
 include "minimap.re";
 include "archipelago_gameplay.re";
 include "archipelago_log.re"

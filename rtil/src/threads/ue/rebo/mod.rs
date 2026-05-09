@@ -17,7 +17,6 @@ use crate::threads::ue::{Suspend, UeEvent};
 use crate::threads::ue::iced_ui::ReboUi;
 
 pub(crate) mod rebo_init;
-mod livesplit;
 
 type Coroutine = corosensei::Coroutine<UeEvent, Suspend, ()>;
 

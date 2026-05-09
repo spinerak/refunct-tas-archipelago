@@ -4,23 +4,10 @@ enum ReplayMenuOp {
     Delete,
 }
 
-static mut TIMER_LABEL = Text { text: if CURRENT_COMPONENTS.contains(TIMER_COMPONENT) { "Disable Timer" } else { "Enable Timer" } };
 static mut TAS_LABEL = Text { text: if CURRENT_COMPONENTS.contains(TAS_COMPONENT) { "Disable TAS Mode" } else { "Enable TAS Mode" } };
 
 fn create_misc_menu() -> Ui {
     Ui::new("Misc:", List::of(
-        UiElement::Button(UiButton {
-            label: TIMER_LABEL,
-            onclick: fn(label: Text) {
-                if CURRENT_COMPONENTS.contains(TIMER_COMPONENT) {
-                    remove_component(TIMER_COMPONENT);
-                    TIMER_LABEL.text = "Enable Timer";
-                } else {
-                    add_component(TIMER_COMPONENT);
-                    TIMER_LABEL.text = "Disable Timer";
-                }
-            }
-        }),
         UiElement::Button(UiButton {
             label: Text { text: "Save Recording" },
             onclick: fn(label: Text) {
