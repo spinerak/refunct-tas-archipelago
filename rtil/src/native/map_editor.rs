@@ -921,17 +921,16 @@ pub fn init() {
             let object = item.object();
             let name = object.name();
             let class_name = object.class().name();
-            // fn print_children(depth: usize, class: StructWrapper) {
-            //     use crate::native::{PropertyWrapper, UProperty};
-            //     use crate::native::reflection::{StructWrapper, ClassWrapper};
+
+            // fn print_children(depth: usize, class: ClassWrapper) {
             //     for property in class.iter_properties() {
             //         let class_name = property.class().name();
             //         log!("{}{property}", "    ".repeat(depth));
-            //         if class_name == "ObjectProperty" {
-            //             let class = unsafe { ClassWrapper::new((*(property.as_uobjectproperty())).property_class) };
-            //             log!("{}going into {}", "    ".repeat(depth), class.name());
-            //             // print_children(depth+1, class);
-            //         }
+            //         //if class_name == "ObjectProperty" {
+            //         //    let class = unsafe { ClassWrapper::new((*(property.as_uobjectproperty())).property_class) };
+            //         //    log!("{}going into {}", "    ".repeat(depth), class.name());
+            //         //    // print_children(depth+1, class);
+            //         //}
             //     }
             //     log!("{}done printing children", "    ".repeat(depth));
             // }
@@ -973,6 +972,10 @@ pub fn init() {
                     fun.call(trigger.as_ptr(), &params);
                 }
             }
+            // if class_name == "BP_LevelBounds_C" && name != "Default__BP_LevelBounds_C" {
+            //     let water_height = object.get_field("WaterHeight").unwrap::<&Cell<f32>>();
+            //     water_height.set(1000000.0);
+            // }
         }
         assert_eq!(levels.len(), 31);
         levels.sort_by_key(|level| scope.get(level.level).level_index());
@@ -1009,7 +1012,7 @@ pub fn init() {
                 "BP_Jumppad2_530" => 24,
                 "BP_Jumppad_414" if pad.absolute_location().0 == 2075. => 24,
                 "BP_Jumppad_514" => 26,
-                name => unreachable!("Invalid pipe: {name:?}"),
+                name => unreachable!("Invalid springpad: {name:?}"),
             };
             levels[level_index].springpads.push(scope.object_index(pad));
         }
