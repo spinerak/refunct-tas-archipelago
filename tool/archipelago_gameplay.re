@@ -311,7 +311,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.1.0",
+        mod_version: "1.1.1",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -568,15 +568,19 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             }
             if index.element_type == ElementType::Springpad {
                 let mut map = Map::new();
-                map.insert(10002401, 10032405);
-                map.insert(10002501, 10032501);
-                map.insert(10002502, 10032507);
-                map.insert(10002701, 10032704);
+                map.insert(10002401, 10012405);
+                map.insert(10002501, 10012501);
+                map.insert(10002502, 10012507);
+                map.insert(10002701, 10012704);
 
-                let mapped_loc = map.get(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+                let res = map.get(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
 
-                if mapped_loc != Option::None {
-                    archipelago_send_check(mapped_loc.unwrap());
+                if res != Option::None {
+                    let loc_id = res.unwrap();
+                    if ARCHIPELAGO_STATE.seeker_platforms.contains(loc_id) && !ARCHIPELAGO_STATE.seeker_extra_pressed.contains(loc_id) {
+                        ARCHIPELAGO_STATE.seeker_extra_pressed.push(loc_id);
+                        archipelago_send_check(loc_id + 20000);
+                    }
                 }
             }
         }
