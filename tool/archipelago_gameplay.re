@@ -311,7 +311,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.1.1",
+        mod_version: "1.1.1a",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -1209,7 +1209,6 @@ fn archipelago_init(gamemode: int){
 
     if gamemode == 2 || gamemode == 11 {
         Tas::set_level(30);
-        log("Setting level to 30 for Button Galore gamemode");
     }
 }
 
@@ -2039,7 +2038,7 @@ fn archipelago_the_climb_start(mode: int){
 }
 
 fn ap_on_level_change_function(old: int, new: int) {
-    if ARCHIPELAGO_STATE.gamemode == 2 || ARCHIPELAGO_STATE.gamemode == 11 || ARCHIPELAGO_STATE.gamemode == 12 {
+    if ARCHIPELAGO_STATE.gamemode == 2 || ARCHIPELAGO_STATE.gamemode == 11 {
         // log(f"[AP] on_level_change: {old} -> {new}");
         Tas::set_level(30);
     }
