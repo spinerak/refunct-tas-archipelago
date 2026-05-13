@@ -15,7 +15,7 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 ## Here's how to play Refunct in Archipelago.
 - You need to own the original game Refunct (via Steam).
 - Download the `practice-windows.zip` or `practice-linux.zip` from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest). Unzip the contents into any folder.
-- **\[Linux only]** Change the launch command for Refunct in Steam to `LD_PRELOAD="/path/to/practice-linux/librtil.so:libssl.so.3:libcrypto.so.3" %command%` (replace `/path/to/practice-linux` with the path to the unpacked `practice-linux` folder)
+- **\[Linux only]** Change the launch command for Refunct in Steam to `LD_PRELOAD="/path/to/practice-linux/librtil.so" %command%` (replace `/path/to/practice-linux` with the path to the unpacked `practice-linux` folder)
 - Do the usual [Archipelago custom games things](https://archipelago.gg/tutorial/Archipelago/setup_en#playing-with-custom-worlds): get your yaml and apworld from the [release](https://github.com/spinerak/refunct-tas-archipelago/releases/latest), generate and host.
 - Open Refunct.
 - Once it's loaded, double-click `refunct-tas.exe` on Windows or `refunct-tas` on Linux (note: it may crash, just try again a couple of times, or check troubleshooting at the very bottom).
@@ -38,7 +38,9 @@ All of these troubleshooting steps are for when the mod crashes on launch.
 - There are two ways to learn more about the error.
   - Run `debug.bat` (after opening Refunct) and it'll print an error.
   - Find the log file at `Users\user\AppData\Local\Temp\refunct-tas.log` (note that the log file may not exist).
-- **On linux, `debug.bat` says `thread 'main' panicked at 'called Result::unwrap()'...`]**
+- **On Steam Deck: `debug.bat` says `CantConnectToRtil`.**
+  - In compatibility, try if legacy mode works.
+- **On linux, `debug.bat` says `thread 'main' panicked at 'called Result::unwrap()'...`**
   - Make sure that you configured `LD_PRELOAD` correctly.
 - **`debug.bat` says `"failed to fill whole buffer"`**
   - Do you have Spybot system tray? That program might interfere with Refunct.
@@ -46,6 +48,8 @@ All of these troubleshooting steps are for when the mod crashes on launch.
   - You might have older graphics drivers.
   - Right-click the game on steam and add this as launch option: `cmd /C "set WGPU_BACKEND=gles&& %command%"`
   - Or you could try to update your graphics driver (this helped many times).
+- **`debug.bat` says `An established connection was aborted` and the log file says `TcpError`.**
+  - You might have older graphics drivers, please update them.
 - **`debug.bat` says `ParseIntError { kind: InvalidDigit }`**
   - Refunct probably has multiple processes open (some kind of overlay)?
   - Please run Refunct, then open a cmd, and run `powershell -NoProfile -Command "Get-Process -Name 'Refunct-Win32-Shipping'"`. If it shows two or more lines, then this does seem to be the case.
