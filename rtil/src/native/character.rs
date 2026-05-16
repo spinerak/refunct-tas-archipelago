@@ -1,6 +1,7 @@
 use std::cell::Cell;
 use std::ffi::c_void;
 use std::mem;
+use std::sync::Once;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use hook::{ArgsRef, RawHook, IsaAbi};
 use iced::mouse::Interaction;
@@ -8,6 +9,7 @@ use crate::native::ue::{FVector, FRotator, FString, UeU64};
 use crate::native::{AMYCHARACTER_STATICCLASS, REBO_DOESNT_START_SEMAPHORE, APLAYERCONTROLLER_GETVIEWPORTSIZE, ActorWrapper, ObjectWrapper, StructValueWrapper, BoolValueWrapper, AMYCHARACTER_UNDERWATERCHANGED, AMYCHARACTER_FELLOUTOFWORLD, UObject, UeScope, APLAYERCONTROLLER_FLUSHPRESSEDKEYS, APLAYERCONTROLLER_GETMOUSEPOSITION};
 use crate::native::reflection::UClass;
 use crate::native::uworld::CAMERA_INDEX;
+use rfd::MessageDialog;
 
 pub static CURRENT_PLAYER: AtomicPtr<AMyCharacterUE> = AtomicPtr::new(std::ptr::null_mut());
 static mut DEATH_HOOK: Option<fn()> = None;
@@ -98,12 +100,15 @@ impl AMyCharacter {
 
     pub fn get_player() -> AMyCharacter {
         let current_player = CURRENT_PLAYER.load(Ordering::SeqCst);
+        print!("AMyCharacter::get_player called, current player pointer is {:p}", current_player);
         if current_player.is_null() {
             let bt = std::backtrace::Backtrace::force_capture().to_string();
             let msg = concat!("called AMyCharacter::get_player while current player's AMyCharacter-pointer wasn't initialized yet");
 
             log!("{}\n{}", msg, bt);
-            panic!("{}", msg);
+            
+            // return a nice object where you can check that it is null later
+            return AMyCharacter(std::ptr::null_mut());
         }
         AMyCharacter(current_player)
     }
@@ -362,12 +367,32 @@ struct FUniqueNetIdSteam {
     steamid: UeU64,
 }
 
+static SHOW_MESSAGE: Once = Once::new();
+
 pub fn tick_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, mut args: ArgsRef<'_, IA>) {
     log!("tick_hook called");
     let this = args.load::<*mut AMyCharacterUE>();
     log!("args: this = {:p}", this);
     CURRENT_PLAYER.store(this, Ordering::SeqCst);
     let my_character = AMyCharacter::get_player();
+    
+
+    if my_character.as_ptr().is_null() {
+        //spawn a separate window that shows a log saying "the bug happened":
+
+        SHOW_MESSAGE.call_once(|| {
+            MessageDialog::new()
+                .set_title("This is exciting!")
+                .set_description("The game would have crashes now, but maybe it works?")
+                .show();
+        });
+
+        log!("AMyCharacter::get_player returned null, returning early from tick_hook");
+        unsafe { hook.call_original_function(args) };
+        log!("tick_hook called end in null case");
+        return;
+    }
+
     log!("Got AMyCharacter: {:p}", this);
     log!("Got AMyCharacter::RootComponent: {:p}", my_character.root_component());
     log!("Got AMyCharacter::Controller: {:p}", my_character.controller());

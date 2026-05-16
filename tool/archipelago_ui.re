@@ -835,13 +835,13 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         //         leave_ui(); 
         //     },
         // }),
-        // UiElement::Button(UiButton {
-        //     label: Text { text: "[test] Frogger" },
-        //     onclick: fn(label: Text) { 
-        //         archipelago_init(10); 
-        //         leave_ui(); 
-        //     },
-        // }),
+        UiElement::Button(UiButton {
+            label: Text { text: "[test] Frogger" },
+            onclick: fn(label: Text) { 
+                archipelago_init(10); 
+                leave_ui(); 
+            },
+        }),
         UiElement::Button(UiButton {
             label: Text { text: {
                 if ARCHIPELAGO_STATE.unlock_block_blub {

@@ -1756,71 +1756,47 @@ fn archipelago_frogger_start(){
     collect_all_vanilla_cubes();
     Tas::disable_all_buttons();
 
+    // the size of blocks is multiplied by 250, so a block of size 1 is actually 250 in the game world.
+    // the player jumps around 100 high and 400 far
+    // spawn platform spawns the platform at x,y,z which is the center of the platform.
+    // add_platform_spawner spawns platforms and all locations are based on the center of the platform!
+
     // start location, spawn block below it, player in the middle, a platform that is longer x-wise than z-wise
     Tas::set_location(Location { x: 10000., y: 0., z: 6000. }); 
     Tas::set_rotation(Rotation { pitch: 0., yaw: 0., roll: 0. });
 
-    Tas::spawn_platform(Location { x: 10000., y: 0.0, z: 3000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }, Size3D { x: 8., y: 8., z: 2. }); 
+    // spawn the starting platform
+    Tas::spawn_platform(Location { x: 10000., y: 0.0, z: 3500.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }, Size3D { x: 4., y: 4., z: 2. }); 
 
-    // path in positive x direction, middle y = 0
+    // input of fn add_platform_spawner
+    // (speed: f32, locations: Vec<Vec<f32>>, size: Size3D, rotation: Rotation, rotation_delta: Rotation, end_behavior: u8, interval: f32)
+    // speed of platforms (10 is very fast), locations platforms pass by, size of platform, initial rotation of platform, rotation change over time (max 50 for enjoyability), 
+    // end behavior (4 means delete it when it reaches the end), interval is seconds between spawns
+
     Tas::add_platform_spawner(500., 
         List::of(
-            List::of(11000., 1750., 3125.), 
-            List::of(11000., -2000., 3125.)
+            List::of(11000., 1000., 3500.), 
+            List::of(11000., -1000., 3500.)
         ), 
         Size3D { x: 1., y: 1., z: 1. },
         Rotation { pitch: 0., yaw: 0., roll: 0. },
         Rotation { pitch: 0., yaw: 0., roll: 0. },
         4, 
-        3.
+        2.7
     );
 
-    Tas::add_platform_spawner(500., 
-        List::of(
-            List::of(11500., -2000., 3225.), 
-            List::of(11500., 1750., 3225.)
-        ), 
-        Size3D { x: 1., y: 1., z: 1. },
-        Rotation { pitch: 0., yaw: 0., roll: 0. },
-        Rotation { pitch: 0., yaw: 0., roll: 0. },
-        4, 
-        3.
-    );
+    // goal platform
+    Tas::spawn_platform(Location { x: 11500., y: 0.0, z: 3500.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }, Size3D { x: 1., y: 1., z: 1. });
 
-    Tas::add_platform_spawner(500., 
-        List::of(
-            List::of(12000., 1750., 3225.), 
-            List::of(12000., -2000., 3225.)
+    // cubes can be spawned and they are the goal of the minigame:
+    Tas::set_cube_scale(
+        Tas::set_cube_color(
+            Tas::spawn_cube(
+                Location { x: 11500., y: 0.0, z: 3600.0 }
+            ), 
+            Color { red: 1., green: 0., blue: 0., alpha: 1. }
         ), 
-        Size3D { x: 1., y: 1., z: 1. },
-        Rotation { pitch: 0., yaw: 0., roll: 0. },
-        Rotation { pitch: 0., yaw: 10., roll: 0. },
-        4, 
-        3.
-    );
-
-    Tas::add_platform_spawner(500., 
-        List::of(
-            List::of(12500., -2000., 3225.), 
-            List::of(12500., 1750., 3225.)
-        ), 
-        Size3D { x: 1., y: 1., z: 1. },
-        Rotation { pitch: 0., yaw: 0., roll: 0. },
-        Rotation { pitch: 10., yaw: 10., roll: 10. },
-        4, 
-        3.
-    );
-
-    Tas::add_platform_spawner(500., 
-        List::of(
-            List::of(13000., 1750., 3225.), 
-            List::of(13000., -2000., 3225.)
-        ), 
-        Size3D { x: 1., y: 1., z: 1. },
-        Rotation { pitch: 0., yaw: 0., roll: 0. },
-        Rotation { pitch: 0., yaw: 500., roll: 0. },
-        4, 
-        3.
+        1.0
     );
 
 

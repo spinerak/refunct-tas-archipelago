@@ -903,9 +903,9 @@ impl CachedPlatform {
             if let Some(func) =
                 ObjectWrapper::new(self.set_location_func_ptr).try_upcast::<FunctionWrapper>()
             {
-                let half_x = sx * 0.5;
-                let half_y = sy * 0.5;
-                let half_z = sz * 0.5;
+                let half_x = sx * 125.;
+                let half_y = sy * 125.;
+                let half_z = sz * 125.;
 
                 // Pivot is one corner, cube extends in +X +Y +Z
                 let mut ox = half_x;
@@ -1676,11 +1676,11 @@ fn spawn_platform_rando_location_5(lx: f32, ly: f32, lz: f32, yaw: f32, _i: f32)
         yaw: yaw - 90.0 + rand::random::<f32>() * 180.0,
         roll: 0.0,
     };
-    spawn_platform(loc, rot, Size3D { x: 5.0, y: 0.2, z: 0.2 });
-    let length = 5.0 * 250.0;
-    let endx = rx + length * rot.pitch.to_radians().cos() * rot.yaw.to_radians().cos();
-    let endy = ry + length * rot.pitch.to_radians().cos() * rot.yaw.to_radians().sin();
-    let endz = rz + length * rot.pitch.to_radians().sin();
+    spawn_platform(loc, rot, Size3D { x: 10.0, y: 0.2, z: 0.2 });
+    let hlength = 10.0 * 125.0;
+    let endx = rx + hlength * rot.pitch.to_radians().cos() * rot.yaw.to_radians().cos();
+    let endy = ry + hlength * rot.pitch.to_radians().cos() * rot.yaw.to_radians().sin();
+    let endz = rz + hlength * rot.pitch.to_radians().sin();
     LocationY { x: endx, y: endy, z: endz, yaw: rot.yaw }
 }
 
