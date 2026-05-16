@@ -383,7 +383,7 @@ pub fn tick_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, mut args: ArgsRef<'
         SHOW_MESSAGE.call_once(|| {
             MessageDialog::new()
                 .set_title("This is exciting!")
-                .set_description("The game would have crashes now, but maybe it works?")
+                .set_description("The game would normally crash now. However, this time, it might work! If you see this message, please report it regardless of whether the game crashes or not!")
                 .show();
         });
 

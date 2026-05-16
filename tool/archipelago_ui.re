@@ -836,13 +836,6 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         //     },
         // }),
         UiElement::Button(UiButton {
-            label: Text { text: "[test] Frogger" },
-            onclick: fn(label: Text) { 
-                archipelago_init(10); 
-                leave_ui(); 
-            },
-        }),
-        UiElement::Button(UiButton {
             label: Text { text: {
                 if ARCHIPELAGO_STATE.unlock_block_blub {
                     "Block Blub"
@@ -910,6 +903,13 @@ fn create_archipelago_gamemodes_menu() -> Ui {
                     return;
                 }
                 archipelago_init(14); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "[TEST] Frogger" },
+            onclick: fn(label: Text) { 
+                archipelago_init(10); 
                 leave_ui(); 
             },
         }),
@@ -999,6 +999,12 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: "Goal: Reach 100m!\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: f"Current height: {ARCHIPELAGO_STATE.climb_current_height:3.0}m\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: f"Highest: {ARCHIPELAGO_STATE.climb_chaos_highscore:3.0}m", color: AP_COLOR_CYAN },
+            ),
+            10 => List::of(
+                ColorfulText { text: "Archipelago - Frogger\n", color: COLOR_WHITE },
+                ColorfulText { text: "UNTESTED MINIGAME\n", color: AP_COLOR_RED },
+                ColorfulText { text: "WITH NO CHECKS\n", color: AP_COLOR_RED },
+                ColorfulText { text: "Press R to reset to start", color: COLOR_WHITE },
             ),
             11 => List::of(
                 ColorfulText { text: "Archipelago - Block Blub\n", color: COLOR_WHITE },

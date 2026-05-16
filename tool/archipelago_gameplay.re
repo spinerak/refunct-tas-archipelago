@@ -311,7 +311,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.1.1a",
+        mod_version: "1.1.1b",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -620,6 +620,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         if ARCHIPELAGO_STATE.gamemode == 12 || ARCHIPELAGO_STATE.gamemode == 13 {
             if key.to_small() == KEY_E.to_small() {
                 Tas::dash();
+            }
+        }
+        if ARCHIPELAGO_STATE.gamemode == 10 {
+            if key.to_small() == KEY_R.to_small() {
+                Tas::set_location(Location { x: 10000., y: 0., z: 6500. }); 
+                Tas::set_rotation(Rotation { pitch: 0., yaw: 0., roll: 0. });
             }
         }
     },
@@ -1756,48 +1762,276 @@ fn archipelago_frogger_start(){
     collect_all_vanilla_cubes();
     Tas::disable_all_buttons();
 
-    // the size of blocks is multiplied by 250, so a block of size 1 is actually 250 in the game world.
-    // the player jumps around 100 high and 400 far
-    // spawn platform spawns the platform at x,y,z which is the center of the platform.
-    // add_platform_spawner spawns platforms and all locations are based on the center of the platform!
+    
+    // =====================================================
+    // FROGGER HUB v5 (CLEAN PASS)
+    // Start aligned to:
+    // player z = 6500
+    // hub z = 5600
+    // =====================================================
 
-    // start location, spawn block below it, player in the middle, a platform that is longer x-wise than z-wise
-    Tas::set_location(Location { x: 10000., y: 0., z: 6000. }); 
+    // =====================================================
+    // PLAYER + HUB
+    // =====================================================
+
+    Tas::set_location(Location { x: 10000., y: 0., z: 6500. }); 
     Tas::set_rotation(Rotation { pitch: 0., yaw: 0., roll: 0. });
 
-    // spawn the starting platform
-    Tas::spawn_platform(Location { x: 10000., y: 0.0, z: 3500.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }, Size3D { x: 4., y: 4., z: 2. }); 
-
-    // input of fn add_platform_spawner
-    // (speed: f32, locations: Vec<Vec<f32>>, size: Size3D, rotation: Rotation, rotation_delta: Rotation, end_behavior: u8, interval: f32)
-    // speed of platforms (10 is very fast), locations platforms pass by, size of platform, initial rotation of platform, rotation change over time (max 50 for enjoyability), 
-    // end behavior (4 means delete it when it reaches the end), interval is seconds between spawns
-
-    Tas::add_platform_spawner(500., 
-        List::of(
-            List::of(11000., 1000., 3500.), 
-            List::of(11000., -1000., 3500.)
-        ), 
-        Size3D { x: 1., y: 1., z: 1. },
+    Tas::spawn_platform(
+        Location { x: 10000., y: 0.0, z: 5600.0 },
         Rotation { pitch: 0., yaw: 0., roll: 0. },
-        Rotation { pitch: 0., yaw: 0., roll: 0. },
-        4, 
-        2.7
+        Size3D { x: 5., y: 4., z: 5. }
     );
 
-    // goal platform
-    Tas::spawn_platform(Location { x: 11500., y: 0.0, z: 3500.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }, Size3D { x: 1., y: 1., z: 1. });
+    // #####################################################
+    // RED (INTRO COURSE)
+    // no rotation, readable frogger, 4 cubes
+    // #####################################################
 
-    // cubes can be spawned and they are the goal of the minigame:
-    Tas::set_cube_scale(
-        Tas::set_cube_color(
-            Tas::spawn_cube(
-                Location { x: 11500., y: 0.0, z: 3600.0 }
-            ), 
-            Color { red: 1., green: 0., blue: 0., alpha: 1. }
-        ), 
+    Tas::spawn_platform(Location { x: 10000., y: 700., z: 5600.0 }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.8, y: 1.8, z: 1.8 });
+
+    // lane 1 (slow)
+    Tas::add_platform_spawner(
+        240.,
+        List::of(List::of(9000., 1200., 5600.), List::of(11000., 1200., 5600.)),
+        Size3D { x: 1.3, y: 1.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        4,
+        2.2
+    );
+
+    Tas::spawn_platform(Location { x: 10000., y: 2000., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.7, y: 1.7, z: 1.7 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: 2000., z: 5750. }), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+
+    // lane 2 (same direction, faster)
+    Tas::add_platform_spawner(
+        340.,
+        List::of(List::of(9000., 3000., 5600.), List::of(11000., 3000., 5600.)),
+        Size3D { x: 1.1, y: 1.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        4,
+        1.6
+    );
+
+    Tas::spawn_platform(Location { x: 10000., y: 4000., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: 4000., z: 5750. }), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+
+    // lane 3 (opposite direction)
+    Tas::add_platform_spawner(
+        380.,
+        List::of(List::of(11000., 5000., 5600.), List::of(9000., 5000., 5600.)),
+        Size3D { x: 1.0, y: 1.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        4,
+        1.4
+    );
+
+    Tas::spawn_platform(Location { x: 10000., y: 6000., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: 6000., z: 5750. }), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+
+    // lane 4 (final simple timing)
+    Tas::add_platform_spawner(
+        420.,
+        List::of(List::of(11000., 7000., 5600.), List::of(9000., 7000., 5600.)),
+        Size3D { x: 0.9, y: 1.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        4,
+        1.2
+    );
+
+    Tas::spawn_platform(Location { x: 10000., y: 8000., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 2.0, y: 2.0, z: 2.0 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: 8000., z: 5750. }), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+
+    // #####################################################
+    // BLUE (YAW ONLY)
+    // harder frogger with structure
+    // #####################################################
+
+    Tas::spawn_platform(Location { x: 10650., y: 0., z: 5600.0 }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.7, y: 1.7, z: 1.7 });
+
+    // section 1
+    Tas::add_platform_spawner(
+        300.,
+        List::of(List::of(11200., -900., 5600.), List::of(11200., 900., 5600.)),
+        Size3D { x: 1.2, y: 1.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 12., roll: 0. },
+        4,
+        2.0
+    );
+
+    Tas::spawn_platform(Location { x: 11800., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 11800., y: 0., z: 5750. }), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+
+    // section 2 (denser)
+    Tas::add_platform_spawner(
+        360.,
+        List::of(List::of(12400., 1000., 5600.), List::of(12400., -1000., 5600.)),
+        Size3D { x: 1.0, y: 1.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 22., roll: 0. },
+        4,
+        1.6
+    );
+
+    Tas::spawn_platform(Location { x: 13000., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.5, y: 1.5, z: 1.5 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 13000., y: 0., z: 5750. }), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+
+    // section 3 (fast yaw only)
+    Tas::add_platform_spawner(
+        440.,
+        List::of(List::of(13600., -1000., 5600.), List::of(13600., 1000., 5600.)),
+        Size3D { x: 0.8, y: 1.0, z: 0.8 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 32., roll: 0. },
+        4,
+        1.2
+    );
+
+    Tas::spawn_platform(Location { x: 14200., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.4, y: 1.4, z: 1.4 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 14200., y: 0., z: 5750. }), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+
+    // section 4 (final challenge)
+    Tas::add_platform_spawner(
+        520.,
+        List::of(List::of(14800., 1000., 5600.), List::of(14800., -1000., 5600.)),
+        Size3D { x: 0.6, y: 1.0, z: 0.6 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 42., roll: 0. },
+        4,
         1.0
     );
+
+    Tas::spawn_platform(Location { x: 15400., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 2.0, y: 2.0, z: 2.0 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 15400., y: 0., z: 5750. }), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+
+    // #####################################################
+    // GREEN (FAST RIDE)
+    // longer + faster + more obstacles + higher lanes
+    // #####################################################
+
+    Tas::add_platform_spawner(
+        420.,
+        List::of(List::of(10000., -200., 5650.), List::of(10000., -12000., 5650.)),
+        Size3D { x: 3.0, y: 3.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        4,
+        5.5
+    );
+
+    // dense obstacle fields (higher Y so they don’t dip under ride platform)
+
+    Tas::add_platform_spawner(
+        520.,
+        List::of(List::of(8500., -1600., 5900.), List::of(11500., -1600., 5900.)),
+        Size3D { x: 0.7, y: 2.4, z: 1.8 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 25. },
+        4,
+        2.0
+    );
+
+    Tas::add_platform_spawner(
+        600.,
+        List::of(List::of(11500., -2800., 5900.), List::of(8500., -2800., 5900.)),
+        Size3D { x: 0.6, y: 1.2, z: 2.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 32. },
+        4,
+        1.2
+    );
+
+    Tas::add_platform_spawner(
+        680.,
+        List::of(List::of(8500., -4200., 5900.), List::of(11500., -4200., 5900.)),
+        Size3D { x: 0.5, y: 1.8, z: 2.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 38. },
+        4,
+        1.0
+    );
+
+    Tas::add_platform_spawner(
+        740.,
+        List::of(List::of(11500., -5600., 5900.), List::of(8500., -5600., 5900.)),
+        Size3D { x: 0.4, y: 2.2, z: 2.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 45. },
+        4,
+        0.9
+    );
+
+    // cubes along ride path
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: -2000., z: 5750. }), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: -3800., z: 5750. }), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: -5400., z: 5750. }), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: -7000., z: 5750. }), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+
+    // final platform
+    Tas::spawn_platform(Location { x: 10000., y: -12000., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 2.4, y: 2.4, z: 2.4 });
+
+    // #####################################################
+    // YELLOW (LONG GAUNTLET)
+    // single-axis rotations only
+    // more jumps between cubes
+    // structured difficulty
+    // #####################################################
+
+    Tas::spawn_platform(Location { x: 9350., y: 0., z: 5600.0 }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+
+    // cube 1
+    Tas::spawn_platform(Location { x: 8200., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 8200., y: 0., z: 5750. }), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+
+    // pitch lane
+    Tas::add_platform_spawner(
+        340.,
+        List::of(List::of(7500., -900., 5600.), List::of(7500., 900., 5600.)),
+        Size3D { x: 1.0, y: 1.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 18., yaw: 0., roll: 0. },
+        4,
+        1.5
+    );
+
+    // cube 2
+    Tas::spawn_platform(Location { x: 6800., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 6800., y: 0., z: 5750. }), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+
+    // roll lane
+    Tas::add_platform_spawner(
+        220.,
+        List::of(List::of(6100., -1000., 5600.), List::of(6100., 1000., 5600.)),
+        Size3D { x: 0.5, y: 4.5, z: 0.5 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 45. },
+        4,
+        3.5
+    );
+
+    // cube 3
+    Tas::spawn_platform(Location { x: 5200., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 5200., y: 0., z: 5750. }), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+
+    // yaw lane
+    Tas::add_platform_spawner(
+        420.,
+        List::of(List::of(4600., -1000., 5600.), List::of(4600., 1000., 5600.)),
+        Size3D { x: 0.7, y: 1.0, z: 0.8 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 28., roll: 0. },
+        4,
+        1.3
+    );
+
+    // cube 4
+    Tas::spawn_platform(Location { x: 3800., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 2.0, y: 2.0, z: 2.0 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 3800., y: 0., z: 5750. }), Color { red: 1., green: 1., blue: 0., alpha: 1. });
 
 
 }
