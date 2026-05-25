@@ -907,9 +907,23 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
+            label: Text { text: "Funny Bridge Game" },
+            onclick: fn(label: Text) { 
+                archipelago_init(16); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
             label: Text { text: "[TEST] Frogger" },
             onclick: fn(label: Text) { 
                 archipelago_init(10); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "[TEST] Block Beat" },
+            onclick: fn(label: Text) { 
+                archipelago_init(15); 
                 leave_ui(); 
             },
         }),

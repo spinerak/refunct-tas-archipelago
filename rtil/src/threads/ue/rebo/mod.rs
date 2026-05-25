@@ -15,6 +15,7 @@ use crate::threads::{StreamToRebo, ReboToStream, ArchipelagoToRebo, ReboToArchip
 use crate::native::{AMyCharacter, FPlatformMisc, Hooks, UTexture2D, UWorld, REBO_DOESNT_START_SEMAPHORE};
 use crate::threads::ue::{Suspend, UeEvent};
 use crate::threads::ue::iced_ui::ReboUi;
+use crate::threads::ue::rebo::rebo_init::{PlatformBlockBeat};
 
 pub(crate) mod rebo_init;
 
@@ -53,6 +54,13 @@ struct State {
     player_minimap_textures: HashMap<Rgba<u8>, UTexture2D>,
 
     dashes_left: u32,
+
+    block_beat_platforms: Vec<PlatformBlockBeat>,
+    
+
+    block_beat_time: f64,
+    block_beat_block_phase: i32,
+    block_beat_enabled: bool,
 }
 
 pub(super) fn poll(event: UeEvent) {
@@ -176,6 +184,10 @@ pub fn init(
         player_minimap_textures: HashMap::new(),
 
         dashes_left: 0,
+        block_beat_platforms: Vec::new(),
+        block_beat_time: 0.0,
+        block_beat_block_phase: 0,
+        block_beat_enabled: false,
     });
 }
 

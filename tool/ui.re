@@ -137,10 +137,10 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     //    Tas::archipelago_raise_cluster(30);
     //}
     //if key.to_small() == KEY_I.to_small() {
-    //    Tas::set_level(-1);
+    //    toggle_block_beat_platform();
     //}
     //if key.to_small() == KEY_O.to_small() {
-    //    Tas::set_level(40);
+    //    Tas::set_all_platforms_hidden(true);
     //}
     if (LSHIFT_PRESSED || RSHIFT_PRESSED) && (LCTRL_PRESSED || RCTRL_PRESSED) && key.to_small() == KEY_M.to_small() {
         enter_ui(create_map_editor_menu());
@@ -178,12 +178,12 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
      //     Tas::abilities_set_pipes(ARCHIPELAGO_STATE.pipes);
      //     log(f"Pipes set to {ARCHIPELAGO_STATE.pipes}");
      // }
-     // if key.to_small() == KEY_7.to_small(){
-     //     let current_loc = Tas::get_location();
-     //     let loc = Location { x: current_loc.x, y: current_loc.y, z: current_loc.z + 10000. };
-     //     Tas::set_location(loc);
-     //     log(f"Teleported up by 10000 units");
-     // }
+     if key.to_small() == KEY_7.to_small(){
+         let current_loc = Tas::get_location();
+         let loc = Location { x: current_loc.x, y: current_loc.y, z: current_loc.z + 10000. };
+         Tas::set_location(loc);
+         log(f"Teleported up by 10000 units");
+     }
 
     match UI_STACK.last() {
         Option::Some(ui) => ui.onkey(key),
