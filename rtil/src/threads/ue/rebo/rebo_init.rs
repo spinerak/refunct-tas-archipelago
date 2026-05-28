@@ -885,7 +885,6 @@ struct CachedPlatform {
     root_component_ptr: *mut UObject,
     set_location_func_ptr: *mut UObject,
     set_size_func_ptr: *mut UObject,
-    set_collision_func_ptr: *mut UObject,
     movement: Option<PlatformMovement>,
 }
 
@@ -999,16 +998,6 @@ impl CachedPlatform {
                 location.get_field("X").unwrap::<&Cell<f32>>().set(x);
                 location.get_field("Y").unwrap::<&Cell<f32>>().set(y);
                 location.get_field("Z").unwrap::<&Cell<f32>>().set(z);
-                func.call(self.root_component_ptr, &params);
-            }
-        }
-    }
-
-    pub fn set_collision_cached(&self, enabled: bool) {
-        unsafe {
-            if let Some(func) = ObjectWrapper::new(self.set_collision_func_ptr).try_upcast::<FunctionWrapper>() {
-                let params = func.create_argument_struct();
-                params.get_field("NewCollisionEnabled").unwrap::<&Cell<u8>>().set(if enabled { 1 } else { 0 });
                 func.call(self.root_component_ptr, &params);
             }
         }
@@ -1703,11 +1692,11 @@ fn spawn_platform_rando_location_5(lx: f32, ly: f32, lz: f32, yaw: f32, _i: f32)
 }
 
 #[rebo::function("Tas::spawn_cube_rando_location")]
-fn spawn_cube_rando_location(max: f32, spawn_platform_below: bool) -> i32 {
+fn spawn_cube_rando_location(max: f32, maxh: f32, spawn_platform_below: bool) -> i32 {
     let rx = rand::random::<f32>();
     let ry = rand::random::<f32>();
     let rz = rand::random::<f32>();
-    let loc = Location { x: (rx-0.5) * 2. * max as f32, y: (ry-0.5) * 2. * max as f32, z: rz * max as f32 };
+    let loc = Location { x: (rx-0.5) * 2. * max as f32, y: (ry-0.5) * 2. * max as f32, z: rz * maxh as f32 };
     if spawn_platform_below {
         let mut platform_loc = loc;
         platform_loc.z -= 125.;
@@ -1781,18 +1770,15 @@ fn spawn_platform(loc: Location, rot: Rotation, size: Size3D) -> i32 {
             let root_component = platform.get_field("RootComponent").unwrap::<ObjectWrapper>();
             if let Some(func) = root_component.class().find_function("K2_SetWorldLocationAndRotation") {
                 if let Some(set_size_func) = root_component.class().find_function("SetRelativeScale3D") {
-                    if let Some(set_collision_func) = root_component.class().find_function("SetActorEnableCollision") {
-                        list.borrow_mut().push(CachedPlatform {
-                            platform_id: internal_index,
-                            size: size,
-                            root_component_ptr: root_component.as_ptr(),
-                            set_location_func_ptr: func.as_ptr() as *mut UObject,
-                            set_size_func_ptr: set_size_func.as_ptr() as *mut UObject,
-                            set_collision_func_ptr: set_collision_func.as_ptr() as *mut UObject,
+                    list.borrow_mut().push(CachedPlatform {
+                        platform_id: internal_index,
+                        size: size,
+                        root_component_ptr: root_component.as_ptr(),
+                        set_location_func_ptr: func.as_ptr() as *mut UObject,
+                        set_size_func_ptr: set_size_func.as_ptr() as *mut UObject,
 
-                            movement: None,
-                        });
-                    }
+                        movement: None,
+                    });
                 }
             }
         }
@@ -2126,11 +2112,13 @@ fn block_beat_toggle() {
 fn block_beat_tick(delta: f64) {
     STATE.lock().unwrap().as_mut().unwrap().block_beat_time += delta;
 
-    let time = (STATE.lock().unwrap().as_ref().unwrap().block_beat_time * 4.0) % 8.0;
+    let speed = 2.0;
+
+    let time = (STATE.lock().unwrap().as_ref().unwrap().block_beat_time * speed) % 8.0;
     log!("Block beat time: {}, phase time: {}", STATE.lock().unwrap().as_ref().unwrap().block_beat_time, time);
 
     for phase in 0..=7 {
-        if time >= phase as f64 && time - delta * 4.0 < phase as f64 {
+        if time >= phase as f64 && time - delta * speed < phase as f64 {
             log!("Block beat phase: {}", phase);
             if phase == 0 {
                 block_beat_toggle();
@@ -2277,17 +2265,14 @@ fn set_platform_movement_path(
             let root_component = platform.get_field("RootComponent").unwrap::<ObjectWrapper>();
             if let Some(set_location_func) = root_component.class().find_function("K2_SetWorldLocationAndRotation") {
                 if let Some(set_size_func) = root_component.class().find_function("SetRelativeScale3D") {
-                    if let Some(set_collision_func) = root_component.class().find_function("SetActorEnableCollision") {
-                        list.borrow_mut().push(CachedPlatform {
-                            platform_id: internal_index,
-                            size: size,
-                            root_component_ptr: root_component.as_ptr(),
-                            set_location_func_ptr: set_location_func.as_ptr() as *mut UObject,
-                            set_size_func_ptr: set_size_func.as_ptr() as *mut UObject,
-                            set_collision_func_ptr: set_collision_func.as_ptr() as *mut UObject,
-                            movement: Some(initial_movement),
-                        });
-                    }
+                    list.borrow_mut().push(CachedPlatform {
+                        platform_id: internal_index,
+                        size: size,
+                        root_component_ptr: root_component.as_ptr(),
+                        set_location_func_ptr: set_location_func.as_ptr() as *mut UObject,
+                        set_size_func_ptr: set_size_func.as_ptr() as *mut UObject,
+                        movement: Some(initial_movement),
+                    });
                 }
             }
         }

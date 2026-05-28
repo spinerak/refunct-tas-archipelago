@@ -1540,7 +1540,7 @@ fn archipelago_block_brawl_start(){
     if ARCHIPELAGO_STATE.unlock_block_brawl_reds {
         // log("Spawning Block Brawl Reds");
         while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., true),2.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., 3000., true),2.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
             ARCHIPELAGO_STATE.block_brawl_red_ids.push(id);
             j += 1;
         }
@@ -1550,7 +1550,7 @@ fn archipelago_block_brawl_start(){
     if ARCHIPELAGO_STATE.unlock_block_brawl_greens {
         // log("Spawning Block Brawl Greens");
         while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., true),2.), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., 3000., true),2.), Color { red: 0., green: 1., blue: 0., alpha: 1. });
             ARCHIPELAGO_STATE.block_brawl_green_ids.push(id);
             j += 1;
         }
@@ -1560,7 +1560,7 @@ fn archipelago_block_brawl_start(){
     if ARCHIPELAGO_STATE.unlock_block_brawl_blues {
         // log("Spawning Block Brawl Blues");
         while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., true),2.), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., 3000., true),2.), Color { red: 0., green: 0., blue: 1., alpha: 1. });
             ARCHIPELAGO_STATE.block_brawl_blue_ids.push(id);
             j += 1;
         }
@@ -1570,7 +1570,7 @@ fn archipelago_block_brawl_start(){
     if ARCHIPELAGO_STATE.unlock_block_brawl_yellows {
         // log("Spawning Block Brawl Yellows");
         while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., true),2.), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., 3000., true),2.), Color { red: 1., green: 1., blue: 0., alpha: 1. });
             ARCHIPELAGO_STATE.block_brawl_yellow_ids.push(id);
             j += 1;
         }
