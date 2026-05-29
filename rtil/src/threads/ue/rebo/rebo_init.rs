@@ -2602,7 +2602,22 @@ fn archipelago_disconnect() {
     STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(ReboToArchipelago::Disconnect).unwrap();
 }
 fn archipelago_send_death() {
-    STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(ReboToArchipelago::SendDeath).unwrap();
+    // check if the last death link (variable in STATE, you name it) is at least 3 seconds ago,
+    // if so, do deathlink and update time
+    let mut state = STATE.lock().unwrap();
+    let state = state.as_mut().unwrap();
+
+    if state.last_death_link_time.elapsed() < Duration::from_secs(3) {
+        log!("Not sending death link because last one was less than 3 seconds ago");
+        return;
+    }
+
+    state
+        .rebo_archipelago_tx
+        .send(ReboToArchipelago::SendDeath)
+        .unwrap();
+
+    state.last_death_link_time = std::time::Instant::now();
 }
 #[rebo::function(raw("Tas::archipelago_send_check"))]
 fn archipelago_send_check(location_id: i64) {

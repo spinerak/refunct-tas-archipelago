@@ -53,6 +53,8 @@ struct State {
     // will keep textures forever, even if the player doesn't exist anymore, but each texture is only a few MB
     player_minimap_textures: HashMap<Rgba<u8>, UTexture2D>,
 
+    last_death_link_time: std::time::Instant,
+
     dashes_left: u32,
 
     block_beat_platforms: Vec<PlatformBlockBeat>,
@@ -182,6 +184,7 @@ pub fn init(
         minimap_image,
         player_minimap_image,
         player_minimap_textures: HashMap::new(),
+        last_death_link_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first death link can be sent immediately
 
         dashes_left: 0,
         block_beat_platforms: Vec::new(),
@@ -233,6 +236,7 @@ fn cleanup_after_rebo() {
     for key in state.pressed_keys.drain() {
         state.hooks.fslateapplication.release_key(key, key as u32, false);
     }
+    state.last_death_link_time = std::time::Instant::now() - Duration::from_secs(10); // reset to a time far in the past so that the first death link can be sent immediately
     rebo_init::apply_map_internal(&rebo_init::ORIGINAL_MAP);
     state.rebo_stream_tx.send(ReboToStream::MiDone).unwrap();
     log!("Cleanup finished.");
@@ -263,7 +267,7 @@ fn check_for_new_version() -> Option<String> {
             }
         },
         Err(err) => {
-            log!("VERSION: Error checking for new version: err");
+            log!("VERSION: Error checking for new version: {}", err);
             match err {
                 ureq::Error::StatusCode(status) => {
                     Some(format!("Error checking for new version: Got status {status}"))
