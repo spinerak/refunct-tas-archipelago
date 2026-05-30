@@ -147,6 +147,16 @@ struct ArchipelagoState {
     rando_mountain_prev_prev_prev_level: int,
     rando_mountain_can_swim: bool,
 
+    block_beat_platforms: List<PlatformBlockBeat>,
+
+    unlock_funny_bridge_game_minigame: bool,
+    done_funny_bridge_game_minigame: bool,
+
+    unlock_clique_button: bool,
+    got_clique_cube: bool,
+    done_clique_button: bool,
+    just_clique: bool,
+    has_clique: bool,
 
     last_platform_c: Option<int>,
     last_platform_p: Option<int>,
@@ -306,12 +316,22 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         rando_mountain_prev_prev_level: 0,
         rando_mountain_prev_prev_prev_level: 0,
         rando_mountain_can_swim: false,
+        
+        block_beat_platforms: List::new(),
 
+        unlock_funny_bridge_game_minigame: false,
+        done_funny_bridge_game_minigame: false,
+
+        unlock_clique_button: false,
+        got_clique_cube: false,
+        done_clique_button: false,
+        just_clique: false,
+        has_clique: false,
 
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.1.1a",
+        mod_version: "1.2.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -344,6 +364,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         Tas::destroy_spawners();
         ARCHIPELAGO_STATE.extra_cubes_locs.clear();
         ARCHIPELAGO_STATE.extra_cubes_int_ids.clear();
+        ARCHIPELAGO_STATE.block_beat_platforms.clear();
+        Tas::stop_block_beat_timer();
 
         if ARCHIPELAGO_STATE.gamemode == 4 {
             ARCHIPELAGO_STATE.started = 0;
@@ -390,6 +412,38 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     on_element_pressed: fn(index: ElementIndex) {
         // ap_log(List::of(ColorfulText { text: f"Pressed {index.element_type} {index.element_index+1} in cluster {index.cluster_index+1}", color: AP_COLOR_GREEN }));
 
+        if ARCHIPELAGO_STATE.started == 0 {
+            return;
+        }
+        if ARCHIPELAGO_STATE.started == 1 {
+            archipelago_start();
+            // log("Archipelago started!");
+            // no return on purpose to allow first press to count
+        }     
+
+        if ARCHIPELAGO_STATE.gamemode == 16 {
+            if index.element_type == ElementType::Cube {
+                archipelago_send_check(10130000);
+            }   
+        }
+
+        if ARCHIPELAGO_STATE.gamemode == 17 {
+            if index.element_type == ElementType::Cube {
+                archipelago_send_check(10130002);
+            }
+            if index.element_type == ElementType::Button {
+                archipelago_send_check(10130001);
+                if !ARCHIPELAGO_STATE.has_goaled {
+                    ARCHIPELAGO_STATE.has_goaled = true;
+                    Tas::trigger_goal_animation();
+                }
+                if ARCHIPELAGO_STATE.just_clique {
+                    Tas::archipelago_goal();
+                }
+            }
+            return;
+        }
+        
         if index.cluster_index == 9999 {
             got_cube_block_brawl(index.element_index);
             got_cube_block_blub(index.element_index);
@@ -401,14 +455,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             ARCHIPELAGO_STATE.last_platform_c = Option::Some(index.cluster_index + 1);
             ARCHIPELAGO_STATE.last_platform_p = Option::Some(index.element_index + 1);
         }
-        if ARCHIPELAGO_STATE.started == 0 {
-            return;
-        }
-        if ARCHIPELAGO_STATE.started == 1 {
-            archipelago_start();
-            // log("Archipelago started!");
-            // no return on purpose to allow first press to count
-        }
+
+
 
         if ARCHIPELAGO_STATE.gamemode == 0 {
 
@@ -622,6 +670,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                 Tas::dash();
             }
         }
+        if ARCHIPELAGO_STATE.gamemode == 10 {
+            if key.to_small() == KEY_R.to_small() {
+                Tas::set_location(Location { x: 10000., y: 0., z: 6500. }); 
+                Tas::set_rotation(Rotation { pitch: 0., yaw: 0., roll: 0. });
+            }
+        }
     },
     on_key_down_always: fn(key: KeyCode, is_repeat: bool) {},
     on_key_up: fn(key: KeyCode) {},
@@ -762,6 +816,13 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
             }
         }
     }
+    
+    if item_id == 9999901 { // Clique Button
+        ARCHIPELAGO_STATE.unlock_clique_button = true;
+        if ARCHIPELAGO_STATE.gamemode == 17 && !ARCHIPELAGO_STATE.done_clique_button {
+            Tas::enable_button(0, 0, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+        }
+    }
 
     if starting_index > 0 {
         if item_id == 9999001{
@@ -794,7 +855,6 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
             Tas::set_screen_percentage(10., SETTINGS.screen_percentage);
         }
     }
-
 }
 
 fn archipelago_tick(time: int) {
@@ -998,6 +1058,11 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
     }
     if item_id == 9999911 {  // Rando Mountain Minigame
         ARCHIPELAGO_STATE.unlock_rando_mountain_minigame = true;
+        return;
+    }
+
+    if item_id == 9999900 { // Funny Bridge Game Minigame
+        ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame = true;
         return;
     }
 
@@ -1260,6 +1325,15 @@ fn archipelago_start(){
     if ARCHIPELAGO_STATE.gamemode == 14 {
         archipelago_the_climb_start(4);
     }
+    if ARCHIPELAGO_STATE.gamemode == 15 {
+        archipelago_block_beat_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 16 {
+        archipelago_funny_bridge_game_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 17 {
+        archipelago_clique_start();
+    }
 
     let mut i = 0;
     for item in ARCHIPELAGO_STATE.received_items {
@@ -1509,7 +1583,7 @@ fn archipelago_block_brawl_start(){
     let mut i = 0;
     if !ARCHIPELAGO_STATE.block_brawl_alt {
         while i < 200 {
-            Tas::spawn_platform_rando_location(3000., 10.);
+            Tas::spawn_platform_rando_location(3000., 3000., 10.);
             i += 1;
         }
     } else {
@@ -1525,7 +1599,7 @@ fn archipelago_block_brawl_start(){
     if ARCHIPELAGO_STATE.unlock_block_brawl_reds {
         // log("Spawning Block Brawl Reds");
         while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., true),2.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., 3000., true),2.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
             ARCHIPELAGO_STATE.block_brawl_red_ids.push(id);
             j += 1;
         }
@@ -1535,7 +1609,7 @@ fn archipelago_block_brawl_start(){
     if ARCHIPELAGO_STATE.unlock_block_brawl_greens {
         // log("Spawning Block Brawl Greens");
         while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., true),2.), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., 3000., true),2.), Color { red: 0., green: 1., blue: 0., alpha: 1. });
             ARCHIPELAGO_STATE.block_brawl_green_ids.push(id);
             j += 1;
         }
@@ -1545,7 +1619,7 @@ fn archipelago_block_brawl_start(){
     if ARCHIPELAGO_STATE.unlock_block_brawl_blues {
         // log("Spawning Block Brawl Blues");
         while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., true),2.), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., 3000., true),2.), Color { red: 0., green: 0., blue: 1., alpha: 1. });
             ARCHIPELAGO_STATE.block_brawl_blue_ids.push(id);
             j += 1;
         }
@@ -1555,7 +1629,7 @@ fn archipelago_block_brawl_start(){
     if ARCHIPELAGO_STATE.unlock_block_brawl_yellows {
         // log("Spawning Block Brawl Yellows");
         while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., true),2.), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., 3000., true),2.), Color { red: 1., green: 1., blue: 0., alpha: 1. });
             ARCHIPELAGO_STATE.block_brawl_yellow_ids.push(id);
             j += 1;
         }
@@ -1688,6 +1762,148 @@ fn archipelago_block_blub_start(){
     }
 }
 
+fn archipelago_block_beat_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    Tas::disable_all_buttons();
+    collect_all_vanilla_cubes();
+
+    let startx = -300.;
+    let starty = -850.;
+
+    Tas::spawn_platform(
+        Location { x: startx, y: starty, z: 0. }, 
+        Rotation { pitch: 0., yaw: 0., roll: 0. }, 
+        Size3D { x: 1., y: 1., z: 1. }
+    );
+
+    let mut counter = 0;
+    let ns = List::of(1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0);
+    for yy in ns {
+        let id = Tas::spawn_platform(
+            Location { x: startx, y: yy * 500.0 + starty, z: 0. }, 
+            Rotation { pitch: 0., yaw: 0., roll: 0. }, 
+            Size3D { x: 1., y: 1., z: 1. }
+        );
+        ARCHIPELAGO_STATE.block_beat_platforms.push(PlatformBlockBeat{
+            id: id,
+            offset: counter,
+            cycle: 2
+        });
+        counter = (counter + 1) % 2;
+    }
+
+    for xx in ns {
+        let id = Tas::spawn_platform(
+            Location { x: xx * 500.0 + startx, y: starty, z: 0. }, 
+            Rotation { pitch: 0., yaw: 0., roll: 0. }, 
+            Size3D { x: 1., y: 1., z: 1. }
+        );
+        ARCHIPELAGO_STATE.block_beat_platforms.push(PlatformBlockBeat{
+            id: id,
+            offset: counter,
+            cycle: 3
+        });
+        counter = (counter + 1) % 3;
+    }
+
+    let startx2 = 1700.;
+    let starty2 = 1150.;
+
+    for a in List::of(1,2,3,4,5,6,7) {
+        for b in List::of(1,2,3,4,5,6,7) {
+            if (a + b) % 2 == 0 {
+                let mut z = 1;
+                if a == 1 || a == 7 || b == 1 || b == 7 {
+                    z = 1;
+                } else if a == 2 || a == 6 || b == 2 || b == 6 {
+                    z = 2;
+                } else if a == 3 || a == 5 || b == 3 || b == 5 {
+                    z = 3;
+                } else if a == 4 && b == 4 {
+                    z = 4;
+                }
+
+                let id = Tas::spawn_platform(
+                    Location { x: a.to_float() * 300.0 + startx2, y: b.to_float() * 300.0 + starty2, z: z.to_float() * 200.0 }, 
+                    Rotation { pitch: 0., yaw: 0., roll: 0. }, 
+                    Size3D { x: 1., y: 1., z: 1. }
+                );
+                ARCHIPELAGO_STATE.block_beat_platforms.push(PlatformBlockBeat{
+                    id: id,
+                    offset: z,
+                    cycle: 4
+                });
+            }
+        }
+    }
+    Tas::start_block_beat_timer(ARCHIPELAGO_STATE.block_beat_platforms);
+}
+
+fn archipelago_funny_bridge_game_start(){
+    Tas::set_location(Location { x: -500., y: -850., z: 90. });
+    Tas::set_rotation(Rotation { pitch: 0., yaw: 0., roll: 0. });
+
+    Tas::abilities_set_swim(false);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    Tas::disable_all_buttons();
+    collect_all_vanilla_cubes();
+
+
+    let startx = 250.;
+    let starty = -1100.;
+    let startz = -150.;
+    let hdiv = -500.;
+    let vdiv = 625.;
+    for i in List::of(0,1,2,3,4) {
+        let id1 = Tas::spawn_platform(Location { x: startx + i.to_float() * vdiv, y: starty, z: startz }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1., y: 1., z: 1. });
+        let id2 = Tas::spawn_platform(Location { x: startx + i.to_float() * vdiv, y: starty - hdiv, z: startz }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1., y: 1., z: 1. });
+        Tas::disable_collision_randomly(id1, id2);
+    }
+
+    Tas::spawn_platform(Location { x: startx + 5.0 * vdiv, y: starty - hdiv/2.0, z: startz }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1., y: 1., z: 1. });
+    // spawn cube on top:
+    Tas::set_cube_scale(
+        Tas::set_cube_color(
+            Tas::spawn_cube(Location { x: startx + 5.0 * vdiv, y: starty - hdiv/2.0, z: startz + 100.0 }), 
+            Color { red: 0.5, green: 0., blue: 0.5, alpha: 1.0 }
+        ),
+        4.
+    );
+}
+
+fn archipelago_clique_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    Tas::disable_all_buttons();
+    collect_all_vanilla_cubes();
+
+    Tas::set_level(-10000);
+
+    Tas::set_location(Location { x: -1000., y: -2000., z: 600. });
+    Tas::set_rotation(Rotation { pitch: 0., yaw: 90., roll: 0. });
+
+    if !ARCHIPELAGO_STATE.got_clique_cube{
+        Tas::spawn_cube(Location { x: -1000., y: -1600., z: 500. });
+    }
+
+    if ARCHIPELAGO_STATE.unlock_clique_button && !ARCHIPELAGO_STATE.done_clique_button {
+        Tas::enable_button(0, 0, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+    }
+}
+
 fn got_cube_block_blub(id: int){
     let score_list_based_on_number_of_cubes = List::of(1,2,3,4,5,8,11,14,17,20,26,32,38,44,50,60,70,80,90,100);
     let score_to_add = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_blub_cubes_collected).unwrap_or(1);
@@ -1756,72 +1972,276 @@ fn archipelago_frogger_start(){
     collect_all_vanilla_cubes();
     Tas::disable_all_buttons();
 
-    // start location, spawn block below it, player in the middle, a platform that is longer x-wise than z-wise
-    Tas::set_location(Location { x: 10000., y: 0., z: 6000. }); 
+    
+    // =====================================================
+    // FROGGER HUB v5 (CLEAN PASS)
+    // Start aligned to:
+    // player z = 6500
+    // hub z = 5600
+    // =====================================================
+
+    // =====================================================
+    // PLAYER + HUB
+    // =====================================================
+
+    Tas::set_location(Location { x: 10000., y: 0., z: 6500. }); 
     Tas::set_rotation(Rotation { pitch: 0., yaw: 0., roll: 0. });
 
-    Tas::spawn_platform(Location { x: 10000., y: 0.0, z: 3000.00 }, Rotation {pitch : 0., yaw: 0., roll: 0. }, Size3D { x: 8., y: 8., z: 2. }); 
-
-    // path in positive x direction, middle y = 0
-    Tas::add_platform_spawner(500., 
-        List::of(
-            List::of(11000., 1750., 3125.), 
-            List::of(11000., -2000., 3125.)
-        ), 
-        Size3D { x: 1., y: 1., z: 1. },
+    Tas::spawn_platform(
+        Location { x: 10000., y: 0.0, z: 5600.0 },
         Rotation { pitch: 0., yaw: 0., roll: 0. },
-        Rotation { pitch: 0., yaw: 0., roll: 0. },
-        4, 
-        3.
+        Size3D { x: 5., y: 4., z: 5. }
     );
 
-    Tas::add_platform_spawner(500., 
-        List::of(
-            List::of(11500., -2000., 3225.), 
-            List::of(11500., 1750., 3225.)
-        ), 
-        Size3D { x: 1., y: 1., z: 1. },
+    // #####################################################
+    // RED (INTRO COURSE)
+    // no rotation, readable frogger, 4 cubes
+    // #####################################################
+
+    Tas::spawn_platform(Location { x: 10000., y: 700., z: 5600.0 }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.8, y: 1.8, z: 1.8 });
+
+    // lane 1 (slow)
+    Tas::add_platform_spawner(
+        240.,
+        List::of(List::of(9000., 1200., 5600.), List::of(11000., 1200., 5600.)),
+        Size3D { x: 1.3, y: 1.0, z: 1.0 },
         Rotation { pitch: 0., yaw: 0., roll: 0. },
         Rotation { pitch: 0., yaw: 0., roll: 0. },
-        4, 
-        3.
+        4,
+        2.2
     );
 
-    Tas::add_platform_spawner(500., 
-        List::of(
-            List::of(12000., 1750., 3225.), 
-            List::of(12000., -2000., 3225.)
-        ), 
-        Size3D { x: 1., y: 1., z: 1. },
+    Tas::spawn_platform(Location { x: 10000., y: 2000., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.7, y: 1.7, z: 1.7 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: 2000., z: 5750. }), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+
+    // lane 2 (same direction, faster)
+    Tas::add_platform_spawner(
+        340.,
+        List::of(List::of(9000., 3000., 5600.), List::of(11000., 3000., 5600.)),
+        Size3D { x: 1.1, y: 1.0, z: 1.0 },
         Rotation { pitch: 0., yaw: 0., roll: 0. },
-        Rotation { pitch: 0., yaw: 10., roll: 0. },
-        4, 
-        3.
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        4,
+        1.6
     );
 
-    Tas::add_platform_spawner(500., 
-        List::of(
-            List::of(12500., -2000., 3225.), 
-            List::of(12500., 1750., 3225.)
-        ), 
-        Size3D { x: 1., y: 1., z: 1. },
+    Tas::spawn_platform(Location { x: 10000., y: 4000., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: 4000., z: 5750. }), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+
+    // lane 3 (opposite direction)
+    Tas::add_platform_spawner(
+        380.,
+        List::of(List::of(11000., 5000., 5600.), List::of(9000., 5000., 5600.)),
+        Size3D { x: 1.0, y: 1.0, z: 1.0 },
         Rotation { pitch: 0., yaw: 0., roll: 0. },
-        Rotation { pitch: 10., yaw: 10., roll: 10. },
-        4, 
-        3.
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        4,
+        1.4
     );
 
-    Tas::add_platform_spawner(500., 
-        List::of(
-            List::of(13000., 1750., 3225.), 
-            List::of(13000., -2000., 3225.)
-        ), 
-        Size3D { x: 1., y: 1., z: 1. },
+    Tas::spawn_platform(Location { x: 10000., y: 6000., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: 6000., z: 5750. }), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+
+    // lane 4 (final simple timing)
+    Tas::add_platform_spawner(
+        420.,
+        List::of(List::of(11000., 7000., 5600.), List::of(9000., 7000., 5600.)),
+        Size3D { x: 0.9, y: 1.0, z: 1.0 },
         Rotation { pitch: 0., yaw: 0., roll: 0. },
-        Rotation { pitch: 0., yaw: 500., roll: 0. },
-        4, 
-        3.
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        4,
+        1.2
     );
+
+    Tas::spawn_platform(Location { x: 10000., y: 8000., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 2.0, y: 2.0, z: 2.0 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: 8000., z: 5750. }), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+
+    // #####################################################
+    // BLUE (YAW ONLY)
+    // harder frogger with structure
+    // #####################################################
+
+    Tas::spawn_platform(Location { x: 10650., y: 0., z: 5600.0 }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.7, y: 1.7, z: 1.7 });
+
+    // section 1
+    Tas::add_platform_spawner(
+        300.,
+        List::of(List::of(11200., -900., 5600.), List::of(11200., 900., 5600.)),
+        Size3D { x: 1.2, y: 1.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 12., roll: 0. },
+        4,
+        2.0
+    );
+
+    Tas::spawn_platform(Location { x: 11800., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 11800., y: 0., z: 5750. }), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+
+    // section 2 (denser)
+    Tas::add_platform_spawner(
+        360.,
+        List::of(List::of(12400., 1000., 5600.), List::of(12400., -1000., 5600.)),
+        Size3D { x: 1.0, y: 1.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 22., roll: 0. },
+        4,
+        1.6
+    );
+
+    Tas::spawn_platform(Location { x: 13000., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.5, y: 1.5, z: 1.5 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 13000., y: 0., z: 5750. }), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+
+    // section 3 (fast yaw only)
+    Tas::add_platform_spawner(
+        440.,
+        List::of(List::of(13600., -1000., 5600.), List::of(13600., 1000., 5600.)),
+        Size3D { x: 0.8, y: 1.0, z: 0.8 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 32., roll: 0. },
+        4,
+        1.2
+    );
+
+    Tas::spawn_platform(Location { x: 14200., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.4, y: 1.4, z: 1.4 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 14200., y: 0., z: 5750. }), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+
+    // section 4 (final challenge)
+    Tas::add_platform_spawner(
+        520.,
+        List::of(List::of(14800., 1000., 5600.), List::of(14800., -1000., 5600.)),
+        Size3D { x: 0.6, y: 1.0, z: 0.6 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 42., roll: 0. },
+        4,
+        1.0
+    );
+
+    Tas::spawn_platform(Location { x: 15400., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 2.0, y: 2.0, z: 2.0 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 15400., y: 0., z: 5750. }), Color { red: 0., green: 0., blue: 1., alpha: 1. });
+
+    // #####################################################
+    // GREEN (FAST RIDE)
+    // longer + faster + more obstacles + higher lanes
+    // #####################################################
+
+    Tas::add_platform_spawner(
+        420.,
+        List::of(List::of(10000., -200., 5650.), List::of(10000., -12000., 5650.)),
+        Size3D { x: 3.0, y: 3.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        4,
+        5.5
+    );
+
+    // dense obstacle fields (higher Y so they don’t dip under ride platform)
+
+    Tas::add_platform_spawner(
+        520.,
+        List::of(List::of(8500., -1600., 5900.), List::of(11500., -1600., 5900.)),
+        Size3D { x: 0.7, y: 2.4, z: 1.8 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 25. },
+        4,
+        2.0
+    );
+
+    Tas::add_platform_spawner(
+        600.,
+        List::of(List::of(11500., -2800., 5900.), List::of(8500., -2800., 5900.)),
+        Size3D { x: 0.6, y: 1.2, z: 2.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 32. },
+        4,
+        1.2
+    );
+
+    Tas::add_platform_spawner(
+        680.,
+        List::of(List::of(8500., -4200., 5900.), List::of(11500., -4200., 5900.)),
+        Size3D { x: 0.5, y: 1.8, z: 2.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 38. },
+        4,
+        1.0
+    );
+
+    Tas::add_platform_spawner(
+        740.,
+        List::of(List::of(11500., -5600., 5900.), List::of(8500., -5600., 5900.)),
+        Size3D { x: 0.4, y: 2.2, z: 2.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 45. },
+        4,
+        0.9
+    );
+
+    // cubes along ride path
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: -2000., z: 5750. }), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: -3800., z: 5750. }), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: -5400., z: 5750. }), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 10000., y: -7000., z: 5750. }), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+
+    // final platform
+    Tas::spawn_platform(Location { x: 10000., y: -12000., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 2.4, y: 2.4, z: 2.4 });
+
+    // #####################################################
+    // YELLOW (LONG GAUNTLET)
+    // single-axis rotations only
+    // more jumps between cubes
+    // structured difficulty
+    // #####################################################
+
+    Tas::spawn_platform(Location { x: 9350., y: 0., z: 5600.0 }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+
+    // cube 1
+    Tas::spawn_platform(Location { x: 8200., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 8200., y: 0., z: 5750. }), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+
+    // pitch lane
+    Tas::add_platform_spawner(
+        340.,
+        List::of(List::of(7500., -900., 5600.), List::of(7500., 900., 5600.)),
+        Size3D { x: 1.0, y: 1.0, z: 1.0 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 18., yaw: 0., roll: 0. },
+        4,
+        1.5
+    );
+
+    // cube 2
+    Tas::spawn_platform(Location { x: 6800., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 6800., y: 0., z: 5750. }), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+
+    // roll lane
+    Tas::add_platform_spawner(
+        220.,
+        List::of(List::of(6100., -1000., 5600.), List::of(6100., 1000., 5600.)),
+        Size3D { x: 0.5, y: 4.5, z: 0.5 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 0., roll: 45. },
+        4,
+        3.5
+    );
+
+    // cube 3
+    Tas::spawn_platform(Location { x: 5200., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 1.6, y: 1.6, z: 1.6 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 5200., y: 0., z: 5750. }), Color { red: 1., green: 1., blue: 0., alpha: 1. });
+
+    // yaw lane
+    Tas::add_platform_spawner(
+        420.,
+        List::of(List::of(4600., -1000., 5600.), List::of(4600., 1000., 5600.)),
+        Size3D { x: 0.7, y: 1.0, z: 0.8 },
+        Rotation { pitch: 0., yaw: 0., roll: 0. },
+        Rotation { pitch: 0., yaw: 28., roll: 0. },
+        4,
+        1.3
+    );
+
+    // cube 4
+    Tas::spawn_platform(Location { x: 3800., y: 0., z: 5600. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 2.0, y: 2.0, z: 2.0 });
+    Tas::set_cube_color(Tas::spawn_cube(Location { x: 3800., y: 0., z: 5750. }), Color { red: 1., green: 1., blue: 0., alpha: 1. });
 
 
 }
@@ -2262,6 +2682,16 @@ fn archipelago_checked_location(id: int){
         ARCHIPELAGO_STATE.progress_rando_mountain_minigame = f"{number_pressed}/{rando_mountain_locations.len()}";
     }
 
+    if id == 10130000 {
+        ARCHIPELAGO_STATE.done_funny_bridge_game_minigame = true;
+    }
+    if id == 10130001 {
+        ARCHIPELAGO_STATE.done_clique_button = true;
+    }
+    if id == 10130002 {
+        ARCHIPELAGO_STATE.got_clique_cube = true;
+    }
+
 }
 
 
@@ -2384,7 +2814,7 @@ fn archipelago_collect_collected_cubes(){
 }
 
 fn archipelago_received_slot_data(key: string, value: string){
-    // ap_log_1(f"Received slot data: {key} = {value}");
+    //ap_log_1(f"Received slot data: {key} = {value}");
     if key == "ap_world_version" {
         ARCHIPELAGO_STATE.apworld_version = value.slice(1, -1);
     }
@@ -2446,5 +2876,15 @@ fn archipelago_received_slot_data(key: string, value: string){
     }
     if key == "extra_cubes" {
         ARCHIPELAGO_STATE.extra_cubes_options = value.parse_int().unwrap();
+    }
+
+    if key == "has_clique" {
+        if value == "true" {
+            ARCHIPELAGO_STATE.has_clique = true;
+        }
+    }
+    if key == "just_clique" && value == "1" {
+        ARCHIPELAGO_STATE.just_clique = true;
+        ARCHIPELAGO_STATE.gamemode = 17;
     }
 }

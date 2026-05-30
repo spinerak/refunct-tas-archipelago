@@ -194,7 +194,6 @@ impl<'a> PlatformWrapper<'a> {
     pub fn reset(&self) {
         self.set_color(1.0, 0.016666, 0.03305);
         self.set_scale(1.0, 1.0, 1.0);
-        self.set_picked_up(false);
         self.set_hidden(false);
     }
 
@@ -209,40 +208,10 @@ impl<'a> PlatformWrapper<'a> {
         unsafe { set_hidden.call(self.base.as_ptr(), &params); }
     }
 
-    pub fn is_picked_up(&self) -> bool {
-        self.base.get_field("IsPickedUp").unwrap::<BoolValueWrapper>()._get()
-    }
-
-    pub fn set_picked_up(&self, picked_up: bool) {
-        self.base.get_field("IsPickedUp").unwrap::<BoolValueWrapper>().set(picked_up);
-    }
-
     pub fn destroy(&self) {
         unsafe {
             UWorld::destroy_actor(self.base.as_ptr() as *const AActor, true, true);
         }
-    }
-
-    pub fn pickup(&self) {
-        self.set_collision(true);
-
-        let trigger_fn = self.class()
-            .find_function("BndEvt__Trigger_K2Node_ComponentBoundEvent_24_ComponentBeginOverlapSignature__DelegateSignature")
-            .unwrap();
-        let params = trigger_fn.create_argument_struct();
-        let movement = unsafe { ObjectWrapper::new(AMyCharacter::get_player().movement() as *mut UObject) };
-        let updated_primitive = movement.get_field("UpdatedPrimitive").unwrap::<ObjectWrapper>();
-        let trigger = self.get_field("Trigger").unwrap::<ObjectWrapper>();
-        params.get_field("OverlappedComponent").set_object(&updated_primitive);
-        params.get_field("OtherComp").set_object(&trigger);
-        params.get_field("OtherActor").set_object(&self);
-        params.get_field("OtherBodyIndex").unwrap::<&Cell<i32>>().set(0);
-        unsafe {
-            trigger_fn.call(self.as_ptr(), &params);
-        }
-
-        self.set_picked_up(true);
-        self.set_hidden(true);
     }
 
     pub fn set_collision(&self, enabled: bool) {
@@ -251,7 +220,7 @@ impl<'a> PlatformWrapper<'a> {
 
     pub fn set_color(&self, r: f32, g: f32, b: f32) {
         self.set_mesh_color(r, g, b);
-        self.set_light_color(r, g, b);
+        // self.set_light_color(r, g, b);
     }
 
     fn set_mesh_color(&self, r: f32, g: f32, b: f32) {
@@ -951,6 +920,19 @@ pub fn init() {
             }
             if class_name == "BP_Lift_C" && name != "Default__BP_Lift_C" {
                 let lift: LiftWrapper = object.upcast();
+                // print all properties of the lift:
+                // for property in lift.class().iter_properties() {
+                //     log!("{}{}", "    ", property.name());
+                //     if property.name() == "LiftMesh" {
+                //         let mesh: ObjectWrapper = lift.get_field("LiftMesh").unwrap();
+                //         log!("Found LiftMesh: {:?}", mesh);
+                //         //print all information that we can about the mesh:
+                //         log!("Mesh class: {}", mesh.class().name());
+                //         for property in mesh.class().iter_properties() {
+                //             log!("{}{}", "    ", property.name());
+                //         }
+                //     }
+                // }
                 lifts.push(lift);
             }
             if class_name == "BP_TravelPipe_C" && name != "Default__BP_TravelPipe_C" {
@@ -972,6 +954,7 @@ pub fn init() {
                     fun.call(trigger.as_ptr(), &params);
                 }
             }
+
             // if class_name == "BP_LevelBounds_C" && name != "Default__BP_LevelBounds_C" {
             //     let water_height = object.get_field("WaterHeight").unwrap::<&Cell<f32>>();
             //     water_height.set(1000000.0);
