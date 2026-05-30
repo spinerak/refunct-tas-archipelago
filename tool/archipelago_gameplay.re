@@ -2879,10 +2879,8 @@ fn archipelago_received_slot_data(key: string, value: string){
     }
 
     if key == "has_clique" {
-        ap_log_1(f"Received has_clique: {value}");
         if value == "true" {
             ARCHIPELAGO_STATE.has_clique = true;
-            ap_log_1(f"Has clique: {ARCHIPELAGO_STATE.has_clique}");
         }
     }
     if key == "just_clique" && value == "1" {
