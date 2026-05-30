@@ -654,14 +654,50 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
         added_minigame_header = true;
     }
 
+    if ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame && !ARCHIPELAGO_STATE.done_funny_bridge_game_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nFunny Bridge Game",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+
+    //ap_log_1(f"Checking if we should show Clique in minigames list: has_clique = {ARCHIPELAGO_STATE.has_clique}, got_clique_cube = {ARCHIPELAGO_STATE.got_clique_cube}, unlock_clique_button = {ARCHIPELAGO_STATE.unlock_clique_button}, done_clique_button = {ARCHIPELAGO_STATE.done_clique_button}");
+    if ARCHIPELAGO_STATE.has_clique {
+        //ap_log_1("Player has Clique, checking if we should show it in minigames list...");
+        if !ARCHIPELAGO_STATE.got_clique_cube || (ARCHIPELAGO_STATE.unlock_clique_button && !ARCHIPELAGO_STATE.done_clique_button) {
+            if !added_minigame_header {
+                lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+            }
+            lines.push(ColorfulText {
+                text:  "\nClique",
+                color: AP_COLOR_GREEN
+            });
+            added_minigame_header = true;
+        }
+    }
+
     lines
 }
 
 fn create_archipelago_gamemodes_menu() -> Ui {
     Ui::new("Select Game Mode:", List::of(
         UiElement::Button(UiButton {
-            label: Text { text: "Move rando (main)" },
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.just_clique {
+                    "Move rando (locked)"
+                } else {
+                    "Move rando (main)"
+                }
+            } },
             onclick: fn(label: Text) {
+                if ARCHIPELAGO_STATE.just_clique {
+                    // log("Move rando gamemode is locked!");
+                    return;
+                }
                 // log("Set gamemode to main game");
                 archipelago_init(0);
                 leave_ui();
@@ -907,9 +943,26 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "Funny Bridge Game" },
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame {
+                    "Funny Bridge Game"
+                } else {
+                    "Funny Bridge Game (locked)"
+                }
+            } },
             onclick: fn(label: Text) { 
+                if !ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame {
+                    // log("Funny Bridge Game gamemode is locked!");
+                    return;
+                }
                 archipelago_init(16); 
+                leave_ui(); 
+            },
+        }),
+        UiElement::Button(UiButton {
+            label: Text { text: "Clique" },
+            onclick: fn(label: Text) { 
+                archipelago_init(17); 
                 leave_ui(); 
             },
         }),
@@ -948,11 +1001,11 @@ fn get_status_text_lines() -> List<ColorfulText> {
     List::extend(lines, match ARCHIPELAGO_STATE.started {
         0 => List::of(
             ColorfulText { text: "Archipelago Randomizer\n", color: COLOR_WHITE },
-            ColorfulText { text: "Press new game (in Refunct menu).", color: AP_COLOR_CYAN },
+            ColorfulText { text: "Press new game (in Refunct menu).\n", color: AP_COLOR_CYAN },
         ),
         1 => List::of(
             ColorfulText { text: "Archipelago Randomizer\n", color: COLOR_WHITE },
-            ColorfulText { text: "Touch a platform to start!", color: AP_COLOR_CYAN },
+            ColorfulText { text: "Touch a platform to start!\n", color: AP_COLOR_CYAN },
         ),
         _ => match ARCHIPELAGO_STATE.gamemode {
             0 => get_move_rando_status_lines(),
@@ -1060,6 +1113,23 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: f"Current height: {ARCHIPELAGO_STATE.climb_current_height:3.0}m\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: f"Highest: {ARCHIPELAGO_STATE.climb_narrow_highscore:3.0}m", color: AP_COLOR_CYAN },
             ),
+            15 => List::of(
+                ColorfulText { text: "Archipelago - Beat Block\n", color: COLOR_WHITE },
+                ColorfulText { text: "UNTESTED MINIGAME\n", color: AP_COLOR_RED },
+                ColorfulText { text: "WITH NO CHECKS\n", color: AP_COLOR_RED },
+            ),
+            16 => List::of(
+                ColorfulText { text: "Archipelago - Funny Bridge Game \n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: get the cube!\n", color: AP_COLOR_CYAN },
+            ),
+            17 => List::of(
+                ColorfulText { text: "Archipelago - Clique\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Press the button!\n", color: AP_COLOR_CYAN },
+                
+                ColorfulText { text: if ARCHIPELAGO_STATE.got_clique_cube { "✔ Got Cube  \n" } else { "✖ Got Cube  \n" }, color: if ARCHIPELAGO_STATE.got_clique_cube { AP_COLOR_GREEN } else { AP_COLOR_RED } },
+                ColorfulText { text: if ARCHIPELAGO_STATE.unlock_clique_button { "✔ Button Unlocked  \n" } else { "✖ Button Unlocked  \n" }, color: if ARCHIPELAGO_STATE.unlock_clique_button { AP_COLOR_GREEN } else { AP_COLOR_RED } },
+                ColorfulText { text: if ARCHIPELAGO_STATE.done_clique_button { "✔ Pressed Button  \n" } else { "✖ Pressed Button  \n" }, color: if ARCHIPELAGO_STATE.done_clique_button { AP_COLOR_GREEN } else { AP_COLOR_RED } },
+            ),
 
             _ => List::of(
                 ColorfulText { text: "Archipelago\n", color: COLOR_WHITE },
@@ -1072,13 +1142,16 @@ fn get_status_text_lines() -> List<ColorfulText> {
     if ARCHIPELAGO_STATE.gamemode == 0 {
         txt = "\n\nMinigames with checks:";
     }
-    if (ARCHIPELAGO_STATE.gamemode != 0 || ARCHIPELAGO_STATE.started == 0) && ARCHIPELAGO_STATE.grass >= 0 {
-        lines.push(ColorfulText {
-            text:  f"\n\n[Grass {ARCHIPELAGO_STATE.grass}/{ARCHIPELAGO_STATE.required_grass}] ",
-            color: if ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass { AP_COLOR_GREEN } else { AP_COLOR_CYAN }
-        });
+    if !ARCHIPELAGO_STATE.just_clique {
+        if (ARCHIPELAGO_STATE.gamemode != 0 || ARCHIPELAGO_STATE.started == 0) && ARCHIPELAGO_STATE.grass >= 0 {
+            lines.push(ColorfulText {
+                text:  f"\n\n[Grass {ARCHIPELAGO_STATE.grass}/{ARCHIPELAGO_STATE.required_grass}] ",
+                color: if ARCHIPELAGO_STATE.grass >= ARCHIPELAGO_STATE.required_grass { AP_COLOR_GREEN } else { AP_COLOR_CYAN }
+            });
+        }
     }
     lines.extend(create_list_of_minigames_with_checks(txt));
+    
 
     if ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version && 
         ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version.slice(0,-1) &&

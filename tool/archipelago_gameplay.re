@@ -149,6 +149,14 @@ struct ArchipelagoState {
 
     block_beat_platforms: List<PlatformBlockBeat>,
 
+    unlock_funny_bridge_game_minigame: bool,
+    done_funny_bridge_game_minigame: bool,
+
+    unlock_clique_button: bool,
+    got_clique_cube: bool,
+    done_clique_button: bool,
+    just_clique: bool,
+    has_clique: bool,
 
     last_platform_c: Option<int>,
     last_platform_p: Option<int>,
@@ -311,11 +319,19 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         
         block_beat_platforms: List::new(),
 
+        unlock_funny_bridge_game_minigame: false,
+        done_funny_bridge_game_minigame: false,
+
+        unlock_clique_button: false,
+        got_clique_cube: false,
+        done_clique_button: false,
+        just_clique: false,
+        has_clique: false,
 
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.1.1b",
+        mod_version: "1.2.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -348,6 +364,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         Tas::destroy_spawners();
         ARCHIPELAGO_STATE.extra_cubes_locs.clear();
         ARCHIPELAGO_STATE.extra_cubes_int_ids.clear();
+        ARCHIPELAGO_STATE.block_beat_platforms.clear();
+        Tas::stop_block_beat_timer();
 
         if ARCHIPELAGO_STATE.gamemode == 4 {
             ARCHIPELAGO_STATE.started = 0;
@@ -394,6 +412,38 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     on_element_pressed: fn(index: ElementIndex) {
         // ap_log(List::of(ColorfulText { text: f"Pressed {index.element_type} {index.element_index+1} in cluster {index.cluster_index+1}", color: AP_COLOR_GREEN }));
 
+        if ARCHIPELAGO_STATE.started == 0 {
+            return;
+        }
+        if ARCHIPELAGO_STATE.started == 1 {
+            archipelago_start();
+            // log("Archipelago started!");
+            // no return on purpose to allow first press to count
+        }     
+
+        if ARCHIPELAGO_STATE.gamemode == 16 {
+            if index.element_type == ElementType::Cube {
+                archipelago_send_check(10130000);
+            }   
+        }
+
+        if ARCHIPELAGO_STATE.gamemode == 17 {
+            if index.element_type == ElementType::Cube {
+                archipelago_send_check(10130002);
+            }
+            if index.element_type == ElementType::Button {
+                archipelago_send_check(10130001);
+                if !ARCHIPELAGO_STATE.has_goaled {
+                    ARCHIPELAGO_STATE.has_goaled = true;
+                    Tas::trigger_goal_animation();
+                }
+                if ARCHIPELAGO_STATE.just_clique {
+                    Tas::archipelago_goal();
+                }
+            }
+            return;
+        }
+        
         if index.cluster_index == 9999 {
             got_cube_block_brawl(index.element_index);
             got_cube_block_blub(index.element_index);
@@ -405,14 +455,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             ARCHIPELAGO_STATE.last_platform_c = Option::Some(index.cluster_index + 1);
             ARCHIPELAGO_STATE.last_platform_p = Option::Some(index.element_index + 1);
         }
-        if ARCHIPELAGO_STATE.started == 0 {
-            return;
-        }
-        if ARCHIPELAGO_STATE.started == 1 {
-            archipelago_start();
-            // log("Archipelago started!");
-            // no return on purpose to allow first press to count
-        }
+
+
 
         if ARCHIPELAGO_STATE.gamemode == 0 {
 
@@ -772,6 +816,13 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
             }
         }
     }
+    
+    if item_id == 9999901 { // Clique Button
+        ARCHIPELAGO_STATE.unlock_clique_button = true;
+        if ARCHIPELAGO_STATE.gamemode == 17 && !ARCHIPELAGO_STATE.done_clique_button {
+            Tas::enable_button(0, 0, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+        }
+    }
 
     if starting_index > 0 {
         if item_id == 9999001{
@@ -1007,6 +1058,11 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
     }
     if item_id == 9999911 {  // Rando Mountain Minigame
         ARCHIPELAGO_STATE.unlock_rando_mountain_minigame = true;
+        return;
+    }
+
+    if item_id == 9999900 { // Funny Bridge Game Minigame
+        ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame = true;
         return;
     }
 
@@ -1274,6 +1330,9 @@ fn archipelago_start(){
     }
     if ARCHIPELAGO_STATE.gamemode == 16 {
         archipelago_funny_bridge_game_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 17 {
+        archipelago_clique_start();
     }
 
     let mut i = 0;
@@ -1786,6 +1845,9 @@ fn archipelago_block_beat_start(){
 }
 
 fn archipelago_funny_bridge_game_start(){
+    Tas::set_location(Location { x: -500., y: -850., z: 90. });
+    Tas::set_rotation(Rotation { pitch: 0., yaw: 0., roll: 0. });
+
     Tas::abilities_set_swim(false);
     Tas::abilities_set_wall_jump(2, false);
     Tas::abilities_set_ledge_grab(true);
@@ -1812,10 +1874,34 @@ fn archipelago_funny_bridge_game_start(){
     Tas::set_cube_scale(
         Tas::set_cube_color(
             Tas::spawn_cube(Location { x: startx + 5.0 * vdiv, y: starty - hdiv/2.0, z: startz + 100.0 }), 
-            Color { red: 1., green: 0., blue: 0., alpha: 1. }
+            Color { red: 0.5, green: 0., blue: 0.5, alpha: 1.0 }
         ),
         4.
     );
+}
+
+fn archipelago_clique_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    Tas::disable_all_buttons();
+    collect_all_vanilla_cubes();
+
+    Tas::set_level(-10000);
+
+    Tas::set_location(Location { x: -1000., y: -2000., z: 600. });
+    Tas::set_rotation(Rotation { pitch: 0., yaw: 90., roll: 0. });
+
+    if !ARCHIPELAGO_STATE.got_clique_cube{
+        Tas::spawn_cube(Location { x: -1000., y: -1600., z: 500. });
+    }
+
+    if ARCHIPELAGO_STATE.unlock_clique_button && !ARCHIPELAGO_STATE.done_clique_button {
+        Tas::enable_button(0, 0, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+    }
 }
 
 fn got_cube_block_blub(id: int){
@@ -2596,6 +2682,16 @@ fn archipelago_checked_location(id: int){
         ARCHIPELAGO_STATE.progress_rando_mountain_minigame = f"{number_pressed}/{rando_mountain_locations.len()}";
     }
 
+    if id == 10130000 {
+        ARCHIPELAGO_STATE.done_funny_bridge_game_minigame = true;
+    }
+    if id == 10130001 {
+        ARCHIPELAGO_STATE.done_clique_button = true;
+    }
+    if id == 10130002 {
+        ARCHIPELAGO_STATE.got_clique_cube = true;
+    }
+
 }
 
 
@@ -2718,7 +2814,7 @@ fn archipelago_collect_collected_cubes(){
 }
 
 fn archipelago_received_slot_data(key: string, value: string){
-    // ap_log_1(f"Received slot data: {key} = {value}");
+    //ap_log_1(f"Received slot data: {key} = {value}");
     if key == "ap_world_version" {
         ARCHIPELAGO_STATE.apworld_version = value.slice(1, -1);
     }
@@ -2780,5 +2876,17 @@ fn archipelago_received_slot_data(key: string, value: string){
     }
     if key == "extra_cubes" {
         ARCHIPELAGO_STATE.extra_cubes_options = value.parse_int().unwrap();
+    }
+
+    if key == "has_clique" {
+        ap_log_1(f"Received has_clique: {value}");
+        if value == "true" {
+            ARCHIPELAGO_STATE.has_clique = true;
+            ap_log_1(f"Has clique: {ARCHIPELAGO_STATE.has_clique}");
+        }
+    }
+    if key == "just_clique" && value == "1" {
+        ARCHIPELAGO_STATE.just_clique = true;
+        ARCHIPELAGO_STATE.gamemode = 17;
     }
 }

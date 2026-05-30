@@ -104,6 +104,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_platform_location)
         .add_function(set_platform_scale)
         .add_function(start_block_beat_timer)
+        .add_function(stop_block_beat_timer)
         .add_function(set_platform_movement_path_rebo)
         .add_function(set_platform_movement_path_min_max_speed_rebo)
         .add_function(destroy_platforms)
@@ -1288,6 +1289,8 @@ fn get_location() -> Location {
 fn get_location_and_log() {
     let (x, y, z) = AMyCharacter::get_player().location();
     log!("LOG get_location: x={}, y={}, z={}", x, y, z);
+    let (pitch, yaw, roll) = AMyCharacter::get_player().rotation();
+    log!("LOG get_rotation: pitch={}, yaw={}, roll={}", pitch, yaw, roll);
 }
 #[rebo::function("Tas::set_location")]
 fn set_location(loc: Location) {
@@ -2146,6 +2149,12 @@ fn start_block_beat_timer(platforms: Vec<PlatformBlockBeat>) {
     // save list_of_platforms_on
     STATE.lock().unwrap().as_mut().unwrap().block_beat_platforms = platforms;
     STATE.lock().unwrap().as_mut().unwrap().block_beat_enabled = true;
+}
+#[rebo::function("Tas::stop_block_beat_timer")]
+fn stop_block_beat_timer() {
+    // save list_of_platforms_on
+    STATE.lock().unwrap().as_mut().unwrap().block_beat_platforms.clear();
+    STATE.lock().unwrap().as_mut().unwrap().block_beat_enabled = false;
 }
 
 struct PlatformMovement {
