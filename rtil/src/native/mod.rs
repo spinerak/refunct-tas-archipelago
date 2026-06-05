@@ -87,6 +87,7 @@ pub struct Hooks {
     pub _uuserwidget_addtoscreen: &'static RawHook<RefunctIsaAbi, ()>,
     pub _amycharacter_tick: &'static RawHook<RefunctIsaAbi, ()>,
     pub _amycharacter_felloutofworld: &'static RawHook<RefunctIsaAbi, ()>,
+    pub _acharacter_jump: &'static RawHook<RefunctIsaAbi, ()>,
 }
 
 pub fn init() -> Hooks {
@@ -109,6 +110,7 @@ pub fn init() -> Hooks {
             _uuserwidget_addtoscreen: RawHook::create(UUSERWIDGET_ADDTOSCREEN.load(Ordering::SeqCst), uworld::add_to_screen_hook).enabled(),
             _amycharacter_tick: RawHook::create(AMYCHARACTER_TICK.load(Ordering::SeqCst), character::tick_hook).enabled(),
             _amycharacter_felloutofworld: RawHook::create(AMYCHARACTER_FELLOUTOFWORLD.load(Ordering::SeqCst), character::felloutofworld_hook).enabled(),
+            _acharacter_jump: RawHook::create(AMYCHARACTER_WALLJUMP.load(Ordering::SeqCst), character::jump).enabled(),
         }
     }
 }

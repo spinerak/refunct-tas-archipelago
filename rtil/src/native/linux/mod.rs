@@ -135,4 +135,5 @@ find! {
     UWIDGETBLUEPRINTLIBRARY_SETINPUTMODE_UIONLYEX, "^UWidgetBlueprintLibrary::SetInputMode_UIOnlyEx(APlayerController*, UWidget*, EMouseLockMode)",
     APLAYERCONTROLLER_FLUSHPRESSEDKEYS, "^APlayerController::FlushPressedKeys()",
     APLAYERCONTROLLER_GETMOUSEPOSITION, "^APlayerController::GetMousePosition(float&, float&)",
+    AMYCHARACTER_WALLJUMP, "^AMyCharacter::WallJump()",
 }

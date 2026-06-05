@@ -283,6 +283,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(on_level_state_change)
         .add_required_rebo_function(on_resolution_change)
         .add_required_rebo_function(on_menu_open)
+        .add_required_rebo_function(on_wall_jump_input)
     ;
     if let Some(working_dir) = &STATE.lock().unwrap().as_ref().unwrap().working_dir {
         cfg = cfg.include_config(IncludeConfig::InDirectory(PathBuf::from(working_dir)));
@@ -665,6 +666,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                 on_resolution_change(vm)?
             },
             UeEvent::AddToScreen => on_menu_open(vm)?,
+            UeEvent::WallJumpInput => on_wall_jump_input(vm)?,
         }
 
         // check archipelago
@@ -1051,7 +1053,7 @@ pub fn tick(){
     if AMyCharacter::get_player().movement_mode() == 1 {
         let mut state = STATE.lock().unwrap();
         let state = state.as_mut().unwrap();
-        state.dashes_left = 1;
+        state.dashes_left = 2;
     }
 
     LAST_PROCESSED_DELTA_BITS.store(bits, Ordering::Relaxed);
@@ -1098,6 +1100,7 @@ extern "rebo" {
     fn on_level_state_change(old: LevelState, new: LevelState);
     fn on_resolution_change();
     fn on_menu_open();
+    fn on_wall_jump_input();
     fn archipelago_received_item(index: usize, item_id: usize, starting_index: usize);
     fn archipelago_got_grass();
     fn archipelago_checked_location(id: usize);
@@ -1550,7 +1553,10 @@ fn dash() {
     let yaw = rot.1;
     let roll = rot.2;
 
-    let pitch: f32 = 55.0;
+    let mut pitch: f32 = 55.0;
+    if state.dashes_left == 0 {
+        pitch = -60.0; // downward dash
+    }
     
     let pitch_rad = pitch.to_radians();
     let yaw_rad = yaw.to_radians();

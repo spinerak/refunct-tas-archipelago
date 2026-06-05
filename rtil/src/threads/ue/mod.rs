@@ -27,6 +27,7 @@ enum UeEvent {
     DrawHud,
     ApplyResolutionSettings,
     AddToScreen,
+    WallJumpInput,
 }
 #[derive(Debug, Clone, Copy)]
 enum Suspend {
@@ -130,6 +131,10 @@ pub fn apply_resolution_settings() {
 
 pub fn add_to_screen() {
     handle(UeEvent::AddToScreen);
+}
+
+pub fn wall_jump_input() {
+  handle(UeEvent::WallJumpInput)
 }
 
 fn handle(event: UeEvent) {

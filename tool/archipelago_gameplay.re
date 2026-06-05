@@ -689,6 +689,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     on_menu_open: fn() {},
 };
 
+fn on_wall_jump_input() {
+    if ARCHIPELAGO_STATE.gamemode == 12 || ARCHIPELAGO_STATE.gamemode == 13 {
+        Tas::dash();
+    }
+}
+
 static mut ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT = Component {
     id: ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID,
     conflicts_with: List::of(MAP_EDITOR_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID),
@@ -1734,7 +1740,7 @@ fn archipelago_block_blub_start(){
     if ARCHIPELAGO_STATE.unlock_block_blub_greens {
         // log("Spawning Block blub Greens");
         while j < 5 {
-            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 1., blue: 0., alpha: 1. });
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 0., green: 0.9, blue: 0., alpha: 1. });
             ARCHIPELAGO_STATE.block_blub_green_ids.push(id);
             j += 1;
         }

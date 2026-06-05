@@ -10,6 +10,7 @@ use crate::native::{AMYCHARACTER_STATICCLASS, REBO_DOESNT_START_SEMAPHORE, APLAY
 use crate::native::reflection::UClass;
 use crate::native::uworld::CAMERA_INDEX;
 use rfd::MessageDialog;
+use crate::threads::ue::wall_jump_input;
 
 pub static CURRENT_PLAYER: AtomicPtr<AMyCharacterUE> = AtomicPtr::new(std::ptr::null_mut());
 static mut DEATH_HOOK: Option<fn()> = None;
@@ -423,5 +424,10 @@ pub fn felloutofworld_hook<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, args: Arg
             Some(death_hook) => death_hook()
         }
     }
+    unsafe { hook.call_original_function(args) };
+}
+
+pub fn jump<IA: IsaAbi>(hook: &'static RawHook<IA, ()>, args: ArgsRef<'_, IA>) {
+    wall_jump_input();
     unsafe { hook.call_original_function(args) };
 }
