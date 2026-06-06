@@ -960,8 +960,18 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton {
-            label: Text { text: "Clique" },
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.has_clique {
+                    "Clique"
+                } else {
+                    "Clique (locked)"
+                }
+            } },
             onclick: fn(label: Text) { 
+                if !ARCHIPELAGO_STATE.has_clique {
+                    // log("Clique gamemode is locked!");
+                    return;
+                }
                 archipelago_init(17); 
                 leave_ui(); 
             },
@@ -1096,13 +1106,13 @@ fn get_status_text_lines() -> List<ColorfulText> {
             12 => List::of(
                 ColorfulText { text: "Archipelago - Refunct Mountain\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
-                ColorfulText { text: "✔ Jump  ✔ Jump Pads  ✔ Dash (press E)", color: AP_COLOR_GREEN },
+                ColorfulText { text: "✔ Jump  ✔ Jump Pads  ✔ Dash (jump/E)", color: AP_COLOR_GREEN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_refunct_mountain_minigame}", color: COLOR_WHITE },
             ),
             13 => List::of(
                 ColorfulText { text: "Archipelago - Rando Mountain\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
-                ColorfulText { text: "✔ Jump  ✔ Dash (press E)\n", color: AP_COLOR_GREEN },
+                ColorfulText { text: "✔ Jump  ✔ Dash (jump/E)\n", color: AP_COLOR_GREEN },
                 ColorfulText { text: if ARCHIPELAGO_STATE.rando_mountain_can_swim { "✔ Swim" } else { "✖ Swim" }, color: if ARCHIPELAGO_STATE.rando_mountain_can_swim { AP_COLOR_GREEN } else { AP_COLOR_RED } },
                 ColorfulText { text: "  ✖ Anything else", color: AP_COLOR_RED },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_rando_mountain_minigame}", color: COLOR_WHITE },
