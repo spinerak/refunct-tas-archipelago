@@ -157,6 +157,9 @@ struct ArchipelagoState {
     done_clique_button: bool,
     just_clique: bool,
     has_clique: bool,
+    clique_fillers_collected: int,
+    clique_item_id: int,
+
 
     last_platform_c: Option<int>,
     last_platform_p: Option<int>,
@@ -327,11 +330,13 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         done_clique_button: false,
         just_clique: false,
         has_clique: false,
+        clique_fillers_collected: 0,
+        clique_item_id: 0,
 
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.2.0",
+        mod_version: "1.2.2",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -394,6 +399,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         ARCHIPELAGO_STATE.rando_mountain_index = -1;
 
         ARCHIPELAGO_STATE.climb_current_height = 0.0;
+        ARCHIPELAGO_STATE.clique_fillers_collected = 0;
 
         update_block_brawl_in_logic_counts();
         update_block_blub_in_logic_counts();
@@ -429,7 +435,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 
         if ARCHIPELAGO_STATE.gamemode == 17 {
             if index.element_type == ElementType::Cube {
-                archipelago_send_check(10130002);
+                if index.element_index == ARCHIPELAGO_STATE.clique_item_id {
+                    archipelago_send_check(10130002);
+                }else{
+                    archipelago_send_check(10130003 + ARCHIPELAGO_STATE.clique_fillers_collected);
+                    ARCHIPELAGO_STATE.clique_fillers_collected += 1;
+                }
             }
             if index.element_type == ElementType::Button {
                 archipelago_send_check(10130001);
@@ -1902,11 +1913,25 @@ fn archipelago_clique_start(){
     Tas::set_rotation(Rotation { pitch: 0., yaw: 90., roll: 0. });
 
     if !ARCHIPELAGO_STATE.got_clique_cube{
-        Tas::spawn_cube(Location { x: -1000., y: -1600., z: 500. });
+        let id = Tas::spawn_cube(Location { x: -1000., y: -1600., z: 500. });
+        ARCHIPELAGO_STATE.clique_item_id = id;
     }
 
     if ARCHIPELAGO_STATE.unlock_clique_button && !ARCHIPELAGO_STATE.done_clique_button {
         Tas::enable_button(0, 0, Color { red: 1., green: 1., blue: 0., alpha: 1. });
+    }
+
+    //LOG get_location: x=-1252.0234, y=-2501.905, z=339.27008
+    //LOG get_location: x=-1747.2638, y=-2500.0452, z=339.27008
+    if ARCHIPELAGO_STATE.just_clique {
+        Tas::spawn_cube(Location { x: -1750., y: -2500., z: 300. });
+        Tas::spawn_cube(Location { x: -1679., y: -2500., z: 300. });
+        Tas::spawn_cube(Location { x: -1608., y: -2500., z: 300. });
+        Tas::spawn_cube(Location { x: -1537., y: -2500., z: 300. });
+        Tas::spawn_cube(Location { x: -1466., y: -2500., z: 300. });
+        Tas::spawn_cube(Location { x: -1394., y: -2500., z: 300. });
+        Tas::spawn_cube(Location { x: -1322., y: -2500., z: 300. });
+        Tas::spawn_cube(Location { x: -1250., y: -2500., z: 300. });
     }
 }
 
