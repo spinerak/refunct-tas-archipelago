@@ -1539,7 +1539,7 @@ fn get_viewport_size() -> Size {
 }
 
 #[rebo::function("Tas::dash")]
-fn dash() {
+fn dash(dash_velocity: f32) {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
     if state.dashes_left == 0 {
@@ -1547,7 +1547,6 @@ fn dash() {
     }
     state.dashes_left -= 1;
 
-    let dash_velocity = 1500.0;
     let rot = AMyCharacter::get_player().rotation();
     // let mut pitch = rot.0;
     let yaw = rot.1;

@@ -159,7 +159,9 @@ struct Settings {
 
     archipelago_log_display_width: float,
     archipelago_log_display_time_sec: int,
-    archipelago_log_max_count: int
+    archipelago_log_max_count: int,
+
+    block_brawl_dash_instead: bool
 }
 static mut SETTINGS = Settings::load();
 
@@ -199,7 +201,7 @@ impl Settings {
             ui_scale: get_float("ui_scale", 0.5),
             show_character_stats: get_bool("show_character_stats", false),
             show_game_stats: get_bool("show_game_stats", false),
-            minimap_enabled: get_bool("minimap_enabled", false),
+            minimap_enabled: get_bool("minimap_enabled", true),
             minimap_size: get_float("minimap_size", 0.35),
             minimap_alpha: get_float("minimap_alpha", 0.4),
             minimap_position: match get_string("minimap_position", "BottomRight") {
@@ -302,6 +304,7 @@ impl Settings {
             archipelago_log_display_width: get_float("archipelago_log_display_width", 0.4),
             archipelago_log_display_time_sec: get_int("archipelago_log_display_time_sec", 10),
             archipelago_log_max_count: get_int("archipelago_log_max_count", 8),
+            block_brawl_dash_instead: get_bool("block_brawl_dash_instead", false),
         }
     }
 
@@ -359,6 +362,7 @@ impl Settings {
         map.insert("archipelago_log_display_width", f"{SETTINGS.archipelago_log_display_width}");
         map.insert("archipelago_log_display_time_sec", f"{SETTINGS.archipelago_log_display_time_sec}");
         map.insert("archipelago_log_max_count", f"{SETTINGS.archipelago_log_max_count}");
+        map.insert("block_brawl_dash_instead", f"{SETTINGS.block_brawl_dash_instead}");
         Tas::store_settings(map);
     }
 

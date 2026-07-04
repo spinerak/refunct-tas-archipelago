@@ -336,7 +336,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.2.2",
+        mod_version: "1.2.2a",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -678,13 +678,25 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     on_key_down: fn(key: KeyCode, is_repeat: bool) {
         if ARCHIPELAGO_STATE.gamemode == 12 || ARCHIPELAGO_STATE.gamemode == 13 {
             if key.to_small() == KEY_E.to_small() {
-                Tas::dash();
+                Tas::dash(1500.0);
+            }
+        }
+        if ARCHIPELAGO_STATE.gamemode == 5 && SETTINGS.block_brawl_dash_instead {
+            if key.to_small() == KEY_E.to_small() {
+                Tas::dash(1000.0);
             }
         }
         if ARCHIPELAGO_STATE.gamemode == 10 {
             if key.to_small() == KEY_R.to_small() {
                 Tas::set_location(Location { x: 10000., y: 0., z: 6500. }); 
                 Tas::set_rotation(Rotation { pitch: 0., yaw: 0., roll: 0. });
+            }
+        }
+        if ARCHIPELAGO_STATE.gamemode == 5 {
+            if key.to_small() == KEY_T.to_small() {
+                SETTINGS.block_brawl_dash_instead = !SETTINGS.block_brawl_dash_instead;
+                SETTINGS.store();
+                Tas::abilities_set_wall_jump(if SETTINGS.block_brawl_dash_instead { 0 } else { 2 }, false);
             }
         }
     },
@@ -702,7 +714,10 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 
 fn on_wall_jump_input() {
     if ARCHIPELAGO_STATE.gamemode == 12 || ARCHIPELAGO_STATE.gamemode == 13 {
-        Tas::dash();
+        Tas::dash(1500.0);
+    }
+    if ARCHIPELAGO_STATE.gamemode == 5 && SETTINGS.block_brawl_dash_instead {
+        Tas::dash(1000.0);
     }
 }
 

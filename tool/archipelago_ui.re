@@ -1041,6 +1041,10 @@ fn get_status_text_lines() -> List<ColorfulText> {
             ),
             5 => List::of(
                 ColorfulText { text: "Archipelago - Block Brawl\n", color: COLOR_WHITE },
+                ColorfulText { text: "[T to toggle] ", color: COLOR_WHITE },
+                ColorfulText { text: "Wall Jump  ", color: if SETTINGS.block_brawl_dash_instead { AP_COLOR_RED } else { COLOR_GREEN } },
+                ColorfulText { text: "Dash\n", color: if SETTINGS.block_brawl_dash_instead { COLOR_GREEN } else { AP_COLOR_RED } },
+
                 ColorfulText { text: "Goal: cubes => points => checks!", color: AP_COLOR_GREEN },
                 ColorfulText { text: f"\n\nNew game => new layout + cubes\nScores will be saved", color: COLOR_WHITE},
 
