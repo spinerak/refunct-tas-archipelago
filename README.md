@@ -34,14 +34,10 @@ All of these troubleshooting steps are for when the mod crashes on launch.
 ### The basics
 - Is Refunct open when you open the mod? We only support the latest version of Refunct via Steam (build id 5753767).
 - Please try it 2 or 3 times, sometimes it just crashes.
-### Advanced
+### Advanced - General
 - There are two ways to learn more about the error.
   - Run `debug.bat` (after opening Refunct) and it'll print an error.
   - Find the log file at `Users\user\AppData\Local\Temp\refunct-tas.log` (note that the log file may not exist).
-- **On Steam Deck: `debug.bat` says `CantConnectToRtil`.**
-  - In compatibility, try if legacy mode works.
-- **On linux, `debug.bat` says `thread 'main' panicked at 'called Result::unwrap()'...`**
-  - Make sure that you configured `LD_PRELOAD` correctly.
 - **`debug.bat` says `"failed to fill whole buffer"`**
   - Do you have Spybot system tray? That program might interfere with Refunct.
 - **Log file ends with `Got code`**
@@ -56,6 +52,16 @@ All of these troubleshooting steps are for when the mod crashes on launch.
   - Try to kill one of the processes (try the one with the lowest handles/cpu first) using `taskkill /Pid 8132` where `8132` is the ID. If Refunct doesn't crash, you got the correct one
   - Now try to run the mod again.
   - If it only shows one process, perhaps Windows doesn't trust the process, you can run this line in powershell: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
+### Advance - Linux
+- **IO error: no native root CA certificates found** 
+  - not the nicest fix, but you can adde SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt to launch options
+- **On Steam Deck: `debug.bat` says `CantConnectToRtil`.**
+  - In compatibility, try if legacy mode works.
+- `debug.bat` says `thread 'main' panicked at 'called Result::unwrap()'...`**
+  - Make sure that you configured `LD_PRELOAD` correctly.
+
+
+
      
 ### Stay calm and don't panic
 - Feel free to ask in the discord (Archipelago -> future-game-design -> Refunct). We will probably ask for your operating system and the error messages you got, and how/when it crashes. 
