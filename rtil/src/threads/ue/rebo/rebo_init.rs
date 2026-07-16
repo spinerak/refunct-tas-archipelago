@@ -1550,7 +1550,7 @@ fn dash(dash_velocity: f32) {
     let rot = AMyCharacter::get_player().rotation();
     // let mut pitch = rot.0;
     let yaw = rot.1;
-    let roll = rot.2;
+    // let roll = rot.2;
 
     let mut pitch: f32 = 55.0;
     if state.dashes_left == 0 {
@@ -1559,15 +1559,15 @@ fn dash(dash_velocity: f32) {
     
     let pitch_rad = pitch.to_radians();
     let yaw_rad = yaw.to_radians();
-    let roll_rad = roll.to_radians();
+    // let roll_rad = roll.to_radians();
     let dash_x = dash_velocity * pitch_rad.cos() * yaw_rad.cos();
     let dash_y = dash_velocity * pitch_rad.cos() * yaw_rad.sin();
     let dash_z = dash_velocity * pitch_rad.sin();
 
 
-    log!("Player rotation pitch={}, yaw={}, roll={}", pitch, yaw, roll);
-    log!("Player rotation pitch_rad={}, yaw_rad={}, roll_rad={}", pitch_rad, yaw_rad, roll_rad);
-    log!("Dash vector x={}, y={}, z={}", dash_x, dash_y, dash_z);
+    // log!("Player rotation pitch={}, yaw={}, roll={}", pitch, yaw, roll);
+    // log!("Player rotation pitch_rad={}, yaw_rad={}, roll_rad={}", pitch_rad, yaw_rad, roll_rad);
+    // log!("Dash vector x={}, y={}, z={}", dash_x, dash_y, dash_z);
 
     let current_location = AMyCharacter::get_player().location();
     AMyCharacter::get_player().set_location(
