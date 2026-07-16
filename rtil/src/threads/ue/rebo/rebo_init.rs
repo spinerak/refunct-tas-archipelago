@@ -6,7 +6,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::sync::Arc;
-use archipelago_rs::protocol::{BounceData, ClientMessage, DataStorageOperation, DeathLink, Get, GetDataPackage, ItemsHandlingFlags, NetworkItem, RichMessageColor, RichMessagePart, RichPrint, ServerMessage, Set};
+use archipelago_rs::protocol::{BounceData, ClientMessage, DataStorageOperation, DeathLink, Get, GetDataPackage, ItemsHandlingFlags, NetworkItem, RichMessageColor, RichMessagePart, RichPrint, ServerMessage, Set, SetNotify};
 use crossbeam_channel::{Sender, TryRecvError};
 use image::Rgba;
 use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span, Stdlib, VmContext};
@@ -144,6 +144,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(archipelago_send_check)
         .add_function(archipelago_goal)
         .add_function(archipelago_ds_get)
+        .add_function(archipelago_ds_set_notify)
+        .add_function(archipelago_ds_set_add)
         .add_function(archipelago_ds_set_max)
         .add_function(get_level)
         .add_function(set_level_rebo)
@@ -848,9 +850,13 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::SetReply(reply))) => {
+                    // example: SetReply { key: "RFBB_r_0_1", value: Number(17), original_value: Some(Number(16)) }
                     log!("SetReply message");
                     let msg = format!("Archipelago ServerMessage::SetReply: {:?}", reply);
                     log!("{}", msg);
+                    let key = reply.key;
+                    let value = reply.value;
+                    archipelago_retrieved(vm, key.clone(), value.to_string())?;
                 },
             }
         }
@@ -2662,13 +2668,42 @@ fn archipelago_ds_set<T>(key: String, default: &T, operations: Vec<DataStorageOp
     }))
   ).unwrap());
 }
+#[rebo::function("Tas::archipelago_ds_set_notify")]
+fn archipelago_ds_set_notify(
+    keys: Vec<String>,
+) {
+    ReboToArchipelago::ClientMessage(ClientMessage::SetNotify(SetNotify {
+        keys,
+    }));
+}
+#[rebo::function("Tas::archipelago_ds_set_add")]
+fn archipelago_ds_set_add(
+    key: String,
+    default: i64,
+    add_value: i64
+) {
+    let value = match serde_json::to_value(add_value) {
+        Ok(v) => v,
+        Err(e) => {
+            log!("archipelago_ds_set_add failed: {}", e);
+            return;
+        }
+    };
+    if let Err(e) = archipelago_ds_set(
+        key,
+        &default,
+        vec![DataStorageOperation::Add(value)],
+    ) {
+        log!("archipelago_ds_set_add failed: {}", e);
+    }
+}
 #[rebo::function("Tas::archipelago_ds_set_max")]
 fn archipelago_ds_set_max(
     key: String,
     default: i64,
-    new_value: i64
+    max_value: i64
 ) {
-    let value = match serde_json::to_value(new_value) {
+    let value = match serde_json::to_value(max_value) {
         Ok(v) => v,
         Err(e) => {
             log!("archipelago_ds_set_max failed: {}", e);
@@ -2684,10 +2719,10 @@ fn archipelago_ds_set_max(
     }
 }
 #[rebo::function("Tas::archipelago_ds_get")]
-fn archipelago_ds_get(key: String) {
+fn archipelago_ds_get(keys: Vec<String>) {
     STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(
         ReboToArchipelago::ClientMessage(ClientMessage::Get(Get {
-            keys: vec![key], // Request a single key
+            keys,
         })),
     ).unwrap();
 }
