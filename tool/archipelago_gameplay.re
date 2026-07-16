@@ -1590,7 +1590,7 @@ fn archipelago_og_randomizer_start(){
 
 fn archipelago_block_brawl_start(){
     Tas::abilities_set_swim(true);
-    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_wall_jump(if SETTINGS.block_brawl_dash_instead { 0 } else { 2 }, false);
     Tas::abilities_set_ledge_grab(true);
     Tas::abilities_set_jump_pads(true);
     Tas::abilities_set_pipes(true);
