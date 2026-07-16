@@ -3074,10 +3074,13 @@ fn map_path() -> PathBuf {
 fn list_maps() -> Vec<String> {
     let path = map_path();
     std::fs::read_dir(path).unwrap().flatten()
-        .map(|entry| {
-            assert!(entry.file_type().unwrap().is_file());
-            entry.file_name().into_string().unwrap()
-        }).collect()
+        .filter_map(|entry| {
+            match entry.file_type() {
+                Ok(file_type) if file_type.is_file() => entry.file_name().into_string().ok(),
+                _ => None,
+            }
+        })
+        .collect()
 }
 #[rebo::function("Tas::load_map")]
 fn load_map(filename: String) -> RefunctMap {
