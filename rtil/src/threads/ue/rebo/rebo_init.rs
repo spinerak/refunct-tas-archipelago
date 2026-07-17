@@ -2672,9 +2672,13 @@ fn archipelago_ds_set<T>(key: String, default: &T, operations: Vec<DataStorageOp
 fn archipelago_ds_set_notify(
     keys: Vec<String>,
 ) {
-    ReboToArchipelago::ClientMessage(ClientMessage::SetNotify(SetNotify {
-        keys,
-    }));
+    if let Err(e) = Ok::<(), serde_json::Error>(STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(
+        ReboToArchipelago::ClientMessage(ClientMessage::SetNotify(SetNotify {
+            keys,
+        }))
+    ).unwrap()) {
+        log!("SetNotify failed: {}", e);
+    }
 }
 #[rebo::function("Tas::archipelago_ds_set_add")]
 fn archipelago_ds_set_add(
