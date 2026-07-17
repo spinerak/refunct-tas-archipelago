@@ -1683,7 +1683,7 @@ fn got_cube_block_brawl(id: int){
         ARCHIPELAGO_STATE.block_brawl_red_ids.remove(id);
         ARCHIPELAGO_STATE.score_block_brawl_reds += score_to_add;
         for cp in check_points {
-            if ARCHIPELAGO_STATE.score_block_brawl_reds >= cp {
+            if ARCHIPELAGO_STATE.score_block_brawl_reds / 10 >= cp {
                 Tas::archipelago_send_check(10071000 + cp);
             }
         }
@@ -1693,7 +1693,7 @@ fn got_cube_block_brawl(id: int){
         ARCHIPELAGO_STATE.block_brawl_blue_ids.remove(id);
         ARCHIPELAGO_STATE.score_block_brawl_blues += score_to_add;
         for cp in check_points {
-            if ARCHIPELAGO_STATE.score_block_brawl_blues >= cp {
+            if ARCHIPELAGO_STATE.score_block_brawl_blues / 10  >= cp {
                 Tas::archipelago_send_check(10072000 + cp);
             }
         }
@@ -1703,7 +1703,7 @@ fn got_cube_block_brawl(id: int){
         ARCHIPELAGO_STATE.block_brawl_green_ids.remove(id);
         ARCHIPELAGO_STATE.score_block_brawl_greens += score_to_add;
         for cp in check_points {
-            if ARCHIPELAGO_STATE.score_block_brawl_greens >= cp {
+            if ARCHIPELAGO_STATE.score_block_brawl_greens / 10  >= cp {
                 Tas::archipelago_send_check(10073000 + cp);
             }
         }
@@ -1713,7 +1713,7 @@ fn got_cube_block_brawl(id: int){
         ARCHIPELAGO_STATE.block_brawl_yellow_ids.remove(id);
         ARCHIPELAGO_STATE.score_block_brawl_yellows += score_to_add;
         for cp in check_points {
-            if ARCHIPELAGO_STATE.score_block_brawl_yellows >= cp {
+            if ARCHIPELAGO_STATE.score_block_brawl_yellows / 10  >= cp {
                 Tas::archipelago_send_check(10074000 + cp);
             }
         }
@@ -1969,7 +1969,7 @@ fn got_cube_block_blub(id: int){
         ARCHIPELAGO_STATE.block_blub_red_ids.remove(id);
         ARCHIPELAGO_STATE.score_block_blub_reds += score_to_add;
         for cp in check_points {
-            if ARCHIPELAGO_STATE.score_block_blub_reds >= cp {
+            if ARCHIPELAGO_STATE.score_block_blub_reds / 10 >= cp {
                 Tas::archipelago_send_check(10101000 + cp);
             }
         }
@@ -1979,7 +1979,7 @@ fn got_cube_block_blub(id: int){
         ARCHIPELAGO_STATE.block_blub_blue_ids.remove(id);
         ARCHIPELAGO_STATE.score_block_blub_blues += score_to_add;
         for cp in check_points {
-            if ARCHIPELAGO_STATE.score_block_blub_blues >= cp {
+            if ARCHIPELAGO_STATE.score_block_blub_blues / 10 >= cp {
                 Tas::archipelago_send_check(10102000 + cp);
             }
         }
@@ -1989,7 +1989,7 @@ fn got_cube_block_blub(id: int){
         ARCHIPELAGO_STATE.block_blub_green_ids.remove(id);
         ARCHIPELAGO_STATE.score_block_blub_greens += score_to_add;
         for cp in check_points {
-            if ARCHIPELAGO_STATE.score_block_blub_greens >= cp {
+            if ARCHIPELAGO_STATE.score_block_blub_greens / 10 >= cp {
                 Tas::archipelago_send_check(10103000 + cp);
             }
         }
@@ -1999,7 +1999,7 @@ fn got_cube_block_blub(id: int){
         ARCHIPELAGO_STATE.block_blub_yellow_ids.remove(id);
         ARCHIPELAGO_STATE.score_block_blub_yellows += score_to_add;
         for cp in check_points {
-            if ARCHIPELAGO_STATE.score_block_blub_yellows >= cp {
+            if ARCHIPELAGO_STATE.score_block_blub_yellows / 10 >= cp {
                 Tas::archipelago_send_check(10104000 + cp);
             }
         }
