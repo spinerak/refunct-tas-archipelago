@@ -1008,6 +1008,15 @@ fn get_status_text_lines() -> List<ColorfulText> {
         ));
     }
 
+    if !ARCHIPELAGO_STATE.ap_connected {
+        return List::of(
+            ColorfulText { text: f"\n\nMOD VERSION {ARCHIPELAGO_STATE.mod_version}.\n", color: AP_COLOR_RED },
+            ColorfulText { text: "CONNECTING...\n", color: AP_COLOR_RED },
+            ColorfulText { text: "If this takes more than a few seconds, something's probably wrong.\n", color: AP_COLOR_RED },
+            ColorfulText { text: "Check your login info and refresh your room.", color: AP_COLOR_RED }
+        );
+    }
+
     List::extend(lines, match ARCHIPELAGO_STATE.started {
         0 => List::of(
             ColorfulText { text: "Archipelago Randomizer\n", color: COLOR_WHITE },
