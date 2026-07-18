@@ -3423,8 +3423,21 @@ fn set_time_dilation(dilation: f32, def: f32) {
     });
 }
 #[rebo::function("Tas::set_gravity")]
-fn set_gravity(gravity: f32) {
+fn set_gravity(gravity: f32, def: f32) {
     UWorld::set_gravity(gravity);
+    let current_location = AMyCharacter::get_player().location();
+    AMyCharacter::get_player().set_location(
+        current_location.0,
+        current_location.1,
+        current_location.2 + 50.,
+    );
+    if gravity == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(5));
+        UWorld::set_gravity(def);
+    });
 }
 #[rebo::function("Tas::get_time_of_day")]
 fn get_time_of_day() -> f32 {

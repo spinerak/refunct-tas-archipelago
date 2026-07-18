@@ -886,6 +886,9 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         if item_id == 9999009{
             Tas::set_screen_percentage(10., SETTINGS.screen_percentage);
         }
+        if item_id == 9999010{
+            Tas::set_gravity(50., SETTINGS.gravity);
+        }
     }
 }
 

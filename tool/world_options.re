@@ -2,7 +2,7 @@ Tas::set_reflection_render_scale(SETTINGS.reflection_render_scale);
 Tas::set_lighting_casts_shadows(SETTINGS.lighting_casts_shadows, SETTINGS.lighting_casts_shadows);
 Tas::set_sky_light_enabled(SETTINGS.sky_light_enabled, SETTINGS.sky_light_enabled);
 Tas::set_time_dilation(SETTINGS.time_dilation, SETTINGS.time_dilation);
-Tas::set_gravity(SETTINGS.gravity);
+Tas::set_gravity(SETTINGS.gravity, SETTINGS.gravity);
 Tas::set_time_of_day(SETTINGS.time_of_day);
 Tas::set_sky_time_speed(SETTINGS.sky_time_speed, SETTINGS.sky_time_speed);
 Tas::set_sky_light_brightness(SETTINGS.sky_light_brightness);
@@ -70,7 +70,7 @@ fn create_world_options_menu() -> Ui {
             onchange: fn(input: string) {
                 match input.parse_float() {
                     Result::Ok(gravity) => {
-                        Tas::set_gravity(gravity);
+                        Tas::set_gravity(gravity, gravity);
                         SETTINGS.gravity = gravity;
                         SETTINGS.store();
                     },
