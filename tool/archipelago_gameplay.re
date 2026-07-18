@@ -1398,7 +1398,7 @@ fn archipelago_main_start(){
 
     Tas::set_level(-10000);
 
-    archipelago_activate_stepped_on_platforms();
+    archipelago_activate_stepped_on_platforms(List::of());
     archipelago_collect_collected_cubes();
 }
 
@@ -2565,12 +2565,19 @@ fn archipelago_checked_location(id: int){
     ARCHIPELAGO_STATE.checked_locations.push(id);
     if id >= 10000000 && id < 10010000 {
         ARCHIPELAGO_STATE.stepped_on_buttons.push(id);
+        archipelago_activate_stepped_on_one_button(id);
     }
     if id >= 10010000 && id < 10020000 {
         ARCHIPELAGO_STATE.stepped_on_platforms.push(id);
+        archipelago_activate_stepped_on_platforms(List::of(id));
     }
     if id >= 10060000 && id < 10070000 {
         ARCHIPELAGO_STATE.collected_cubes.push(id);
+        archipelago_collect_one_collected_cube(id);
+    }
+    if id >= 10080000 && id < 10090000 {
+        // no need to add to a list
+        archipelago_collect_one_collected_extra_cube(id);
     }
     let vanilla_locations = List::of(10020101, 10020201, 10020301, 10020401, 10020501, 10020601, 10020701, 10020702, 10020801, 10020901, 10021001, 10021002, 10021101, 10021201, 10021301, 10021401, 10021501, 10021601, 10021701, 10021801, 10021802, 10021901, 10022001, 10022101, 10022201, 10022301, 10022401, 10022501, 10022601, 10022602, 10022603, 10022701, 10022801, 10022802, 10022901, 10023001, 10023101);
     if vanilla_locations.contains(id) {
@@ -2816,6 +2823,12 @@ fn archipelago_send_check(id: int){
     archipelago_checked_location(id);
 }
 
+fn archipelago_activate_stepped_on_one_button(id: int){
+    let cluster = (id - 10000000) / 100;
+    let plat = (id - 10000000) % 100;
+    Tas::disable_button(cluster-1, plat-1);
+}
+
 fn archipelago_activate_stepped_on_buttons(num: int){
     for id in ARCHIPELAGO_STATE.stepped_on_buttons {
         let cluster = (id - 10000000) / 100;
@@ -2828,8 +2841,12 @@ fn archipelago_activate_stepped_on_buttons(num: int){
     }
 }
 
-fn archipelago_activate_stepped_on_platforms(){
-    for id in ARCHIPELAGO_STATE.stepped_on_platforms {
+fn archipelago_activate_stepped_on_platforms(list: List<int>){
+    let mut list2 = list;
+    if list2.len() == 0 {
+        list2 = ARCHIPELAGO_STATE.stepped_on_platforms;
+    }
+    for id in list2 {
         let cluster = (id - 10010000) / 100;
         let plat = (id - 10010000) % 100;
 
@@ -2840,6 +2857,15 @@ fn collect_all_vanilla_cubes(){
     let all_cubes = Tas::get_vanilla_cubes();
     for cube in all_cubes {
         Tas::collect_cube(cube);
+    }
+}
+fn archipelago_collect_one_collected_cube(id: int){
+    let cluster = (id - 10060000) / 100;
+    let plat = (id - 10060000) % 100;
+
+    match Tas::get_vanilla_cube(cluster-1, plat-1) {
+        Option::Some(cube) => { Tas::collect_cube(cube); },
+        Option::None => {}
     }
 }
 fn archipelago_collect_collected_cubes(){
@@ -2871,7 +2897,24 @@ fn archipelago_collect_collected_cubes(){
 
     }
 }
-
+fn archipelago_collect_one_collected_extra_cube(loc_collected: int){
+    let mut i = 0;
+    let mut found_index = Option::None;
+    for loc in ARCHIPELAGO_STATE.extra_cubes_locs {
+        if loc == loc_collected {
+            found_index = Option::Some(i);
+            break;
+        }
+        i += 1;
+    }
+    match found_index {
+        Option::Some(pos) => {
+            let intid = ARCHIPELAGO_STATE.extra_cubes_int_ids.get(pos).unwrap();
+            Tas::collect_cube(intid);
+        },
+        Option::None => {}
+    }
+}
 fn archipelago_received_slot_data(key: string, value: string){
     //ap_log_1(f"Received slot data: {key} = {value}");
     if key == "ap_world_version" {
