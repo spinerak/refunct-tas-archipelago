@@ -3429,7 +3429,7 @@ fn set_gravity(gravity: f32, def: f32) {
     AMyCharacter::get_player().set_location(
         current_location.0,
         current_location.1,
-        current_location.2 + 50.,
+        current_location.2 + 100.,
     );
     if gravity == def {
         return;
