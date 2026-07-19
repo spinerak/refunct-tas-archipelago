@@ -169,6 +169,12 @@ struct ArchipelagoState {
 
     triggering_clusters: List<int>,
     last_tick_time: int,
+
+    multiplayer_names: List<string>,
+    multiplayer_block_ids: List<int>,
+    multiplayer_xs: List<float>,
+    multiplayer_ys: List<float>,
+    multiplayer_zs: List<float>,
 }
 
 fn fresh_archipelago_state() -> ArchipelagoState {
@@ -341,6 +347,12 @@ fn fresh_archipelago_state() -> ArchipelagoState {
 
         triggering_clusters: List::new(),
         last_tick_time: 0,
+
+        multiplayer_names: List::new(),
+        multiplayer_block_ids: List::new(),
+        multiplayer_xs: List::new(),
+        multiplayer_ys: List::new(),
+        multiplayer_zs: List::new(),
     }
 }
 
@@ -403,6 +415,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 
         update_block_brawl_in_logic_counts();
         update_block_blub_in_logic_counts();
+
+        ARCHIPELAGO_STATE.multiplayer_names = List::new();
+        ARCHIPELAGO_STATE.multiplayer_block_ids = List::new();
+        ARCHIPELAGO_STATE.multiplayer_xs = List::new();
+        ARCHIPELAGO_STATE.multiplayer_ys = List::new();
+        ARCHIPELAGO_STATE.multiplayer_zs = List::new();
     },
     on_level_change: ap_on_level_change_function,
     on_buttons_change: fn(old: int, new: int) {
@@ -757,6 +775,46 @@ fn archipelago_disconnected() {
     add_component(ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT);
     ARCHIPELAGO_STATE.ap_connected = false;
 };
+
+   // multiplayer_names: List<string>,
+   // multiplayer_block_ids: List<int>,
+   // multiplayer_xs: List<float>,
+   // multiplayer_ys: List<float>,
+   // multiplayer_zs: List<float>,
+
+//input par is a list of strings
+fn archipelago_received_bounce(player_name: string, x: float, y: float, z: float) {
+    let mut found_index = Option::None;
+    let mut i = 0;
+    for name in ARCHIPELAGO_STATE.multiplayer_names {
+        if name == player_name {
+            found_index = Option::Some(i);
+            break;
+        }
+        i += 1;
+    }
+    match found_index {
+        Option::Some(pos) => {
+            let block_id = ARCHIPELAGO_STATE.multiplayer_block_ids.get(pos).unwrap();
+            //let prevx = ARCHIPELAGO_STATE.multiplayer_xs.get(pos).unwrap();
+            //let prevy = ARCHIPELAGO_STATE.multiplayer_ys.get(pos).unwrap();
+            //let prevz = ARCHIPELAGO_STATE.multiplayer_zs.get(pos).unwrap();
+            // set_platform_movement_path_rebo(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8)
+            Tas::set_platform_location(block_id, Location{ x: x, y: y, z: z + 15. });
+        },
+        Option::None => {
+            let id = Tas::spawn_platform(Location { x: x, y: y, z: z + 15. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 0.25, y: 0.25, z: 0.85 });
+            ARCHIPELAGO_STATE.multiplayer_names.push(player_name);
+            ARCHIPELAGO_STATE.multiplayer_block_ids.push(id);
+            //ARCHIPELAGO_STATE.multiplayer_xs.push(x);
+            //ARCHIPELAGO_STATE.multiplayer_ys.push(y);
+            //ARCHIPELAGO_STATE.multiplayer_zs.push(z);
+        }
+    }
+    
+    ap_log_1(f"Received bounce data from {player_name}: ({x}, {y}, {z})");
+    
+}
 
 fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) {
 

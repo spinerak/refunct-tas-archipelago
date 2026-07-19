@@ -54,6 +54,7 @@ struct State {
     player_minimap_textures: HashMap<Rgba<u8>, UTexture2D>,
 
     last_death_link_time: std::time::Instant,
+    last_bounce_update_time: std::time::Instant,
 
     dashes_left: u32,
 
@@ -185,6 +186,7 @@ pub fn init(
         player_minimap_image,
         player_minimap_textures: HashMap::new(),
         last_death_link_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first death link can be sent immediately
+        last_bounce_update_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
 
         dashes_left: 0,
         block_beat_platforms: Vec::new(),
@@ -237,6 +239,7 @@ fn cleanup_after_rebo() {
         state.hooks.fslateapplication.release_key(key, key as u32, false);
     }
     state.last_death_link_time = std::time::Instant::now() - Duration::from_secs(10); // reset to a time far in the past so that the first death link can be sent immediately
+    state.last_bounce_update_time = std::time::Instant::now() - Duration::from_secs(10); // reset to a time far in the past so that the first bounce can be sent immediately
     rebo_init::apply_map_internal(&rebo_init::ORIGINAL_MAP);
     state.rebo_stream_tx.send(ReboToStream::MiDone).unwrap();
     log!("Cleanup finished.");

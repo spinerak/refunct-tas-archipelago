@@ -7,6 +7,7 @@ use crossbeam_channel::Sender;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::task::AbortHandle;
 use rand::seq::IndexedRandom;
+use serde_json::json;
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago};
 
 
@@ -131,6 +132,26 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                                         source: slot.clone(),
                                         cause: msgs.choose(&mut rand::rng()).map(|s|{s.clone()}),
                                     })
+                                })).await?;
+                            } else {
+                                log!("Sender is None, cannot send message");
+                            }
+                        },
+                        ReboToArchipelago::Bounce => {
+                            if let Some(sender) = sender.as_mut() {
+                                // pub enum BounceData {
+                                //     DeathLink(DeathLink),
+                                //     Generic(Option<Value>),
+                                // }
+                                sender.send(ClientMessage::Bounce(Bounce {
+                                    games: None,
+                                    slots: None,
+                                    tags: vec![],
+                                    // send location in bounce
+                                    data: BounceData::Generic(Some(json!({
+                                        "type": "RefMvm",
+                                        "player": current_slot.clone().unwrap_or(String::from("null")),
+                                    }))),
                                 })).await?;
                             } else {
                                 log!("Sender is None, cannot send message");

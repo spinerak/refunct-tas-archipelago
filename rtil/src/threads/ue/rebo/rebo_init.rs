@@ -278,6 +278,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_retrieved)
         .add_required_rebo_function(archipelago_print_json_message)
         .add_required_rebo_function(archipelago_received_death)
+        .add_required_rebo_function(archipelago_received_bounce)
         .add_required_rebo_function(archipelago_tick)
         .add_required_rebo_function(archipelago_init)
         .add_required_rebo_function(archipelago_set_own_id)
@@ -827,7 +828,25 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                             AMyCharacter::respawn();
                             archipelago_received_death(vm, source, cause.unwrap_or(String::from("")))?;
                         }
-                        _ => (),
+                        // example: Generic bounce data: Some(Array [String("player1"), Number(10), Number(20), Number(30)])
+                        BounceData::Generic(data) => {
+                            if let Some(data) = data {
+                                if let Some(array) = data.as_array() {
+                                    let btype = array.get(0).and_then(|v| v.as_str()).unwrap_or("");
+                                    let playername = array.get(1).and_then(|v| v.as_str()).unwrap_or("");
+                                    let x = array.get(2).and_then(|v| v.as_i64()).unwrap_or(0) as f32;
+                                    let y = array.get(3).and_then(|v| v.as_i64()).unwrap_or(0) as f32;
+                                    let z = array.get(4).and_then(|v| v.as_i64()).unwrap_or(0) as f32;
+                                    if btype == "RefMvm" {
+                                        archipelago_received_bounce(vm, String::from(playername), x, y, z)?;
+                                    }
+                                } else {
+                                    log!("Generic bounce data is not an array: {:?}", data);
+                                }
+                            } else {
+                                log!("Generic bounce data is None");
+                            }
+                        }
                     }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::InvalidPacket(pkt))) => {
@@ -1055,6 +1074,8 @@ pub fn tick(){
         // Already ticked this frame
         return;
     }
+
+    bounce_location();
     
     if AMyCharacter::get_player().movement_mode() == 1 {
         let mut state = STATE.lock().unwrap();
@@ -1083,6 +1104,23 @@ pub fn tick(){
         let rot = LAST_VALID_ROTATION.with(|cell| cell.get());
         AMyCharacter::get_player().set_rotation(rot.pitch, rot.yaw, rot.roll);
     }
+}
+
+pub fn bounce_location() {
+    let mut state = STATE.lock().unwrap();
+    let state = state.as_mut().unwrap();
+
+    if state.last_bounce_update_time.elapsed() < Duration::from_secs(1) {
+        return;
+    }
+
+    log!("Sending bounce location to archipelago: {:?}", AMyCharacter::get_player().location());
+    state
+        .rebo_archipelago_tx
+        .send(ReboToArchipelago::Bounce)
+        .unwrap();
+
+    state.last_bounce_update_time = std::time::Instant::now();
 }
 
 pub fn tick_platforms_once_per_frame(delta: f64) -> bool {
@@ -1120,6 +1158,7 @@ extern "rebo" {
     fn archipelago_print_json_message(json_message: ReboPrintJSONMessage);
     fn archipelago_retrieved(key: String, value: String);
     fn archipelago_received_death(source: String, cause: String);
+    fn archipelago_received_bounce(playername: String, x: f32, y: f32, z: f32);
     fn archipelago_tick(time: u64);
     fn ap_log_error(message: String);
 }

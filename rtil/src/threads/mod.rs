@@ -62,6 +62,7 @@ pub enum ReboToArchipelago {
         tags: Vec<String>,
     },
     SendDeath,
+    Bounce,
     ClientMessage(ClientMessage),
     Disconnect,
     LocationChecks { locations: Vec<i64> },
