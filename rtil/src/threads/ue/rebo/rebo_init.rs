@@ -834,10 +834,18 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                                 if let Some(array) = data.as_array() {
                                     let btype = array.get(0).and_then(|v| v.as_str()).unwrap_or("");
                                     let playername = array.get(1).and_then(|v| v.as_str()).unwrap_or("");
-                                    let x = array.get(2).and_then(|v| v.as_i64()).unwrap_or(0) as f32;
-                                    let y = array.get(3).and_then(|v| v.as_i64()).unwrap_or(0) as f32;
-                                    let z = array.get(4).and_then(|v| v.as_i64()).unwrap_or(0) as f32;
-                                    if btype == "RefMvm" {
+                                    let x = array.get(2).and_then(|v| v.as_f64()).unwrap_or(0.) as f32;
+                                    let y = array.get(3).and_then(|v| v.as_f64()).unwrap_or(0.) as f32;
+                                    let z = array.get(4).and_then(|v| v.as_f64()).unwrap_or(0.) as f32;
+                                    log!("Generic bounce data: type={}, playername={}, x={}, y={}, z={}", btype, playername, x, y, z);
+                                    
+                                    let bounce_location_id = {
+                                        let state = STATE.lock().unwrap();
+                                        state.as_ref().unwrap().bounce_location_id.clone()
+                                    };
+
+                                    if Some(playername.to_string()) != bounce_location_id && btype == "RefMvm" {
+                                        log!("Generic bounce data is a RefMvm bounce and the playername does not match the expected bounce_location_id: {:?} != {:?}", Some(playername.to_string()), bounce_location_id);
                                         archipelago_received_bounce(vm, String::from(playername), x, y, z)?;
                                     }
                                 } else {
@@ -1114,10 +1122,25 @@ pub fn bounce_location() {
         return;
     }
 
-    log!("Sending bounce location to archipelago: {:?}", AMyCharacter::get_player().location());
+    // generate a location id using current time millis if it does not exist already
+    if state.bounce_location_id.is_none() {
+        let time_millis = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        state.bounce_location_id = Some(time_millis.to_string());
+    }
+
+    let location = AMyCharacter::get_player().location();
+
     state
         .rebo_archipelago_tx
-        .send(ReboToArchipelago::Bounce)
+        .send(ReboToArchipelago::Bounce { 
+            playername: state.bounce_location_id.clone().unwrap_or_default(),
+            x: location.0,
+            y: location.1,
+            z: location.2,
+        })
         .unwrap();
 
     state.last_bounce_update_time = std::time::Instant::now();

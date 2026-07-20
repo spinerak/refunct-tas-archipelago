@@ -796,22 +796,14 @@ fn archipelago_received_bounce(player_name: string, x: float, y: float, z: float
     match found_index {
         Option::Some(pos) => {
             let block_id = ARCHIPELAGO_STATE.multiplayer_block_ids.get(pos).unwrap();
-            //let prevx = ARCHIPELAGO_STATE.multiplayer_xs.get(pos).unwrap();
-            //let prevy = ARCHIPELAGO_STATE.multiplayer_ys.get(pos).unwrap();
-            //let prevz = ARCHIPELAGO_STATE.multiplayer_zs.get(pos).unwrap();
-            // set_platform_movement_path_rebo(internal_index: i32, speed: f32, locations: Vec<Vec<f32>>, end_behavior: u8)
             Tas::set_platform_location(block_id, Location{ x: x, y: y, z: z + 15. });
         },
         Option::None => {
             let id = Tas::spawn_platform(Location { x: x, y: y, z: z + 15. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 0.25, y: 0.25, z: 0.85 });
             ARCHIPELAGO_STATE.multiplayer_names.push(player_name);
             ARCHIPELAGO_STATE.multiplayer_block_ids.push(id);
-            //ARCHIPELAGO_STATE.multiplayer_xs.push(x);
-            //ARCHIPELAGO_STATE.multiplayer_ys.push(y);
-            //ARCHIPELAGO_STATE.multiplayer_zs.push(z);
         }
     }
-    
     ap_log_1(f"Received bounce data from {player_name}: ({x}, {y}, {z})");
     
 }

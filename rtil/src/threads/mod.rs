@@ -62,7 +62,12 @@ pub enum ReboToArchipelago {
         tags: Vec<String>,
     },
     SendDeath,
-    Bounce,
+    Bounce {
+        playername: String,
+        x: f32,
+        y: f32,
+        z: f32,
+    },
     ClientMessage(ClientMessage),
     Disconnect,
     LocationChecks { locations: Vec<i64> },

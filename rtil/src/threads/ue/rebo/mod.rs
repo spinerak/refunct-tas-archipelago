@@ -55,6 +55,7 @@ struct State {
 
     last_death_link_time: std::time::Instant,
     last_bounce_update_time: std::time::Instant,
+    bounce_location_id: Option<String>,
 
     dashes_left: u32,
 
@@ -187,7 +188,7 @@ pub fn init(
         player_minimap_textures: HashMap::new(),
         last_death_link_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first death link can be sent immediately
         last_bounce_update_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
-
+        bounce_location_id: None,
         dashes_left: 0,
         block_beat_platforms: Vec::new(),
         block_beat_time: 0.0,
