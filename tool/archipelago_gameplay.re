@@ -169,12 +169,9 @@ struct ArchipelagoState {
 
     triggering_clusters: List<int>,
     last_tick_time: int,
-
-    multiplayer_names: List<string>,
-    multiplayer_block_ids: List<int>,
-    multiplayer_xs: List<float>,
-    multiplayer_ys: List<float>,
-    multiplayer_zs: List<float>,
+    
+    multiplayer_info: Map<string, MultiplayerData>,
+    last_bounce_time: int,
 }
 
 fn fresh_archipelago_state() -> ArchipelagoState {
@@ -348,12 +345,15 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         triggering_clusters: List::new(),
         last_tick_time: 0,
 
-        multiplayer_names: List::new(),
-        multiplayer_block_ids: List::new(),
-        multiplayer_xs: List::new(),
-        multiplayer_ys: List::new(),
-        multiplayer_zs: List::new(),
+        multiplayer_info: Map::new(),
+        last_bounce_time: 0,
     }
+}
+
+struct MultiplayerData {
+    time_start: int,
+    block_id: int,
+    locations: List<Location>,
 }
 
 static mut ARCHIPELAGO_STATE = fresh_archipelago_state();
@@ -416,11 +416,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         update_block_brawl_in_logic_counts();
         update_block_blub_in_logic_counts();
 
-        ARCHIPELAGO_STATE.multiplayer_names = List::new();
-        ARCHIPELAGO_STATE.multiplayer_block_ids = List::new();
-        ARCHIPELAGO_STATE.multiplayer_xs = List::new();
-        ARCHIPELAGO_STATE.multiplayer_ys = List::new();
-        ARCHIPELAGO_STATE.multiplayer_zs = List::new();
+        ARCHIPELAGO_STATE.multiplayer_info = Map::new();
     },
     on_level_change: ap_on_level_change_function,
     on_buttons_change: fn(old: int, new: int) {
@@ -776,36 +772,54 @@ fn archipelago_disconnected() {
     ARCHIPELAGO_STATE.ap_connected = false;
 };
 
-   // multiplayer_names: List<string>,
-   // multiplayer_block_ids: List<int>,
-   // multiplayer_xs: List<float>,
-   // multiplayer_ys: List<float>,
-   // multiplayer_zs: List<float>,
-
 //input par is a list of strings
-fn archipelago_received_bounce(player_name: string, x: float, y: float, z: float) {
-    let mut found_index = Option::None;
+fn archipelago_received_bounce(player_name: string, timenow: int, xs: List<int>, ys: List<int>, zs: List<int>) {
+    // ap_log_1(f"Received bounce data from {player_name}: ({timenow}, {xs}, {ys}, {zs})");
+    let mut last_location = Location { x: 0., y: 0., z: -1000. };
+    let mut block_id = 0;
+    if ARCHIPELAGO_STATE.multiplayer_info.get(player_name) != Option::None {
+        let data = ARCHIPELAGO_STATE.multiplayer_info.get(player_name).unwrap();
+        last_location = data.locations.get(data.locations.len() - 1).unwrap();
+        // ap_log_1(f"last_location X is {last_location}");
+        block_id = data.block_id;
+    } else {
+        // ap_log_1(f"Received bounce data from {player_name} but no previous data found, spawning new platform");
+        block_id = Tas::spawn_platform(Location { 
+            x: xs.get(0).unwrap().to_float() - 32.25, 
+            y: ys.get(0).unwrap().to_float() - 32.25, 
+            z: zs.get(0).unwrap().to_float() - 90.}, 
+            Rotation { pitch: 0., yaw: 0., roll: 0. }, 
+            Size3D { x: 0.25, y: 0.25, z: 0.85 }
+        );
+    }
+
+    // ap_log_1(f"Last location Y for {player_name} is {last_location}, block_id is {block_id}");
+
+    let mut locations = List::new();
+    let mut locations2 = List::new();
+    locations.push(last_location);
     let mut i = 0;
-    for name in ARCHIPELAGO_STATE.multiplayer_names {
-        if name == player_name {
-            found_index = Option::Some(i);
-            break;
-        }
-        i += 1;
+    while i < xs.len(){
+        locations.push(Location { x: xs.get(i).unwrap().to_float(), y: ys.get(i).unwrap().to_float(), z: zs.get(i).unwrap().to_float() });
+        i = i+1;
     }
-    match found_index {
-        Option::Some(pos) => {
-            let block_id = ARCHIPELAGO_STATE.multiplayer_block_ids.get(pos).unwrap();
-            Tas::set_platform_location(block_id, Location{ x: x - 62.5, y: y, z: z - 90. });
-        },
-        Option::None => {
-            let id = Tas::spawn_platform(Location { x: x - 62.5, y: y, z: z - 90. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 0.25, y: 0.25, z: 0.85 });
-            ARCHIPELAGO_STATE.multiplayer_names.push(player_name);
-            ARCHIPELAGO_STATE.multiplayer_block_ids.push(id);
+    // ap_log_1(f"Received bounce data fromX {player_name}: ({timenow}, {locations})");
+
+    let mut prev_location = last_location;
+    for loc in locations {
+        for i in List::of(1., 2., 3., 4., 5.) {
+            locations2.push(Location { 
+                x: prev_location.x + (loc.x - prev_location.x) * i / 5., 
+                y: prev_location.y + (loc.y - prev_location.y) * i / 5., 
+                z: prev_location.z + (loc.z - prev_location.z) * i / 5.
+            });
         }
+        prev_location = loc;
     }
-    ap_log_1(f"Received bounce data from {player_name}: ({x}, {y}, {z})");
-    
+    // ap_log_1(f"Received bounce data fromY {player_name}: ({timenow}, {locations2})");
+
+    ARCHIPELAGO_STATE.multiplayer_info.insert(player_name, MultiplayerData { time_start: timenow, block_id: block_id, locations: locations2 });
+
 }
 
 fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) {
@@ -943,6 +957,22 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
 }
 
 fn archipelago_tick(time: int) {
+    if time - ARCHIPELAGO_STATE.last_bounce_time > 33 {
+        
+        for player_name in ARCHIPELAGO_STATE.multiplayer_info.keys() {
+            // ap_log_1(f"Processing bounce data for {player_name}");
+            let data = ARCHIPELAGO_STATE.multiplayer_info.get(player_name).unwrap();
+            let time_since_start = time - data.time_start;
+            let index = time_since_start * data.locations.len() / 1000;
+            // ap_log_1(f"Bounce data for {player_name}: time_since_start={time_since_start}, index={index}, locations_len={data.locations.len()}");
+            if index < data.locations.len() {
+                let loc = data.locations.get(index).unwrap();
+                // ap_log_1(f"Setting platform location for {player_name} to {loc} index {index}");
+                Tas::set_platform_location(data.block_id, Location{ x: loc.x - 32.25, y: loc.y - 32.25, z: loc.z - 90. });
+            }
+        }
+        ARCHIPELAGO_STATE.last_bounce_time = time;
+    }
     if time - ARCHIPELAGO_STATE.last_tick_time < 400 {
         return;
     }

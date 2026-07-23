@@ -834,19 +834,36 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                                 if let Some(array) = data.as_array() {
                                     let btype = array.get(0).and_then(|v| v.as_str()).unwrap_or("");
                                     let playername = array.get(1).and_then(|v| v.as_str()).unwrap_or("");
-                                    let x = array.get(2).and_then(|v| v.as_f64()).unwrap_or(0.) as f32;
-                                    let y = array.get(3).and_then(|v| v.as_f64()).unwrap_or(0.) as f32;
-                                    let z = array.get(4).and_then(|v| v.as_f64()).unwrap_or(0.) as f32;
-                                    log!("Generic bounce data: type={}, playername={}, x={}, y={}, z={}", btype, playername, x, y, z);
+
+                                    let parse_i64_list = |value: Option<&serde_json::Value>| -> Vec<i64> {
+                                        match value {
+                                            Some(v) => {
+                                                if let Some(arr) = v.as_array() {
+                                                    arr.iter().map(|val| val.as_i64().unwrap_or(0)).collect()
+                                                } else {
+                                                    v.as_i64().map(|n| vec![n]).unwrap_or_default()
+                                                }
+                                            }
+                                            None => Vec::new(),
+                                        }
+                                    };
+
+                                    let xs = parse_i64_list(array.get(2));
+                                    let ys = parse_i64_list(array.get(3));
+                                    let zs = parse_i64_list(array.get(4));
+                                    log!("Generic bounce data: type={}, playername={}, xs={:?}, ys={:?}, zs={:?}", btype, playername, xs, ys, zs);
                                     
                                     let bounce_location_id = {
                                         let state = STATE.lock().unwrap();
                                         state.as_ref().unwrap().bounce_location_id.clone()
                                     };
 
-                                    if Some(playername.to_string()) != bounce_location_id && btype == "RefMvm" {
-                                        log!("Generic bounce data is a RefMvm bounce and the playername does not match the expected bounce_location_id: {:?} != {:?}", Some(playername.to_string()), bounce_location_id);
-                                        archipelago_received_bounce(vm, String::from(playername), x, y, z)?;
+                                    if btype == "RefMvm" {
+                                        // if Some(playername.to_string()) != bounce_location_id {
+                                            let timenow = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64;
+                                            log!("Generic bounce data is a RefMvm bounce and the playername does not match the expected bounce_location_id: {:?} != {:?}", Some(playername.to_string()), bounce_location_id);
+                                            archipelago_received_bounce(vm, String::from(playername), timenow, xs, ys, zs)?;
+                                        // }
                                     }
                                 } else {
                                     log!("Generic bounce data is not an array: {:?}", data);
@@ -1118,32 +1135,45 @@ pub fn bounce_location() {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
 
-    if state.last_bounce_update_time.elapsed() < Duration::from_secs(1) {
+    if state.last_bounce_update_time.elapsed() < Duration::from_millis(160) {
         return;
     }
-
-    // generate a location id using current time millis if it does not exist already
-    if state.bounce_location_id.is_none() {
-        let time_millis = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        state.bounce_location_id = Some(time_millis.to_string());
-    }
+    state.last_bounce_update_time = std::time::Instant::now();
 
     let location = AMyCharacter::get_player().location();
+    state.bounce_locations_xs.push(location.0 as i64);
+    state.bounce_locations_ys.push(location.1 as i64);
+    state.bounce_locations_zs.push(location.2 as i64);
 
-    state
-        .rebo_archipelago_tx
-        .send(ReboToArchipelago::Bounce { 
-            playername: state.bounce_location_id.clone().unwrap_or_default(),
-            x: location.0,
-            y: location.1,
-            z: location.2,
-        })
-        .unwrap();
+    // if there are 6 location xs:
+    if state.bounce_locations_xs.len() >= 6 {
 
-    state.last_bounce_update_time = std::time::Instant::now();
+        // generate a location id using current time millis if it does not exist already
+        if state.bounce_location_id.is_none() {
+            let time_millis = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis();
+            state.bounce_location_id = Some(time_millis.to_string());
+        }
+
+
+        state
+            .rebo_archipelago_tx
+            .send(ReboToArchipelago::Bounce { 
+                playername: state.bounce_location_id.clone().unwrap_or_default(),
+                x: state.bounce_locations_xs.clone(),
+                y: state.bounce_locations_ys.clone(),
+                z: state.bounce_locations_zs.clone(),
+            })
+            .unwrap();
+        
+        // clear the location xs, ys, zs
+        state.bounce_locations_xs.clear();
+        state.bounce_locations_ys.clear();
+        state.bounce_locations_zs.clear();
+    }
+
 }
 
 pub fn tick_platforms_once_per_frame(delta: f64) -> bool {
@@ -1181,7 +1211,7 @@ extern "rebo" {
     fn archipelago_print_json_message(json_message: ReboPrintJSONMessage);
     fn archipelago_retrieved(key: String, value: String);
     fn archipelago_received_death(source: String, cause: String);
-    fn archipelago_received_bounce(playername: String, x: f32, y: f32, z: f32);
+    fn archipelago_received_bounce(playername: String, timenow: i64, xs: Vec<i64>, ys: Vec<i64>, zs: Vec<i64>);
     fn archipelago_tick(time: u64);
     fn ap_log_error(message: String);
 }

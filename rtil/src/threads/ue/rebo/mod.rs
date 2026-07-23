@@ -56,6 +56,9 @@ struct State {
     last_death_link_time: std::time::Instant,
     last_bounce_update_time: std::time::Instant,
     bounce_location_id: Option<String>,
+    bounce_locations_xs: Vec<i64>,
+    bounce_locations_ys: Vec<i64>,
+    bounce_locations_zs: Vec<i64>,
 
     dashes_left: u32,
 
@@ -189,6 +192,9 @@ pub fn init(
         last_death_link_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first death link can be sent immediately
         last_bounce_update_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
         bounce_location_id: None,
+        bounce_locations_xs: Vec::new(),
+        bounce_locations_ys: Vec::new(),
+        bounce_locations_zs: Vec::new(),
         dashes_left: 0,
         block_beat_platforms: Vec::new(),
         block_beat_time: 0.0,

@@ -64,9 +64,9 @@ pub enum ReboToArchipelago {
     SendDeath,
     Bounce {
         playername: String,
-        x: f32,
-        y: f32,
-        z: f32,
+        x: Vec<i64>,
+        y: Vec<i64>,
+        z: Vec<i64>,
     },
     ClientMessage(ClientMessage),
     Disconnect,
