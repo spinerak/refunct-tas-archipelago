@@ -796,10 +796,10 @@ fn archipelago_received_bounce(player_name: string, x: float, y: float, z: float
     match found_index {
         Option::Some(pos) => {
             let block_id = ARCHIPELAGO_STATE.multiplayer_block_ids.get(pos).unwrap();
-            Tas::set_platform_location(block_id, Location{ x: x, y: y, z: z + 15. });
+            Tas::set_platform_location(block_id, Location{ x: x - 62.5, y: y, z: z - 90. });
         },
         Option::None => {
-            let id = Tas::spawn_platform(Location { x: x, y: y, z: z + 15. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 0.25, y: 0.25, z: 0.85 });
+            let id = Tas::spawn_platform(Location { x: x - 62.5, y: y, z: z - 90. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 0.25, y: 0.25, z: 0.85 });
             ARCHIPELAGO_STATE.multiplayer_names.push(player_name);
             ARCHIPELAGO_STATE.multiplayer_block_ids.push(id);
         }
