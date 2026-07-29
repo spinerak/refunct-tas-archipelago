@@ -117,6 +117,19 @@ fn create_archipelago_connection_details_menu() -> Ui {
     }));
 
     if ARCHIPELAGO_STATE.ap_connected {
+        elements.push(UiElement::FloatInput(FloatInput {
+            label: Text { text: "See number of players" },
+            input: f"{Tas::is_bounce_on()}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_int() {
+                    Result::Ok(val) => {
+                        Tas::set_bounce(val);
+                    },
+                    Result::Err(e) => (),
+                }
+            },
+        }));
         elements.push(UiElement::Chooser(Chooser {
             label: Text { text: "Death Link" },
             options: List::of(Text { text: "On" }, Text { text: "Off" }),
@@ -1434,6 +1447,10 @@ fn archipelago_disconnected_info_hud() {
 
     lines.push(ColorfulText { text: "Not connected to an Archipelago server yet,\nuse the menu to ", color: COLOR_WHITE });
     lines.push(ColorfulText { text: "log in\n\n", color: AP_COLOR_YELLOW });
+
+    if ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT.error_message != "" {
+        lines.push(ColorfulText { text: f"{ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT.error_message}\n\n", color: AP_COLOR_GREEN });
+    }
 
     lines.push(ColorfulText { text: "Once logged in, use ", color: COLOR_WHITE });
     lines.push(ColorfulText { text: "Change gamemode ", color: AP_COLOR_YELLOW });

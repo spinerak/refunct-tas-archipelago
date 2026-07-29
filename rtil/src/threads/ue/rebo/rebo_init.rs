@@ -89,6 +89,9 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(project)
         .add_function(get_viewport_size)
         .add_function(get_text_size)
+        .add_function(restart_bounces_rebo)
+        .add_function(is_bounce_on)
+        .add_function(set_bounce)
 
         .add_function(spawn_platform_rebo)
         .add_function(spawn_platform_rando_location)
@@ -683,11 +686,11 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     for line in cause.split("\n") {
                         ap_log_error(vm, format!(" - {}", line.trim().to_string()))?;
                     }
-                    archipelago_disconnected(vm)?
+                    archipelago_disconnected(vm, "".to_string())?
                 },
                 Ok(ArchipelagoToRebo::ConnectionAborted) => {
                     log!("ArchipelagoToRebo::ConnectionAborted");
-                    archipelago_disconnected(vm)?
+                    archipelago_disconnected(vm, "".to_string())?
                     
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::RoomInfo(info))) => {
@@ -727,6 +730,8 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     archipelago_init(vm, 0 as usize)?;
 
                     archipelago_set_own_id(vm, info.team as isize, info.slot as isize)?;
+
+                    STATE.lock().unwrap().as_mut().unwrap().slot = info.slot;
 
                     for loc in &info.checked_locations {
                         let value: i64 = *loc;
@@ -829,47 +834,67 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                             archipelago_received_death(vm, source, cause.unwrap_or(String::from("")))?;
                         }
                         // example: Generic bounce data: Some(Array [String("player1"), Number(10), Number(20), Number(30)])
+                        // can only be bounce location for now
+                        
+                        
                         BounceData::Generic(data) => {
                             if let Some(data) = data {
                                 if let Some(array) = data.as_array() {
                                     let btype = array.get(0).and_then(|v| v.as_str()).unwrap_or("");
-                                    let playername = array.get(1).and_then(|v| v.as_str()).unwrap_or("");
-
-                                    let parse_i64_list = |value: Option<&serde_json::Value>| -> Vec<i64> {
-                                        match value {
-                                            Some(v) => {
-                                                if let Some(arr) = v.as_array() {
-                                                    arr.iter().map(|val| val.as_i64().unwrap_or(0)).collect()
-                                                } else {
-                                                    v.as_i64().map(|n| vec![n]).unwrap_or_default()
-                                                }
-                                            }
-                                            None => Vec::new(),
-                                        }
-                                    };
-
-                                    let xs = parse_i64_list(array.get(2));
-                                    let ys = parse_i64_list(array.get(3));
-                                    let zs = parse_i64_list(array.get(4));
-                                    log!("Generic bounce data: type={}, playername={}, xs={:?}, ys={:?}, zs={:?}", btype, playername, xs, ys, zs);
-                                    
-                                    let bounce_location_id = {
-                                        let state = STATE.lock().unwrap();
-                                        state.as_ref().unwrap().bounce_location_id.clone()
-                                    };
-
                                     if btype == "RefMvm" {
-                                        // if Some(playername.to_string()) != bounce_location_id {
-                                            let timenow = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64;
-                                            log!("Generic bounce data is a RefMvm bounce and the playername does not match the expected bounce_location_id: {:?} != {:?}", Some(playername.to_string()), bounce_location_id);
-                                            archipelago_received_bounce(vm, String::from(playername), timenow, xs, ys, zs)?;
-                                        // }
+                                        if STATE.lock().unwrap().as_ref().unwrap().bounce_active > 0 {
+                                            let slot = array.get(1).and_then(|v| v.as_i64()).unwrap_or(-100);
+                                            let playername = array.get(2).and_then(|v| v.as_str()).unwrap_or("");
+
+                                            let parse_i64_list = |value: Option<&serde_json::Value>| -> Vec<i64> {
+                                                match value {
+                                                    Some(v) => {
+                                                        if let Some(arr) = v.as_array() {
+                                                            arr.iter().map(|val| val.as_i64().unwrap_or(0)).collect()
+                                                        } else {
+                                                            v.as_i64().map(|n| vec![n]).unwrap_or_default()
+                                                        }
+                                                    }
+                                                    None => Vec::new(),
+                                                }
+                                            };
+
+                                            let xs = parse_i64_list(array.get(3));
+                                            let ys = parse_i64_list(array.get(4));
+                                            let zs = parse_i64_list(array.get(5));
+                                            log!("Generic bounce data: type={}, playername={}, xs={:?}, ys={:?}, zs={:?}", btype, playername, xs, ys, zs);
+                                            
+                                            let bounce_location_id = {
+                                                let state = STATE.lock().unwrap();
+                                                state.as_ref().unwrap().bounce_location_id.clone()
+                                            };
+                                            {
+                                                let mut state = STATE.lock().unwrap();
+                                                let state = state.as_mut().unwrap();
+                                                if !state.slots_in_action.contains(&slot) && state.slots_in_action.len() < state.bounce_active {
+                                                    state.slots_in_action.push(slot);
+                                                }else{
+                                                    log!("No room for {:?} | {:?}", slot, state.slots_in_action);
+                                                }
+                                                if !state.slots_in_action_new.contains(&slot) && state.slots_in_action_new.len() < state.bounce_active {
+                                                    state.slots_in_action_new.push(slot);
+                                                }
+                                                log!("Slots in action is now {:?}", state.slots_in_action);
+                                            }
+
+                                            if Some(playername.to_string()) != bounce_location_id {
+                                                STATE.lock().unwrap().as_mut().unwrap().last_bounce_update_time_others = std::time::Instant::now();
+                                                let timenow = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64;
+                                                log!("Generic bounce data is a RefMvm bounce and the playername does not match the this bounce_location_id: {:?} != {:?}", Some(playername.to_string()), bounce_location_id);
+                                                archipelago_received_bounce(vm, slot, String::from(playername), timenow, xs, ys, zs)?;
+                                            }
+                                        }
+                                    } else {
+                                        log!("Something else than refunct movement: {:?}", btype);
                                     }
                                 } else {
-                                    log!("Generic bounce data is not an array: {:?}", data);
+                                    log!("Not an array?!");
                                 }
-                            } else {
-                                log!("Generic bounce data is None");
                             }
                         }
                     }
@@ -1090,6 +1115,48 @@ impl PlatformSpawner {
     }
 }
 
+#[rebo::function("Tas::restart_bounces")]
+fn restart_bounces_rebo() {
+    restart_bounces();
+}
+
+fn restart_bounces() {
+    log!("Start restart bounces");
+    let mut state = STATE.lock().unwrap();
+    let state = state.as_mut().unwrap();
+    state.bounce_locations_xs.clear();
+    state.bounce_locations_ys.clear();
+    state.bounce_locations_zs.clear();
+    state.last_bounce_update_time_others = std::time::Instant::now();
+    state.last_bounce_refresh_slots = std::time::Instant::now();
+    state.slots_in_action.clear();
+    state.slots_in_action_new.clear();
+    state.full_bounce_next = true;
+    log!("End restart bounces");
+}
+
+#[rebo::function("Tas::set_bounce")]
+fn set_bounce(st: usize) {
+    {
+        log!("Setting bounce");
+        let mut state = STATE.lock().unwrap();
+        let state = state.as_mut().unwrap();
+        state.bounce_active = st;
+        log!("Set bounce to {:?}", state.bounce_active);
+    }
+    // if st > 0 {
+    //     restart_bounces();
+    // }
+}
+#[rebo::function("Tas::is_bounce_on")]
+fn is_bounce_on() -> usize {
+    log!("Is bounce on?");
+    let mut state = STATE.lock().unwrap();
+    let state = state.as_mut().unwrap();
+    log!("Is bounce on? {:?}", state.bounce_active);
+    return state.bounce_active;
+}
+
 pub fn tick(){
     let delta = FApp::delta();
     let bits = delta.to_bits();
@@ -1100,7 +1167,9 @@ pub fn tick(){
         return;
     }
 
-    bounce_location();
+    if STATE.lock().unwrap().as_ref().unwrap().bounce_active > 0 {
+        bounce_location();
+    }
     
     if AMyCharacter::get_player().movement_mode() == 1 {
         let mut state = STATE.lock().unwrap();
@@ -1135,9 +1204,20 @@ pub fn bounce_location() {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
 
+    if state.last_bounce_update_time_others.elapsed() > Duration::from_millis(4000) {
+        return;
+    }
     if state.last_bounce_update_time.elapsed() < Duration::from_millis(160) {
         return;
     }
+    if state.last_bounce_refresh_slots.elapsed() > Duration::from_millis(4000) {
+        state.slots_in_action = state.slots_in_action_new.clone();
+        state.slots_in_action_new.clear();
+        state.last_bounce_refresh_slots = std::time::Instant::now();
+        log!("Updated slots in action: it is now {:?}", state.slots_in_action);
+    }
+
+    log!("Saving location for eventual bounc!e to archipelago");
     state.last_bounce_update_time = std::time::Instant::now();
 
     let location = AMyCharacter::get_player().location();
@@ -1147,6 +1227,7 @@ pub fn bounce_location() {
 
     // if there are 6 location xs:
     if state.bounce_locations_xs.len() >= 6 {
+        log!("About to send to  archipelago");
 
         // generate a location id using current time millis if it does not exist already
         if state.bounce_location_id.is_none() {
@@ -1154,19 +1235,71 @@ pub fn bounce_location() {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_millis();
-            state.bounce_location_id = Some(time_millis.to_string());
+            let last_6_digits = time_millis % 1_000_000;
+            state.bounce_location_id = Some(format!("{}_{}", state.slot, last_6_digits));
         }
 
+        if state.full_bounce_next {
+            log!("Going to send to all Refunct");
+            log!(
+                "Sending Bounce with slots: None, games: [\"Refunct\"], slot: {}, playername: {}, x: {:?}, y: {:?}, z: {:?}",
+                state.slot,
+                state.bounce_location_id.clone().unwrap_or_default(),
+                &state.bounce_locations_xs,
+                &state.bounce_locations_ys,
+                &state.bounce_locations_zs,
+            );
+            state
+                .rebo_archipelago_tx
+                .send(ReboToArchipelago::Bounce { 
+                    slots: None,
+                    slot: state.slot.clone(),
+                    games: Some(vec!["Refunct".to_string()]),
+                    playername: state.bounce_location_id.clone().unwrap_or_default(),
+                    x: state.bounce_locations_xs.clone(),
+                    y: state.bounce_locations_ys.clone(),
+                    z: state.bounce_locations_zs.clone(),
+                })
+                .unwrap();
+            log!("Sent!");
+        } else {
+            log!("Going to send to slots");
+            let number_of_bounce_slots = state.bounce_active;
+            let slots_to_send_to: Vec<i64> = state
+                            .slots_in_action
+                            .iter()
+                            .take(number_of_bounce_slots)
+                            .cloned()
+                            .collect();
+            log!("Going to send to slots {:?}", slots_to_send_to.clone());
+            log!(
+                "Sending Bounce with slots: {:?}, games: None, slot: {}, playername: {}, x: {:?}, y: {:?}, z: {:?}",
+                slots_to_send_to,
+                state.slot,
+                state.bounce_location_id.clone().unwrap_or_default(),
+                &state.bounce_locations_xs,
+                &state.bounce_locations_ys,
+                &state.bounce_locations_zs,
+            );
+            state
+                .rebo_archipelago_tx
+                .send(ReboToArchipelago::Bounce { 
+                    slots: Some(slots_to_send_to.clone()),
+                    slot: state.slot.clone(),
+                    games: None,
+                    playername: state.bounce_location_id.clone().unwrap_or_default(),
+                    x: state.bounce_locations_xs.clone(),
+                    y: state.bounce_locations_ys.clone(),
+                    z: state.bounce_locations_zs.clone(),
+                })
+                .unwrap();
+            log!("Sent!");
+        }
+        state.full_bounce_next = false;
 
-        state
-            .rebo_archipelago_tx
-            .send(ReboToArchipelago::Bounce { 
-                playername: state.bounce_location_id.clone().unwrap_or_default(),
-                x: state.bounce_locations_xs.clone(),
-                y: state.bounce_locations_ys.clone(),
-                z: state.bounce_locations_zs.clone(),
-            })
-            .unwrap();
+
+
+        log!("Sent bounce location to archipelago");
         
         // clear the location xs, ys, zs
         state.bounce_locations_xs.clear();
@@ -1193,7 +1326,7 @@ extern "rebo" {
     fn on_key_char(character: String, is_repeat: bool);
     fn on_mouse_move(x: i32, y: i32);
     fn draw_hud();
-    fn archipelago_disconnected();
+    fn archipelago_disconnected(error_message: String);
     fn on_level_state_change(old: LevelState, new: LevelState);
     fn on_resolution_change();
     fn on_menu_open();
@@ -1211,7 +1344,7 @@ extern "rebo" {
     fn archipelago_print_json_message(json_message: ReboPrintJSONMessage);
     fn archipelago_retrieved(key: String, value: String);
     fn archipelago_received_death(source: String, cause: String);
-    fn archipelago_received_bounce(playername: String, timenow: i64, xs: Vec<i64>, ys: Vec<i64>, zs: Vec<i64>);
+    fn archipelago_received_bounce(slot: i64, playername: String, timenow: i64, xs: Vec<i64>, ys: Vec<i64>, zs: Vec<i64>);
     fn archipelago_tick(time: u64);
     fn ap_log_error(message: String);
 }

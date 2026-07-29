@@ -339,7 +339,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.2.3",
+        mod_version: "1.3.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -365,6 +365,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     conflicts_with: List::of(MAP_EDITOR_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID),
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {},
     on_yield: fn() {},
     draw_hud_text: archipelago_hud_text,
@@ -373,6 +374,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         if !ARCHIPELAGO_STATE.ap_connected {
             return;
         }
+        
         Tas::set_goal_animation_should_play(true); // so it works for minigames :3
         Tas::enable_all_buttons();
 
@@ -740,6 +742,7 @@ static mut ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT = Component {
     conflicts_with: List::of(MAP_EDITOR_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID),
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {},
     on_yield: fn() {},
     draw_hud_text: fn(text: string) -> string { text },
@@ -765,16 +768,17 @@ static mut ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT = Component {
     on_menu_open: fn() {},
 };
 
-fn archipelago_disconnected() {
-    ap_log_error("Disconnected from Archipelago server");
+fn archipelago_disconnected(error_message: string) {
+    ap_log_error("DISCONNECTED FROM THE ARCHIPELAGO SERVER");
     remove_component(ARCHIPELAGO_COMPONENT);
     add_component(ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT);
+    ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT.error_message = error_message;
     ARCHIPELAGO_STATE.ap_connected = false;
 };
 
 //input par is a list of strings
-fn archipelago_received_bounce(player_name: string, timenow: int, xs: List<int>, ys: List<int>, zs: List<int>) {
-    // ap_log_1(f"Received bounce data from {player_name}: ({timenow}, {xs}, {ys}, {zs})");
+fn archipelago_received_bounce(slot: int, player_name: string, timenow: int, xs: List<int>, ys: List<int>, zs: List<int>) {
+    ap_log_1(f"Received bounce data from {player_name}");
     let mut last_location = Location { x: 0., y: 0., z: -1000. };
     let mut block_id = 0;
     if ARCHIPELAGO_STATE.multiplayer_info.get(player_name) != Option::None {
@@ -787,7 +791,7 @@ fn archipelago_received_bounce(player_name: string, timenow: int, xs: List<int>,
         block_id = Tas::spawn_platform(Location { 
             x: xs.get(0).unwrap().to_float() - 32.25, 
             y: ys.get(0).unwrap().to_float() - 32.25, 
-            z: zs.get(0).unwrap().to_float() - 90.}, 
+            z: zs.get(0).unwrap().to_float() - 93.}, 
             Rotation { pitch: 0., yaw: 0., roll: 0. }, 
             Size3D { x: 0.25, y: 0.25, z: 0.85 }
         );
@@ -968,7 +972,7 @@ fn archipelago_tick(time: int) {
             if index < data.locations.len() {
                 let loc = data.locations.get(index).unwrap();
                 // ap_log_1(f"Setting platform location for {player_name} to {loc} index {index}");
-                Tas::set_platform_location(data.block_id, Location{ x: loc.x - 32.25, y: loc.y - 32.25, z: loc.z - 90. });
+                Tas::set_platform_location(data.block_id, Location{ x: loc.x - 32.25, y: loc.y - 32.25, z: loc.z - 93. });
             }
         }
         ARCHIPELAGO_STATE.last_bounce_time = time;
@@ -1456,6 +1460,7 @@ fn archipelago_start(){
         i += 1;
     }
     ARCHIPELAGO_STATE.started = 2;
+    Tas::restart_bounces();
 
 }
 
@@ -2999,6 +3004,16 @@ fn archipelago_received_slot_data(key: string, value: string){
     //ap_log_1(f"Received slot data: {key} = {value}");
     if key == "ap_world_version" {
         ARCHIPELAGO_STATE.apworld_version = value.slice(1, -1);
+
+        if ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version && 
+            ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version.slice(0,-1) &&
+            ARCHIPELAGO_STATE.apworld_version.slice(0,-1) != ARCHIPELAGO_STATE.mod_version {
+                
+            ap_log_error("Incorrect version, please use the correct mod (all releases are on the same github page)\n");
+            ap_log_error(f"You are looking for a version that starts with {ARCHIPELAGO_STATE.apworld_version} \n");
+            archipelago_disconnected(f"YOU NEED VERSION {ARCHIPELAGO_STATE.apworld_version} TO LOG IN");
+        }
+
     }
     
     if key == "required_grass" {
@@ -3068,5 +3083,10 @@ fn archipelago_received_slot_data(key: string, value: string){
     if key == "just_clique" && value == "1" {
         ARCHIPELAGO_STATE.just_clique = true;
         ARCHIPELAGO_STATE.gamemode = 17;
+    }
+    if key == "see_other_players" {
+        if value.parse_int().unwrap() > 0 {
+            Tas::set_bounce(value.parse_int().unwrap());
+        }
     }
 }

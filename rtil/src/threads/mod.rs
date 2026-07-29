@@ -63,6 +63,9 @@ pub enum ReboToArchipelago {
     },
     SendDeath,
     Bounce {
+        slots: Option<Vec<i64>>,
+        slot: i64,
+        games: Option<Vec<String>>,
         playername: String,
         x: Vec<i64>,
         y: Vec<i64>,

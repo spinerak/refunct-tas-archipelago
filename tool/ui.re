@@ -145,6 +145,9 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     if (LSHIFT_PRESSED || RSHIFT_PRESSED) && (LCTRL_PRESSED || RCTRL_PRESSED) && key.to_small() == KEY_M.to_small() {
         enter_ui(create_map_editor_menu());
     }
+    if (LSHIFT_PRESSED || RSHIFT_PRESSED) && (LCTRL_PRESSED || RCTRL_PRESSED) && key.to_small() == KEY_P.to_small() {
+        enter_ui(create_practice_menu());
+    }
 
     //Ledge, jump_pad, WallJump, Swim, Lifts, Pipes
 

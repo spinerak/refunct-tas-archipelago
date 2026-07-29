@@ -27,6 +27,7 @@ struct Component {
     tick_mode: TickMode,
     // largest delta time wins and is used for the next frame
     requested_delta_time: Option<float>,
+    error_message: string,
     on_tick: fn(),
     on_yield: fn(),
     on_new_game: fn(),
