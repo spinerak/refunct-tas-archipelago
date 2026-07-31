@@ -1077,10 +1077,10 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_brawl_yellows:4} ", color: AP_COLOR_YELLOW },
 
                 ColorfulText { text: f"\nScore in logic: ", color: COLOR_WHITE },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_reds * 10:4} ", color: AP_COLOR_RED },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_blues * 10:4} ", color: AP_COLOR_CYAN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_greens * 10:4} ", color: AP_COLOR_GREEN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_yellows * 10:4} ", color: AP_COLOR_YELLOW },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_reds:4} ", color: AP_COLOR_RED },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_blues:4} ", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_greens:4} ", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_yellows:4} ", color: AP_COLOR_YELLOW },
                 ColorfulText { text: f"\nCubes collected: {ARCHIPELAGO_STATE.block_brawl_cubes_collected} / {ARCHIPELAGO_STATE.block_brawl_cubes_total}", color: COLOR_WHITE },
 
                 ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block_brawl} pts", color: COLOR_WHITE },
@@ -1121,10 +1121,10 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_yellows:4} ", color: AP_COLOR_YELLOW },
 
                 ColorfulText { text: f"\nScore in logic: ", color: COLOR_WHITE },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_reds * 10:4} ", color: AP_COLOR_RED },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_blues * 10:4} ", color: AP_COLOR_CYAN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_greens * 10:4} ", color: AP_COLOR_GREEN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_yellows * 10:4} ", color: AP_COLOR_YELLOW },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_reds:4} ", color: AP_COLOR_RED },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_blues:4} ", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_greens:4} ", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_yellows:4} ", color: AP_COLOR_YELLOW },
                 ColorfulText { text: f"\nCubes collected: {ARCHIPELAGO_STATE.block_blub_cubes_collected} / {ARCHIPELAGO_STATE.block_blub_cubes_total}", color: COLOR_WHITE },
 
                 ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block_blub} pts", color: COLOR_WHITE },
