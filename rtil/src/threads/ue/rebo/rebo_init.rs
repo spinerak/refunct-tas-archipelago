@@ -862,7 +862,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                                             let xs = parse_i64_list(array.get(3));
                                             let ys = parse_i64_list(array.get(4));
                                             let zs = parse_i64_list(array.get(5));
-                                            log!("Generic bounce data: type={}, playername={}, xs={:?}, ys={:?}, zs={:?}", btype, playername, xs, ys, zs);
+                                            // log!("Generic bounce data: type={}, playername={}, xs={:?}, ys={:?}, zs={:?}", btype, playername, xs, ys, zs);
                                             
                                             let bounce_location_id = {
                                                 let state = STATE.lock().unwrap();
@@ -873,19 +873,16 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                                                 let state = state.as_mut().unwrap();
                                                 if !state.slots_in_action.contains(&slot) && state.slots_in_action.len() < state.bounce_active {
                                                     state.slots_in_action.push(slot);
-                                                }else{
-                                                    log!("No room for {:?} | {:?}", slot, state.slots_in_action);
                                                 }
                                                 if !state.slots_in_action_new.contains(&slot) && state.slots_in_action_new.len() < state.bounce_active {
                                                     state.slots_in_action_new.push(slot);
                                                 }
-                                                log!("Slots in action is now {:?}", state.slots_in_action);
                                             }
 
                                             if Some(playername.to_string()) != bounce_location_id {
                                                 STATE.lock().unwrap().as_mut().unwrap().last_bounce_update_time_others = std::time::Instant::now();
                                                 let timenow = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64;
-                                                log!("Generic bounce data is a RefMvm bounce and the playername does not match the this bounce_location_id: {:?} != {:?}", Some(playername.to_string()), bounce_location_id);
+                                                // log!("Generic bounce data is a RefMvm bounce and the playername does not match the this bounce_location_id: {:?} != {:?}", Some(playername.to_string()), bounce_location_id);
                                                 archipelago_received_bounce(vm, slot, String::from(playername), timenow, xs, ys, zs)?;
                                             }
                                         }

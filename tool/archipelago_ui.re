@@ -1130,7 +1130,7 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block_blub} pts", color: COLOR_WHITE },
             ),
             12 => List::of(
-                ColorfulText { text: "Archipelago - Refunct Mountain\n", color: COLOR_WHITE },
+                ColorfulText { text: "Archipelago - Refunct Mountain\n", color: COLOR_WHITE }, 
                 ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: "✔ Jump  ✔ Jump Pads  ✔ Dash (jump/E)", color: AP_COLOR_GREEN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_refunct_mountain_minigame}", color: COLOR_WHITE },

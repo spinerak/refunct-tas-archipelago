@@ -778,7 +778,7 @@ fn archipelago_disconnected(error_message: string) {
 
 //input par is a list of strings
 fn archipelago_received_bounce(slot: int, player_name: string, timenow: int, xs: List<int>, ys: List<int>, zs: List<int>) {
-    ap_log_1(f"Received bounce data from {player_name}");
+    // ap_log_1(f"Received bounce data from {player_name}");
     let mut last_location = Location { x: 0., y: 0., z: -1000. };
     let mut block_id = 0;
     if ARCHIPELAGO_STATE.multiplayer_info.get(player_name) != Option::None {
