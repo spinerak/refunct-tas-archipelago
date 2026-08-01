@@ -197,6 +197,18 @@ impl<'a> ObjectItemWrapper<'a> {
         unsafe { (*self.item).serial_number }
     }
 
+    /// Whether this slot holds a live object.
+    ///
+    /// GC nulls out the object pointer of freed slots, so `object()` on an arbitrary
+    /// element of the global object array can hand out a null `ObjectWrapper`. Any
+    /// iteration that touches the object (`name()`, `class()`, ...) must filter on this
+    /// first, otherwise it segfaults once a GC pass has run.
+    pub fn is_valid(&self) -> bool {
+        const DEAD: i32 = EInternalObjectFlags::Unreachable as i32
+            | EInternalObjectFlags::PendingKill as i32;
+        unsafe { !(*self.item).object.is_null() && (*self.item).flags & DEAD == 0 }
+    }
+
     pub fn mark_as_root_object(&self, val: bool) {
         unsafe {
             if val {
