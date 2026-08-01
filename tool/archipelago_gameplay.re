@@ -528,6 +528,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                             Tas::set_location(loc);
                             ARCHIPELAGO_STATE.has_goaled = true;
                             Tas::trigger_goal_animation();
+                            // Tas::set_outro_text("Thank you ESA!");
                         }
                     }
                 }
@@ -545,6 +546,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                             Tas::set_location(loc);
                             ARCHIPELAGO_STATE.has_goaled = true;
                             Tas::trigger_goal_animation();
+                            // Tas::set_outro_text("Thank you ESA!");
                         }
                     }
                 }

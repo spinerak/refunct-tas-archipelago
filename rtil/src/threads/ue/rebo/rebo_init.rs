@@ -25,11 +25,13 @@ use chrono::{DateTime, Local};
 use crate::threads::ue::iced_ui::Clipboard;
 use crate::threads::ue::iced_ui::rebo_elements::{IcedButton, IcedColumn, IcedElement, IcedRow, IcedText, IcedWindow};
 use std::cell::RefCell;
+use std::ptr;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::native::{BoolValueWrapper, FunctionWrapper, StructValueWrapper};
 use crate::native::reflection::DerefToObjectWrapper;
 use crate::native::font::replace_unrenderable_chars;
+use crate::native::ue::FString;
 
 pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
     let mut cfg = ReboConfig::new()
@@ -89,6 +91,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(project)
         .add_function(get_viewport_size)
         .add_function(get_text_size)
+        .add_function(set_outro_text_rebo)
 
         .add_function(spawn_platform_rebo)
         .add_function(spawn_platform_rando_location)
@@ -1149,6 +1152,70 @@ fn store_settings(settings: Map<String, String>) {
     let map: HashMap<_, _> = settings.clone_map();
     serde_json::to_writer_pretty(&mut file, &map).unwrap();
     writeln!(file).unwrap();
+}
+
+/// Bitwise-move a param between two ProcessEvent buffers, for property types
+/// (FText, FString, ...) that the reflection layer has no Rust wrapper for.
+/// Safe only because OwningStructValueWrapper never runs destructors.
+unsafe fn move_param(
+    src: &StructValueWrapper, src_name: &str,
+    dst: &StructValueWrapper, dst_name: &str,
+) {
+    let src_prop = src.get_field(src_name).prop();
+    let dst_prop = dst.get_field(dst_name).prop();
+    assert_eq!(src_prop.size(), dst_prop.size());
+    ptr::copy_nonoverlapping(
+        (src.as_ptr() as *const u8).offset(src_prop.offset()),
+        (dst.as_ptr() as *mut u8).offset(dst_prop.offset()),
+        src_prop.size(),
+    );
+}
+
+fn set_outro_text(text: &str) {
+    UeScope::with(|scope| {
+        let find = |name: &str| scope.iter_global_object_array()
+            .filter(|item| item.is_valid())
+            .map(|item| item.object())
+            .find(|o| o.name() == name);
+
+        let (Some(outro), Some(ktl)) = (find("BP_Outro_C_0"), find("Default__KismetTextLibrary")) else {
+            log!("set_outro_text: BP_Outro_C_0 or Default__KismetTextLibrary is not live");
+            return;
+        };
+
+        // the widget variable is null until the outro's widget tree is constructed.
+        // `unwrap_nullable` doesn't help here: for an ObjectProperty it only checks the
+        // address of the slot, which is never null - the object pointer inside it can be.
+        let title: ObjectWrapper = outro.get_field("Title").unwrap();
+        if title.is_null() {
+            log!("set_outro_text: outro Title widget not constructed yet");
+            return;
+        }
+
+        // UKismetTextLibrary::Conv_StringToText(inString) -> FText
+        let conv = ktl.class().find_function("Conv_StringToText").unwrap();
+        let conv_params = conv.create_argument_struct();
+        unsafe {
+            let offset = conv_params.get_field("inString").prop().offset();
+            // moves the FString in: ProcessEvent's frame owns and destroys it
+            ptr::write(
+                (conv_params.as_ptr() as *mut u8).offset(offset) as *mut FString,
+                FString::from(text),
+            );
+            conv.call(ktl.as_ptr(), &conv_params);
+
+            // UTextBlock::SetText(InText)
+            let set_text = title.class().find_function("SetText").unwrap();
+            let params = set_text.create_argument_struct();
+            move_param(&conv_params, "ReturnValue", &params, "InText");
+            set_text.call(title.as_ptr(), &params);
+        }
+    });
+}
+
+#[rebo::function("Tas::set_outro_text")]
+fn set_outro_text_rebo(text: String) {
+    set_outro_text(text.as_str());
 }
 
 #[derive(Serialize, Deserialize)]
