@@ -527,6 +527,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                             let loc = Location { x: 2625., y: -2250., z: 1357. };
                             Tas::set_location(loc);
                             ARCHIPELAGO_STATE.has_goaled = true;
+                            Tas::set_screen_percentage(SETTINGS.screen_percentage, SETTINGS.screen_percentage);
                             Tas::trigger_goal_animation();
                             Tas::set_outro_text("Thank you ESA! <3");
                         }
@@ -545,6 +546,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                             let loc = Location { x: 2625., y: -2250., z: 1357. };
                             Tas::set_location(loc);
                             ARCHIPELAGO_STATE.has_goaled = true;
+                            Tas::set_screen_percentage(SETTINGS.screen_percentage, SETTINGS.screen_percentage);
                             Tas::trigger_goal_animation();
                             Tas::set_outro_text("Thank you ESA! <3");
                         }
@@ -885,7 +887,7 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         if item_id == 9999008{
             Tas::set_cloud_speed(200., SETTINGS.cloud_speed);
         }
-        if item_id == 9999009{
+        if item_id == 9999009 && !ARCHIPELAGO_STATE.has_goaled {
             Tas::set_screen_percentage(10., SETTINGS.screen_percentage);
         }
     }

@@ -219,6 +219,10 @@ fn archipelago_interpret_json_message_part(
 }
 
 fn draw_ap_log_hud() {
+    if ARCHIPELAGO_STATE.has_goaled {
+        return;
+    }
+
     //if SETTINGS.archipelago_log_display == ArchipelagoLogDisplay::Off { return; }
 
     let viewport = Tas::get_viewport_size();
