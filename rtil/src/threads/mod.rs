@@ -67,6 +67,7 @@ pub enum ReboToArchipelago {
         slot: i64,
         games: Option<Vec<String>>,
         playername: String,
+        milliseconds: i64,
         x: Vec<i64>,
         y: Vec<i64>,
         z: Vec<i64>,

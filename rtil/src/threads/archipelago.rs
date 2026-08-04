@@ -137,7 +137,7 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                                 log!("Sender is None, cannot send message");
                             }
                         },
-                        ReboToArchipelago::Bounce { slots, slot, games, playername, x, y, z } => {
+                        ReboToArchipelago::Bounce { slots, slot, games, playername, milliseconds, x, y, z } => {
                             if let Some(sender) = sender.as_mut() {
                                 
                                 sender.send(ClientMessage::Bounce(Bounce {
@@ -146,7 +146,7 @@ pub fn run(archipelago_rebo_tx: Sender<ArchipelagoToRebo>, mut rebo_archipelago_
                                     tags: vec![],
                                     // send location in bounce
                                     data: BounceData::Generic(Some(json!([
-                                        "RefMvm", slot, playername, x, y, z
+                                        "RefMvm", slot, playername, milliseconds, x, y, z
                                     ]))),
                                 })).await?;
                             } else {
