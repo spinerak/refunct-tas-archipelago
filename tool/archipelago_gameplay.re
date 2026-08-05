@@ -169,6 +169,9 @@ struct ArchipelagoState {
 
     triggering_clusters: List<int>,
     last_tick_time: int,
+    
+    multiplayer_info: Map<string, MultiplayerData>,
+    last_bounce_time: int,
 }
 
 fn fresh_archipelago_state() -> ArchipelagoState {
@@ -336,12 +339,22 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.2.2a",
+        mod_version: "1.3.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
         last_tick_time: 0,
+
+        multiplayer_info: Map::new(),
+        last_bounce_time: 0,
     }
+}
+
+struct MultiplayerData {
+    time_start: int,
+    milliseconds: int,
+    block_id: int,
+    locations: List<Location>,
 }
 
 static mut ARCHIPELAGO_STATE = fresh_archipelago_state();
@@ -353,6 +366,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     conflicts_with: List::of(MAP_EDITOR_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID),
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {},
     on_yield: fn() {},
     draw_hud_text: archipelago_hud_text,
@@ -361,6 +375,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         if !ARCHIPELAGO_STATE.ap_connected {
             return;
         }
+        
         Tas::set_goal_animation_should_play(true); // so it works for minigames :3
         Tas::enable_all_buttons();
 
@@ -403,6 +418,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 
         update_block_brawl_in_logic_counts();
         update_block_blub_in_logic_counts();
+
+        ARCHIPELAGO_STATE.multiplayer_info = Map::new();
     },
     on_level_change: ap_on_level_change_function,
     on_buttons_change: fn(old: int, new: int) {
@@ -728,6 +745,7 @@ static mut ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT = Component {
     conflicts_with: List::of(MAP_EDITOR_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID),
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {},
     on_yield: fn() {},
     draw_hud_text: fn(text: string) -> string { text },
@@ -753,12 +771,63 @@ static mut ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT = Component {
     on_menu_open: fn() {},
 };
 
-fn archipelago_disconnected() {
-    ap_log_error("Disconnected from Archipelago server");
+fn archipelago_disconnected(error_message: string) {
+    ap_log_error("DISCONNECTED FROM THE ARCHIPELAGO SERVER");
     remove_component(ARCHIPELAGO_COMPONENT);
     add_component(ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT);
+    ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT.error_message = error_message;
     ARCHIPELAGO_STATE.ap_connected = false;
 };
+
+//input par is a list of strings
+fn archipelago_received_bounce(slot: int, player_name: string, timenow: int, milliseconds: int, xs: List<int>, ys: List<int>, zs: List<int>) {
+    // ap_log_1(f"{player_name}, {timenow}, {milliseconds}, {xs}, {ys}, {zs}");
+    let mut last_location = Location { x: 0., y: 0., z: -1000. };
+    let mut block_id = 0;
+    if ARCHIPELAGO_STATE.multiplayer_info.get(player_name) != Option::None {
+        let data = ARCHIPELAGO_STATE.multiplayer_info.get(player_name).unwrap();
+        last_location = data.locations.get(data.locations.len() - 1).unwrap();
+        // ap_log_1(f"last_location X is {last_location}");
+        block_id = data.block_id;
+    } else {
+        // ap_log_1(f"Received bounce data from {player_name} but no previous data found, spawning new platform");
+        block_id = Tas::spawn_platform(Location { 
+            x: xs.get(0).unwrap().to_float(), 
+            y: ys.get(0).unwrap().to_float(), 
+            z: zs.get(0).unwrap().to_float() + 20.}, 
+            Rotation { pitch: 0., yaw: 0., roll: 0. }, 
+            Size3D { x: 0.25, y: 0.25, z: 0.85 }
+        );
+    }
+
+    // ap_log_1(f"Last location Y for {player_name} is {last_location}, block_id is {block_id}");
+
+    let mut locations = List::new();
+    let mut locations2 = List::new();
+    locations.push(last_location);
+    let mut i = 0;
+    while i < xs.len(){
+        locations.push(Location { x: xs.get(i).unwrap().to_float(), y: ys.get(i).unwrap().to_float(), z: zs.get(i).unwrap().to_float() });
+        i = i+1;
+    }
+    // ap_log_1(f"Received bounce data fromX {player_name}: ({timenow}, {locations})");
+
+    let mut prev_location = last_location;
+    for loc in locations {
+        for i in List::of(1., 2., 3., 4., 5.) {
+            locations2.push(Location { 
+                x: prev_location.x + (loc.x - prev_location.x) * i / 5., 
+                y: prev_location.y + (loc.y - prev_location.y) * i / 5., 
+                z: prev_location.z + (loc.z - prev_location.z) * i / 5.
+            });
+        }
+        prev_location = loc;
+    }
+    // ap_log_1(f"Received bounce data fromY {player_name}: ({timenow}, {locations2})");
+
+    ARCHIPELAGO_STATE.multiplayer_info.insert(player_name, MultiplayerData { time_start: timenow, milliseconds: milliseconds, block_id: block_id, locations: locations2 });
+
+}
 
 fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) {
 
@@ -888,10 +957,29 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         if item_id == 9999009{
             Tas::set_screen_percentage(10., SETTINGS.screen_percentage);
         }
+        if item_id == 9999010 && !ARCHIPELAGO_STATE.has_goaled {
+            Tas::set_gravity(50., SETTINGS.gravity);
+        }
     }
 }
 
 fn archipelago_tick(time: int) {
+    if time - ARCHIPELAGO_STATE.last_bounce_time > 32 {
+        
+        for player_name in ARCHIPELAGO_STATE.multiplayer_info.keys() {
+            // ap_log_1(f"Processing bounce data for {player_name}");
+            let data = ARCHIPELAGO_STATE.multiplayer_info.get(player_name).unwrap();
+            let time_since_start = time - data.time_start;
+            let index = time_since_start * data.locations.len() / data.milliseconds;
+            // ap_log_1(f"Bounce data for {player_name}: time_since_start={time_since_start}, index={index}, locations_len={data.locations.len()}");
+            if index < data.locations.len() {
+                let loc = data.locations.get(index).unwrap();
+                // ap_log_1(f"Setting platform location for {player_name} to {loc} index {index}");
+                Tas::set_platform_location(data.block_id, Location{ x: loc.x, y: loc.y, z: loc.z + 20.});
+            }
+        }
+        ARCHIPELAGO_STATE.last_bounce_time = time;
+    }
     if time - ARCHIPELAGO_STATE.last_tick_time < 400 {
         return;
     }
@@ -1375,6 +1463,7 @@ fn archipelago_start(){
         i += 1;
     }
     ARCHIPELAGO_STATE.started = 2;
+    Tas::restart_bounces();
 
 }
 
@@ -1397,7 +1486,7 @@ fn archipelago_main_start(){
 
     Tas::set_level(-10000);
 
-    archipelago_activate_stepped_on_platforms();
+    archipelago_activate_stepped_on_platforms(List::of());
     archipelago_collect_collected_cubes();
 }
 
@@ -1609,10 +1698,15 @@ fn archipelago_block_brawl_start(){
     ARCHIPELAGO_STATE.block_brawl_cubes_collected = 0;
     ARCHIPELAGO_STATE.score_for_next_block_brawl = 1;
 
-    Tas::archipelago_ds_get(f"RFBB_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
-    Tas::archipelago_ds_get(f"RFBB_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
-    Tas::archipelago_ds_get(f"RFBB_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
-    Tas::archipelago_ds_get(f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
+    // needs a list of keys
+    let keys = List::of(
+        f"RFBB_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",
+        f"RFBB_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",
+        f"RFBB_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",
+        f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}"
+    );
+    Tas::archipelago_ds_set_notify(keys);
+    Tas::archipelago_ds_get(keys);
 
     let mut i = 0;
     if !ARCHIPELAGO_STATE.block_brawl_alt {
@@ -1684,7 +1778,7 @@ fn got_cube_block_brawl(id: int){
                 Tas::archipelago_send_check(10071000 + cp);
             }
         }
-        Tas::archipelago_ds_set_max(f"RFBB_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_brawl_reds);
+        Tas::archipelago_ds_set_add(f"RFBB_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, score_to_add);
     }
     if ARCHIPELAGO_STATE.block_brawl_blue_ids.contains(id) {
         ARCHIPELAGO_STATE.block_brawl_blue_ids.remove(id);
@@ -1694,7 +1788,7 @@ fn got_cube_block_brawl(id: int){
                 Tas::archipelago_send_check(10072000 + cp);
             }
         }
-        Tas::archipelago_ds_set_max(f"RFBB_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_brawl_blues);
+        Tas::archipelago_ds_set_add(f"RFBB_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, score_to_add);
     }
     if ARCHIPELAGO_STATE.block_brawl_green_ids.contains(id) {
         ARCHIPELAGO_STATE.block_brawl_green_ids.remove(id);
@@ -1704,7 +1798,7 @@ fn got_cube_block_brawl(id: int){
                 Tas::archipelago_send_check(10073000 + cp);
             }
         }
-        Tas::archipelago_ds_set_max(f"RFBB_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_brawl_greens);
+        Tas::archipelago_ds_set_add(f"RFBB_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, score_to_add);
     }
     if ARCHIPELAGO_STATE.block_brawl_yellow_ids.contains(id) {
         ARCHIPELAGO_STATE.block_brawl_yellow_ids.remove(id);
@@ -1714,7 +1808,7 @@ fn got_cube_block_brawl(id: int){
                 Tas::archipelago_send_check(10074000 + cp);
             }
         }
-        Tas::archipelago_ds_set_max(f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_brawl_yellows);
+        Tas::archipelago_ds_set_add(f"RFBB_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, score_to_add);
     }
     ARCHIPELAGO_STATE.block_brawl_cubes_collected += 1;
     let next_score = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_brawl_cubes_collected).unwrap_or(1);
@@ -1741,10 +1835,15 @@ fn archipelago_block_blub_start(){
     ARCHIPELAGO_STATE.block_blub_cubes_collected = 0;
     ARCHIPELAGO_STATE.score_for_next_block_blub = 1;
 
-    Tas::archipelago_ds_get(f"RFBBL_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
-    Tas::archipelago_ds_get(f"RFBBL_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
-    Tas::archipelago_ds_get(f"RFBBL_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
-    Tas::archipelago_ds_get(f"RFBBL_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}");
+    // needs a list of keys
+    let keys = List::of(
+        f"RFBBL_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",
+        f"RFBBL_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",
+        f"RFBBL_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",
+        f"RFBBL_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}"
+    );
+    Tas::archipelago_ds_set_notify(keys);
+    Tas::archipelago_ds_get(keys);
 
     let mut i = 0;
     while i < 200 {
@@ -1965,7 +2064,7 @@ fn got_cube_block_blub(id: int){
                 Tas::archipelago_send_check(10101000 + cp);
             }
         }
-        Tas::archipelago_ds_set_max(f"RFBBL_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_blub_reds);
+        Tas::archipelago_ds_set_add(f"RFBBL_r_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, score_to_add);
     }
     if ARCHIPELAGO_STATE.block_blub_blue_ids.contains(id) {
         ARCHIPELAGO_STATE.block_blub_blue_ids.remove(id);
@@ -1975,7 +2074,7 @@ fn got_cube_block_blub(id: int){
                 Tas::archipelago_send_check(10102000 + cp);
             }
         }
-        Tas::archipelago_ds_set_max(f"RFBBL_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_blub_blues);
+        Tas::archipelago_ds_set_add(f"RFBBL_b_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, score_to_add);
     }
     if ARCHIPELAGO_STATE.block_blub_green_ids.contains(id) {
         ARCHIPELAGO_STATE.block_blub_green_ids.remove(id);
@@ -1985,7 +2084,7 @@ fn got_cube_block_blub(id: int){
                 Tas::archipelago_send_check(10103000 + cp);
             }
         }
-        Tas::archipelago_ds_set_max(f"RFBBL_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_blub_greens);
+        Tas::archipelago_ds_set_add(f"RFBBL_g_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, score_to_add);
     }
     if ARCHIPELAGO_STATE.block_blub_yellow_ids.contains(id) {
         ARCHIPELAGO_STATE.block_blub_yellow_ids.remove(id);
@@ -1995,7 +2094,7 @@ fn got_cube_block_blub(id: int){
                 Tas::archipelago_send_check(10104000 + cp);
             }
         }
-        Tas::archipelago_ds_set_max(f"RFBBL_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, ARCHIPELAGO_STATE.score_block_blub_yellows);
+        Tas::archipelago_ds_set_add(f"RFBBL_y_{ARCHIPELAGO_ROOM_INFO.this_player_team}_{ARCHIPELAGO_ROOM_INFO.this_player_slot}",0, score_to_add);
     }
     ARCHIPELAGO_STATE.block_blub_cubes_collected += 1;
     let next_score = score_list_based_on_number_of_cubes.get(ARCHIPELAGO_STATE.block_blub_cubes_collected).unwrap_or(1);
@@ -2554,12 +2653,19 @@ fn archipelago_checked_location(id: int){
     ARCHIPELAGO_STATE.checked_locations.push(id);
     if id >= 10000000 && id < 10010000 {
         ARCHIPELAGO_STATE.stepped_on_buttons.push(id);
+        archipelago_activate_stepped_on_one_button(id);
     }
     if id >= 10010000 && id < 10020000 {
         ARCHIPELAGO_STATE.stepped_on_platforms.push(id);
+        archipelago_activate_stepped_on_platforms(List::of(id));
     }
     if id >= 10060000 && id < 10070000 {
         ARCHIPELAGO_STATE.collected_cubes.push(id);
+        archipelago_collect_one_collected_cube(id);
+    }
+    if id >= 10080000 && id < 10090000 {
+        // no need to add to a list
+        archipelago_collect_one_collected_extra_cube(id);
     }
     let vanilla_locations = List::of(10020101, 10020201, 10020301, 10020401, 10020501, 10020601, 10020701, 10020702, 10020801, 10020901, 10021001, 10021002, 10021101, 10021201, 10021301, 10021401, 10021501, 10021601, 10021701, 10021801, 10021802, 10021901, 10022001, 10022101, 10022201, 10022301, 10022401, 10022501, 10022601, 10022602, 10022603, 10022701, 10022801, 10022802, 10022901, 10023001, 10023101);
     if vanilla_locations.contains(id) {
@@ -2805,6 +2911,12 @@ fn archipelago_send_check(id: int){
     archipelago_checked_location(id);
 }
 
+fn archipelago_activate_stepped_on_one_button(id: int){
+    let cluster = (id - 10000000) / 100;
+    let plat = (id - 10000000) % 100;
+    Tas::disable_button(cluster-1, plat-1);
+}
+
 fn archipelago_activate_stepped_on_buttons(num: int){
     for id in ARCHIPELAGO_STATE.stepped_on_buttons {
         let cluster = (id - 10000000) / 100;
@@ -2817,8 +2929,12 @@ fn archipelago_activate_stepped_on_buttons(num: int){
     }
 }
 
-fn archipelago_activate_stepped_on_platforms(){
-    for id in ARCHIPELAGO_STATE.stepped_on_platforms {
+fn archipelago_activate_stepped_on_platforms(list: List<int>){
+    let mut list2 = list;
+    if list2.len() == 0 {
+        list2 = ARCHIPELAGO_STATE.stepped_on_platforms;
+    }
+    for id in list2 {
         let cluster = (id - 10010000) / 100;
         let plat = (id - 10010000) % 100;
 
@@ -2829,6 +2945,15 @@ fn collect_all_vanilla_cubes(){
     let all_cubes = Tas::get_vanilla_cubes();
     for cube in all_cubes {
         Tas::collect_cube(cube);
+    }
+}
+fn archipelago_collect_one_collected_cube(id: int){
+    let cluster = (id - 10060000) / 100;
+    let plat = (id - 10060000) % 100;
+
+    match Tas::get_vanilla_cube(cluster-1, plat-1) {
+        Option::Some(cube) => { Tas::collect_cube(cube); },
+        Option::None => {}
     }
 }
 fn archipelago_collect_collected_cubes(){
@@ -2860,11 +2985,38 @@ fn archipelago_collect_collected_cubes(){
 
     }
 }
-
+fn archipelago_collect_one_collected_extra_cube(loc_collected: int){
+    let mut i = 0;
+    let mut found_index = Option::None;
+    for loc in ARCHIPELAGO_STATE.extra_cubes_locs {
+        if loc == loc_collected {
+            found_index = Option::Some(i);
+            break;
+        }
+        i += 1;
+    }
+    match found_index {
+        Option::Some(pos) => {
+            let intid = ARCHIPELAGO_STATE.extra_cubes_int_ids.get(pos).unwrap();
+            Tas::collect_cube(intid);
+        },
+        Option::None => {}
+    }
+}
 fn archipelago_received_slot_data(key: string, value: string){
     //ap_log_1(f"Received slot data: {key} = {value}");
     if key == "ap_world_version" {
         ARCHIPELAGO_STATE.apworld_version = value.slice(1, -1);
+
+        if ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version && 
+            ARCHIPELAGO_STATE.apworld_version != ARCHIPELAGO_STATE.mod_version.slice(0,-1) &&
+            ARCHIPELAGO_STATE.apworld_version.slice(0,-1) != ARCHIPELAGO_STATE.mod_version {
+                
+            ap_log_error("Incorrect version, please use the correct mod (all releases are on the same github page)\n");
+            ap_log_error(f"You are looking for a version that starts with {ARCHIPELAGO_STATE.apworld_version} \n");
+            archipelago_disconnected(f"YOU NEED VERSION {ARCHIPELAGO_STATE.apworld_version} TO LOG IN");
+        }
+
     }
     
     if key == "required_grass" {
@@ -2934,5 +3086,10 @@ fn archipelago_received_slot_data(key: string, value: string){
     if key == "just_clique" && value == "1" {
         ARCHIPELAGO_STATE.just_clique = true;
         ARCHIPELAGO_STATE.gamemode = 17;
+    }
+    if key == "see_other_players" {
+        if value.parse_int().unwrap() > 0 {
+            Tas::set_bounce(value.parse_int().unwrap());
+        }
     }
 }

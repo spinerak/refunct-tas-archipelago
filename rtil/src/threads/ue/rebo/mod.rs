@@ -54,15 +54,29 @@ struct State {
     player_minimap_textures: HashMap<Rgba<u8>, UTexture2D>,
 
     last_death_link_time: std::time::Instant,
+    last_bounce_update_time: std::time::Instant,
+    last_bounce_update_time_others: std::time::Instant,
+    last_bounce_refresh_slots: std::time::Instant,
+    bounce_location_id: Option<String>,
+    bounce_locations_xs: Vec<i64>,
+    bounce_locations_ys: Vec<i64>,
+    bounce_locations_zs: Vec<i64>,
+    bounce_delay_multiplier: f64,
+    bounces_received_since_last_send: usize,
+    slot: i64,
+    slots_in_action: Vec<i64>,
+    slots_in_action_new: Vec<i64>,
+    full_bounce_next: bool,
+    bounce_active: usize,
 
     dashes_left: u32,
 
     block_beat_platforms: Vec<PlatformBlockBeat>,
     
-
     block_beat_time: f64,
     block_beat_block_phase: i32,
     block_beat_enabled: bool,
+
 }
 
 pub(super) fn poll(event: UeEvent) {
@@ -185,12 +199,25 @@ pub fn init(
         player_minimap_image,
         player_minimap_textures: HashMap::new(),
         last_death_link_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first death link can be sent immediately
-
+        last_bounce_update_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
+        last_bounce_update_time_others: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
+        last_bounce_refresh_slots: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
+        bounce_location_id: None,
+        bounce_locations_xs: Vec::new(),
+        bounce_locations_ys: Vec::new(),
+        bounce_locations_zs: Vec::new(),
+        bounce_delay_multiplier: 1.0,
+        bounces_received_since_last_send: 0,
         dashes_left: 0,
         block_beat_platforms: Vec::new(),
         block_beat_time: 0.0,
         block_beat_block_phase: 0,
         block_beat_enabled: false,
+        slot: -100,
+        slots_in_action: Vec::new(),
+        slots_in_action_new: Vec::new(),
+        full_bounce_next: true,
+        bounce_active: 0,
     });
 }
 
@@ -237,6 +264,7 @@ fn cleanup_after_rebo() {
         state.hooks.fslateapplication.release_key(key, key as u32, false);
     }
     state.last_death_link_time = std::time::Instant::now() - Duration::from_secs(10); // reset to a time far in the past so that the first death link can be sent immediately
+    state.last_bounce_update_time = std::time::Instant::now() - Duration::from_secs(10); // reset to a time far in the past so that the first bounce can be sent immediately
     rebo_init::apply_map_internal(&rebo_init::ORIGINAL_MAP);
     state.rebo_stream_tx.send(ReboToStream::MiDone).unwrap();
     log!("Cleanup finished.");

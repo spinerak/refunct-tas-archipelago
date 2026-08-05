@@ -1,14 +1,34 @@
-static mut MAP_EDITOR_STATE = MapEditorState {
-    map_name: "",
-    map: Tas::current_map(),
-    mode: MapEditorMode::Edit,
-};
-
 struct MapEditorState {
     map_name: string,
     map: RefunctMap,
     mode: MapEditorMode,
+    chosen_element: Element,
+    chosen_element_index: ElementIndex,
 }
+
+static mut MAP_EDITOR_STATE = MapEditorState {
+    map_name: "",
+    map: Tas::current_map(),
+    mode: MapEditorMode::Edit,
+    chosen_element: Element {
+        x: 0.,
+        y: 0.,
+        z: 0.,
+        pitch: 0.,
+        yaw: 0.,
+        roll: 0.,
+        sizex: 0.,
+        sizey: 0.,
+        sizez: 0.,
+    },
+    chosen_element_index: ElementIndex {
+        cluster_index: -1,
+        element_type: ElementType::Platform,
+        element_index: -1
+    },
+};
+
+
 
 enum MapEditorMode {
     Play,
@@ -27,6 +47,7 @@ static MAP_EDITOR_COMPONENT = Component {
     draw_hud_always: fn() {},
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {},
     on_yield: fn() {},
     on_new_game: fn() {},
@@ -312,6 +333,8 @@ fn create_map_editor_cluster_ui(mut cluster: Cluster, cluster_index: int) -> Ui 
 }
 
 fn create_map_editor_element_ui(mut element: Element, index: ElementIndex, selected: int) -> Ui {
+    MAP_EDITOR_STATE.chosen_element = element;
+    MAP_EDITOR_STATE.chosen_element_index = index;
     let submit = fn() {
         let selected = match UI_STACK.last() {
             Option::Some(ui) => ui.selected,
@@ -532,6 +555,11 @@ fn create_map_editor_element_ui(mut element: Element, index: ElementIndex, selec
                 MAP_EDITOR_SIZEY_LABEL.text = "SizeY";
                 MAP_EDITOR_SIZEZ_LABEL.text = "SizeZ";
                 leave_ui();
+                MAP_EDITOR_STATE.chosen_element_index = ElementIndex {
+                    cluster_index: -1,
+                    element_type: ElementType::Platform,
+                    element_index: -1
+                };
             },
         }),
     ))

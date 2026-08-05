@@ -87,6 +87,7 @@ static MOVEMENT_COMPONENT = Component {
     draw_hud_always: fn() {},
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {
         if MOVEMENT_STATE.enable_fly {
             Tas::set_movement_mode(5);

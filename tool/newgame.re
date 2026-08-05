@@ -43,6 +43,7 @@ static mut NEW_GAME_100_PERCENT_COMPONENT = Component {
     draw_hud_always: fn() {},
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {
         if 0 <= NEW_GAME_100_PERCENT_STATE.tick && NEW_GAME_100_PERCENT_STATE.tick < 9 {
             // wait for all platforms to rise
@@ -104,6 +105,7 @@ static NEW_GAME_ALL_BUTTONS_COMPONENT = Component {
     draw_hud_always: fn() {},
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {},
     on_yield: fn() {},
     on_new_game: fn() {
@@ -139,6 +141,7 @@ static NEW_GAME_NGG_COMPONENT = Component {
     draw_hud_always: fn() {},
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {},
     on_yield: fn() {},
     on_new_game: fn() {

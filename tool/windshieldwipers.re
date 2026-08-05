@@ -22,6 +22,7 @@ static WINDSCREEN_WIPERS_COMPONENT = Component {
     draw_hud_always: fn() {},
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {
         if WINDSCREEN_WIPERS_STATE.seconds_per_wipe == 0. {
             return;

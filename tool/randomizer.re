@@ -100,6 +100,7 @@ static RANDOMIZER_COMPONENT = Component {
     draw_hud_always: fn() {},
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
+    error_message: "",
     on_tick: fn() {},
     on_yield: fn() {},
     on_new_game: randomizer_new_game_function,

@@ -117,6 +117,19 @@ fn create_archipelago_connection_details_menu() -> Ui {
     }));
 
     if ARCHIPELAGO_STATE.ap_connected {
+        elements.push(UiElement::FloatInput(FloatInput {
+            label: Text { text: "See number of players" },
+            input: f"{Tas::is_bounce_on()}",
+            onclick: fn(input: string) {},
+            onchange: fn(input: string) {
+                match input.parse_int() {
+                    Result::Ok(val) => {
+                        Tas::set_bounce(val);
+                    },
+                    Result::Err(e) => (),
+                }
+            },
+        }));
         elements.push(UiElement::Chooser(Chooser {
             label: Text { text: "Death Link" },
             options: List::of(Text { text: "On" }, Text { text: "Off" }),
@@ -1008,6 +1021,15 @@ fn get_status_text_lines() -> List<ColorfulText> {
         ));
     }
 
+    if !ARCHIPELAGO_STATE.ap_connected {
+        return List::of(
+            ColorfulText { text: f"\n\nMOD VERSION {ARCHIPELAGO_STATE.mod_version}.\n", color: AP_COLOR_RED },
+            ColorfulText { text: "CONNECTING...\n", color: AP_COLOR_RED },
+            ColorfulText { text: "If this takes more than a few seconds, something's probably wrong.\n", color: AP_COLOR_RED },
+            ColorfulText { text: "Check your login info and refresh your room.", color: AP_COLOR_RED }
+        );
+    }
+
     List::extend(lines, match ARCHIPELAGO_STATE.started {
         0 => List::of(
             ColorfulText { text: "Archipelago Randomizer\n", color: COLOR_WHITE },
@@ -1049,16 +1071,16 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: f"\n\nNew game => new layout + cubes\nScores will be saved", color: COLOR_WHITE},
 
                 ColorfulText { text: f"\n\nCurrent scores: ", color: COLOR_WHITE },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_brawl_reds:3} ", color: AP_COLOR_RED },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_brawl_blues:3} ", color: AP_COLOR_CYAN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_brawl_greens:3} ", color: AP_COLOR_GREEN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_brawl_yellows:3} ", color: AP_COLOR_YELLOW },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_brawl_reds:4} ", color: AP_COLOR_RED },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_brawl_blues:4} ", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_brawl_greens:4} ", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_brawl_yellows:4} ", color: AP_COLOR_YELLOW },
 
                 ColorfulText { text: f"\nScore in logic: ", color: COLOR_WHITE },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_reds:3} ", color: AP_COLOR_RED },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_blues:3} ", color: AP_COLOR_CYAN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_greens:3} ", color: AP_COLOR_GREEN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_yellows:3} ", color: AP_COLOR_YELLOW },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_reds:4} ", color: AP_COLOR_RED },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_blues:4} ", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_greens:4} ", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_brawl_yellows:4} ", color: AP_COLOR_YELLOW },
                 ColorfulText { text: f"\nCubes collected: {ARCHIPELAGO_STATE.block_brawl_cubes_collected} / {ARCHIPELAGO_STATE.block_brawl_cubes_total}", color: COLOR_WHITE },
 
                 ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block_brawl} pts", color: COLOR_WHITE },
@@ -1093,22 +1115,22 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: f"\n\nNew game => new layout + cubes\nScores will be saved", color: COLOR_WHITE},
 
                 ColorfulText { text: f"\n\nCurrent scores: ", color: COLOR_WHITE },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_reds:3} ", color: AP_COLOR_RED },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_blues:3} ", color: AP_COLOR_CYAN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_greens:3} ", color: AP_COLOR_GREEN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_yellows:3} ", color: AP_COLOR_YELLOW },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_reds:4} ", color: AP_COLOR_RED },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_blues:4} ", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_greens:4} ", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.score_block_blub_yellows:4} ", color: AP_COLOR_YELLOW },
 
                 ColorfulText { text: f"\nScore in logic: ", color: COLOR_WHITE },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_reds:3} ", color: AP_COLOR_RED },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_blues:3} ", color: AP_COLOR_CYAN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_greens:3} ", color: AP_COLOR_GREEN },
-                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_yellows:3} ", color: AP_COLOR_YELLOW },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_reds:4} ", color: AP_COLOR_RED },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_blues:4} ", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_greens:4} ", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"{ARCHIPELAGO_STATE.in_logic_block_blub_yellows:4} ", color: AP_COLOR_YELLOW },
                 ColorfulText { text: f"\nCubes collected: {ARCHIPELAGO_STATE.block_blub_cubes_collected} / {ARCHIPELAGO_STATE.block_blub_cubes_total}", color: COLOR_WHITE },
 
                 ColorfulText { text: f"\nCombo: next cube is worth {ARCHIPELAGO_STATE.score_for_next_block_blub} pts", color: COLOR_WHITE },
             ),
             12 => List::of(
-                ColorfulText { text: "Archipelago - Refunct Mountain\n", color: COLOR_WHITE },
+                ColorfulText { text: "Archipelago - Refunct Mountain\n", color: COLOR_WHITE }, 
                 ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: "✔ Jump  ✔ Jump Pads  ✔ Dash (jump/E)", color: AP_COLOR_GREEN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_refunct_mountain_minigame}", color: COLOR_WHITE },
@@ -1425,6 +1447,10 @@ fn archipelago_disconnected_info_hud() {
 
     lines.push(ColorfulText { text: "Not connected to an Archipelago server yet,\nuse the menu to ", color: COLOR_WHITE });
     lines.push(ColorfulText { text: "log in\n\n", color: AP_COLOR_YELLOW });
+
+    if ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT.error_message != "" {
+        lines.push(ColorfulText { text: f"{ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT.error_message}\n\n", color: AP_COLOR_GREEN });
+    }
 
     lines.push(ColorfulText { text: "Once logged in, use ", color: COLOR_WHITE });
     lines.push(ColorfulText { text: "Change gamemode ", color: AP_COLOR_YELLOW });

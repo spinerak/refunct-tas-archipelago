@@ -6,7 +6,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::sync::Arc;
-use archipelago_rs::protocol::{BounceData, ClientMessage, DataStorageOperation, DeathLink, Get, GetDataPackage, ItemsHandlingFlags, NetworkItem, RichMessageColor, RichMessagePart, RichPrint, ServerMessage, Set};
+use archipelago_rs::protocol::{BounceData, ClientMessage, DataStorageOperation, DeathLink, Get, GetDataPackage, ItemsHandlingFlags, NetworkItem, RichMessageColor, RichMessagePart, RichPrint, ServerMessage, Set, SetNotify};
 use crossbeam_channel::{Sender, TryRecvError};
 use image::Rgba;
 use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span, Stdlib, VmContext};
@@ -91,6 +91,9 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(project)
         .add_function(get_viewport_size)
         .add_function(get_text_size)
+        .add_function(restart_bounces_rebo)
+        .add_function(is_bounce_on)
+        .add_function(set_bounce)
         .add_function(set_outro_text_rebo)
 
         .add_function(spawn_platform_rebo)
@@ -147,6 +150,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(archipelago_send_check)
         .add_function(archipelago_goal)
         .add_function(archipelago_ds_get)
+        .add_function(archipelago_ds_set_notify)
+        .add_function(archipelago_ds_set_add)
         .add_function(archipelago_ds_set_max)
         .add_function(get_level)
         .add_function(set_level_rebo)
@@ -279,6 +284,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_retrieved)
         .add_required_rebo_function(archipelago_print_json_message)
         .add_required_rebo_function(archipelago_received_death)
+        .add_required_rebo_function(archipelago_received_bounce)
         .add_required_rebo_function(archipelago_tick)
         .add_required_rebo_function(archipelago_init)
         .add_required_rebo_function(archipelago_set_own_id)
@@ -683,11 +689,11 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     for line in cause.split("\n") {
                         ap_log_error(vm, format!(" - {}", line.trim().to_string()))?;
                     }
-                    archipelago_disconnected(vm)?
+                    archipelago_disconnected(vm, "".to_string())?
                 },
                 Ok(ArchipelagoToRebo::ConnectionAborted) => {
                     log!("ArchipelagoToRebo::ConnectionAborted");
-                    archipelago_disconnected(vm)?
+                    archipelago_disconnected(vm, "".to_string())?
                     
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::RoomInfo(info))) => {
@@ -727,6 +733,8 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     archipelago_init(vm, 0 as usize)?;
 
                     archipelago_set_own_id(vm, info.team as isize, info.slot as isize)?;
+
+                    STATE.lock().unwrap().as_mut().unwrap().slot = info.slot;
 
                     for loc in &info.checked_locations {
                         let value: i64 = *loc;
@@ -770,7 +778,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     //loop through received items
                     for net in &received.items {
                         let id = net.item as i32;
-                        log!("APAPAP Received Item: {}", id);
+                        //log!("APAPAP Received Item: {}", id);
 
                         archipelago_received_item(vm, index as usize, id as usize, received.index as usize)?;
 
@@ -828,7 +836,83 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                             AMyCharacter::respawn();
                             archipelago_received_death(vm, source, cause.unwrap_or(String::from("")))?;
                         }
-                        _ => (),
+                        // example: Generic bounce data: Some(Array [String("player1"), Number(10), Number(20), Number(30)])
+                        // can only be bounce location for now
+                        
+                        
+                        BounceData::Generic(data) => {
+                            if let Some(data) = data {
+                                if let Some(array) = data.as_array() {
+                                    let btype = array.get(0).and_then(|v| v.as_str()).unwrap_or("");
+                                    if btype == "RefMvm" {
+                                        if STATE.lock().unwrap().as_ref().unwrap().bounce_active > 0 {
+                                            let slot = array.get(1).and_then(|v| v.as_i64()).unwrap_or(-100);
+                                            let playername = array.get(2).and_then(|v| v.as_str()).unwrap_or("");
+                                            let milliseconds = array.get(3).and_then(|v| v.as_i64()).unwrap_or(-100);
+
+                                            if slot != -100 && playername != "" && milliseconds != -100 {
+
+                                                let parse_i64_list = |value: Option<&serde_json::Value>| -> Vec<i64> {
+                                                    match value {
+                                                        Some(v) => {
+                                                            if let Some(arr) = v.as_array() {
+                                                                arr.iter().map(|val| val.as_i64().unwrap_or(0)).collect()
+                                                            } else {
+                                                                v.as_i64().map(|n| vec![n]).unwrap_or_default()
+                                                            }
+                                                        }
+                                                        None => Vec::new(),
+                                                    }
+                                                };
+
+                                                let xs = parse_i64_list(array.get(4));
+                                                let ys = parse_i64_list(array.get(5));
+                                                let zs = parse_i64_list(array.get(6));
+                                                // log!("Generic bounce data: type={}, playername={}, xs={:?}, ys={:?}, zs={:?}", btype, playername, xs, ys, zs);
+                                                
+                                                if xs.len() > 0 && xs.len() == ys.len() && xs.len() == zs.len() {
+                                                    
+                                                    let bounce_location_id = {
+                                                        let state = STATE.lock().unwrap();
+                                                        state.as_ref().unwrap().bounce_location_id.clone()
+                                                    };
+                                                    {
+                                                        let mut state = STATE.lock().unwrap();
+                                                        let state = state.as_mut().unwrap();
+                                                        if !state.slots_in_action.contains(&slot) && state.slots_in_action.len() < state.bounce_active {
+                                                            state.slots_in_action.push(slot);
+                                                        }
+                                                        if !state.slots_in_action_new.contains(&slot) && state.slots_in_action_new.len() < state.bounce_active {
+                                                            state.slots_in_action_new.push(slot);
+                                                        }
+                                                    }
+
+                                                    if Some(playername.to_string()) != bounce_location_id {
+                                                        {
+                                                            let mut state = STATE.lock().unwrap();
+                                                            let state = state.as_mut().unwrap();
+                                                            state.last_bounce_update_time_others = std::time::Instant::now();
+                                                            state.bounces_received_since_last_send += 1;
+                                                        }
+                                                        let timenow = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64;
+                                                        // log!("Generic bounce data is a RefMvm bounce and the playername does not match the this bounce_location_id: {:?} != {:?}", Some(playername.to_string()), bounce_location_id);
+                                                        archipelago_received_bounce(vm, slot, String::from(playername), timenow, milliseconds, xs, ys, zs)?;
+                                                    }
+                                                }else{
+                                                    log!("Generic bounce data is a RefMvm bounce but the xs, ys, zs arrays are not the same length or empty: xs={:?}, ys={:?}, zs={:?}", xs, ys, zs);
+                                                }
+                                            }else{
+                                                log!("Generic bounce data is a RefMvm bounce but missing slot, playername or milliseconds: slot={}, playername={}, milliseconds={}", slot, playername, milliseconds);
+                                            }
+                                        }
+                                    } else {
+                                        log!("Something else than refunct movement: {:?}", btype);
+                                    }
+                                } else {
+                                    log!("Not an array?!");
+                                }
+                            }
+                        }
                     }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::InvalidPacket(pkt))) => {
@@ -851,9 +935,13 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     }
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::SetReply(reply))) => {
+                    // example: SetReply { key: "RFBB_r_0_1", value: Number(17), original_value: Some(Number(16)) }
                     log!("SetReply message");
                     let msg = format!("Archipelago ServerMessage::SetReply: {:?}", reply);
                     log!("{}", msg);
+                    let key = reply.key;
+                    let value = reply.value;
+                    archipelago_retrieved(vm, key.clone(), value.to_string())?;
                 },
             }
         }
@@ -1043,6 +1131,48 @@ impl PlatformSpawner {
     }
 }
 
+#[rebo::function("Tas::restart_bounces")]
+fn restart_bounces_rebo() {
+    restart_bounces();
+}
+
+fn restart_bounces() {
+    log!("Start restart bounces");
+    let mut state = STATE.lock().unwrap();
+    let state = state.as_mut().unwrap();
+    state.bounce_locations_xs.clear();
+    state.bounce_locations_ys.clear();
+    state.bounce_locations_zs.clear();
+    state.last_bounce_update_time_others = std::time::Instant::now();
+    state.last_bounce_refresh_slots = std::time::Instant::now();
+    state.slots_in_action.clear();
+    state.slots_in_action_new.clear();
+    state.full_bounce_next = true;
+    log!("End restart bounces");
+}
+
+#[rebo::function("Tas::set_bounce")]
+fn set_bounce(st: usize) {
+    {
+        log!("Setting bounce");
+        let mut state = STATE.lock().unwrap();
+        let state = state.as_mut().unwrap();
+        state.bounce_active = st;
+        log!("Set bounce to {:?}", state.bounce_active);
+    }
+    // if st > 0 {
+    //     restart_bounces();
+    // }
+}
+#[rebo::function("Tas::is_bounce_on")]
+fn is_bounce_on() -> usize {
+    log!("Is bounce on?");
+    let mut state = STATE.lock().unwrap();
+    let state = state.as_mut().unwrap();
+    log!("Is bounce on? {:?}", state.bounce_active);
+    return state.bounce_active;
+}
+
 pub fn tick(){
     let delta = FApp::delta();
     let bits = delta.to_bits();
@@ -1051,6 +1181,10 @@ pub fn tick(){
     if last == bits {
         // Already ticked this frame
         return;
+    }
+
+    if STATE.lock().unwrap().as_ref().unwrap().bounce_active > 0 {
+        bounce_location();
     }
     
     if AMyCharacter::get_player().movement_mode() == 1 {
@@ -1082,6 +1216,107 @@ pub fn tick(){
     }
 }
 
+pub fn bounce_location() {
+    let mut state = STATE.lock().unwrap();
+    let state = state.as_mut().unwrap();
+
+    if state.last_bounce_update_time_others.elapsed() > Duration::from_millis(4000) {
+        return;
+    }
+    if state.last_bounce_update_time.elapsed() < Duration::from_millis(160) {
+        return;
+    }
+    if state.last_bounce_refresh_slots.elapsed() > Duration::from_millis(4000) {
+        state.slots_in_action = state.slots_in_action_new.clone();
+        state.slots_in_action_new.clear();
+        state.last_bounce_refresh_slots = std::time::Instant::now();
+        log!("Updated slots in action: it is now {:?}", state.slots_in_action);
+    }
+
+    log!("Saving location for eventual bounc!e to archipelago");
+    state.last_bounce_update_time = std::time::Instant::now();
+
+    let location = AMyCharacter::get_player().location();
+    state.bounce_locations_xs.push(location.0 as i64);
+    state.bounce_locations_ys.push(location.1 as i64);
+    state.bounce_locations_zs.push(location.2 as i64);
+
+    // if there are 6 location xs:
+    if state.bounce_locations_xs.len() >= 6 * state.bounce_delay_multiplier as usize {
+
+        log!("About to send to  archipelago");
+
+        // generate a location id using current time millis if it does not exist already
+        if state.bounce_location_id.is_none() {
+            let time_millis = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis();
+            let last_6_digits = time_millis % 1_000_000;
+            state.bounce_location_id = Some(format!("{}_{}", state.slot, last_6_digits));
+        }
+
+        if state.full_bounce_next {
+            state
+                .rebo_archipelago_tx
+                .send(ReboToArchipelago::Bounce { 
+                    slots: None,
+                    slot: state.slot.clone(),
+                    games: Some(vec!["Refunct".to_string()]),
+                    playername: state.bounce_location_id.clone().unwrap_or_default(),
+                    milliseconds: (1000.0 * state.bounce_delay_multiplier) as i64,
+                    x: state.bounce_locations_xs.clone(),
+                    y: state.bounce_locations_ys.clone(),
+                    z: state.bounce_locations_zs.clone(),
+                })
+                .unwrap();
+        } else {
+            let number_of_bounce_slots = state.bounce_active;
+            let slots_to_send_to: Vec<i64> = state
+                            .slots_in_action
+                            .iter()
+                            .take(number_of_bounce_slots)
+                            .cloned()
+                            .collect();
+            state
+                .rebo_archipelago_tx
+                .send(ReboToArchipelago::Bounce { 
+                    slots: Some(slots_to_send_to.clone()),
+                    slot: state.slot.clone(),
+                    games: None,
+                    playername: state.bounce_location_id.clone().unwrap_or_default(),
+                    milliseconds: (1000.0 * state.bounce_delay_multiplier) as i64,
+                    x: state.bounce_locations_xs.clone(),
+                    y: state.bounce_locations_ys.clone(),
+                    z: state.bounce_locations_zs.clone(),
+                })
+                .unwrap();
+        }
+        state.full_bounce_next = false;
+
+        let messages_received_per_second = state.bounces_received_since_last_send as f64 / state.bounce_delay_multiplier;
+        let goal_multiplier = f64::max(1.0, messages_received_per_second / 10.0);
+
+        if state.bounce_delay_multiplier < goal_multiplier {
+            state.bounce_delay_multiplier += 0.01;
+        } else if state.bounce_delay_multiplier > goal_multiplier {
+            state.bounce_delay_multiplier = f64::max(1.0, state.bounce_delay_multiplier - 0.01);
+        }
+        
+        state.bounces_received_since_last_send = 0;
+
+        log!("Bounce delay multiplier is now: {:?}", state.bounce_delay_multiplier);
+
+        log!("Sent bounce location to archipelago");
+        
+        // clear the location xs, ys, zs
+        state.bounce_locations_xs.clear();
+        state.bounce_locations_ys.clear();
+        state.bounce_locations_zs.clear();
+    }
+
+}
+
 pub fn tick_platforms_once_per_frame(delta: f64) -> bool {
     tick_platforms(delta as f32)
 }
@@ -1099,7 +1334,7 @@ extern "rebo" {
     fn on_key_char(character: String, is_repeat: bool);
     fn on_mouse_move(x: i32, y: i32);
     fn draw_hud();
-    fn archipelago_disconnected();
+    fn archipelago_disconnected(error_message: String);
     fn on_level_state_change(old: LevelState, new: LevelState);
     fn on_resolution_change();
     fn on_menu_open();
@@ -1117,6 +1352,7 @@ extern "rebo" {
     fn archipelago_print_json_message(json_message: ReboPrintJSONMessage);
     fn archipelago_retrieved(key: String, value: String);
     fn archipelago_received_death(source: String, cause: String);
+    fn archipelago_received_bounce(slot: i64, playername: String, timenow: i64, milliseconds: i64, xs: Vec<i64>, ys: Vec<i64>, zs: Vec<i64>);
     fn archipelago_tick(time: u64);
     fn ap_log_error(message: String);
 }
@@ -2156,8 +2392,28 @@ fn set_cube_location(internal_index: i32, loc: Location) {
 
 #[rebo::function("Tas::set_platform_location")]
 fn set_platform_location(internal_index: i32, loc: Location) {
-    find_platform_and(internal_index, |platform| platform.set_location(loc.x, loc.y, loc.z))
-        .unwrap_or_else(|e| log!("Could not set location for platform {:?}: {}", internal_index, e));
+    PLATFORMS_STATIC.with(|list| {
+        let mut platforms = list.borrow_mut();
+
+        if let Some(platform) = platforms
+            .iter_mut()
+            .find(|p| p.platform_id == internal_index)
+        {
+            platform.set_location_and_rotation_cached(
+                loc.x,
+                loc.y,
+                loc.z,
+                0.0, // pitch (unchanged)
+                0.0, // yaw   (unchanged)
+                0.0, // roll  (unchanged)
+                platform.size.x,
+                platform.size.y,
+                platform.size.z,
+            );
+        } else {
+            log!("Could not set location for platform {}", internal_index);
+        }
+    });
 }
 
 #[rebo::function("Tas::set_platform_scale")]
@@ -2729,13 +2985,46 @@ fn archipelago_ds_set<T>(key: String, default: &T, operations: Vec<DataStorageOp
     }))
   ).unwrap());
 }
+#[rebo::function("Tas::archipelago_ds_set_notify")]
+fn archipelago_ds_set_notify(
+    keys: Vec<String>,
+) {
+    if let Err(e) = Ok::<(), serde_json::Error>(STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(
+        ReboToArchipelago::ClientMessage(ClientMessage::SetNotify(SetNotify {
+            keys,
+        }))
+    ).unwrap()) {
+        log!("SetNotify failed: {}", e);
+    }
+}
+#[rebo::function("Tas::archipelago_ds_set_add")]
+fn archipelago_ds_set_add(
+    key: String,
+    default: i64,
+    add_value: i64
+) {
+    let value = match serde_json::to_value(add_value) {
+        Ok(v) => v,
+        Err(e) => {
+            log!("archipelago_ds_set_add failed: {}", e);
+            return;
+        }
+    };
+    if let Err(e) = archipelago_ds_set(
+        key,
+        &default,
+        vec![DataStorageOperation::Add(value)],
+    ) {
+        log!("archipelago_ds_set_add failed: {}", e);
+    }
+}
 #[rebo::function("Tas::archipelago_ds_set_max")]
 fn archipelago_ds_set_max(
     key: String,
     default: i64,
-    new_value: i64
+    max_value: i64
 ) {
-    let value = match serde_json::to_value(new_value) {
+    let value = match serde_json::to_value(max_value) {
         Ok(v) => v,
         Err(e) => {
             log!("archipelago_ds_set_max failed: {}", e);
@@ -2751,10 +3040,10 @@ fn archipelago_ds_set_max(
     }
 }
 #[rebo::function("Tas::archipelago_ds_get")]
-fn archipelago_ds_get(key: String) {
+fn archipelago_ds_get(keys: Vec<String>) {
     STATE.lock().unwrap().as_ref().unwrap().rebo_archipelago_tx.send(
         ReboToArchipelago::ClientMessage(ClientMessage::Get(Get {
-            keys: vec![key], // Request a single key
+            keys,
         })),
     ).unwrap();
 }
@@ -3451,8 +3740,21 @@ fn set_time_dilation(dilation: f32, def: f32) {
     });
 }
 #[rebo::function("Tas::set_gravity")]
-fn set_gravity(gravity: f32) {
+fn set_gravity(gravity: f32, def: f32) {
     UWorld::set_gravity(gravity);
+    let current_location = AMyCharacter::get_player().location();
+    AMyCharacter::get_player().set_location(
+        current_location.0,
+        current_location.1,
+        current_location.2 + 100.,
+    );
+    if gravity == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(5));
+        UWorld::set_gravity(def);
+    });
 }
 #[rebo::function("Tas::get_time_of_day")]
 fn get_time_of_day() -> f32 {

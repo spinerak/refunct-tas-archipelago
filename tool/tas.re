@@ -108,6 +108,7 @@ static mut TAS_COMPONENT = Component {
     draw_hud_always: fn() {},
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::Some(1./60.),
+    error_message: "",
     on_tick: fn() {
         if TAS_STATE.step_frame_mode && !TAS_STATE.is_f_repeat {
             TAS_COMPONENT.tick_mode = TickMode::Yield;
