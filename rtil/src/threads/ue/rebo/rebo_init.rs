@@ -203,6 +203,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_sky_light_enabled)
         .add_function(set_time_dilation)
         .add_function(set_gravity)
+        .add_function(set_camera)
         .add_function(get_time_of_day)
         .add_function(set_time_of_day)
         .add_function(set_sky_time_speed)
@@ -3754,6 +3755,17 @@ fn set_gravity(gravity: f32, def: f32) {
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_secs(5));
         UWorld::set_gravity(def);
+    });
+}
+#[rebo::function("Tas::set_camera")]
+fn set_camera(camera: u8, def: u8) {
+    AMyCharacter::set_camera_mode(camera);
+    if camera == def {
+        return;
+    }
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(30));
+        AMyCharacter::set_camera_mode(def);
     });
 }
 #[rebo::function("Tas::get_time_of_day")]

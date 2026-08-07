@@ -339,7 +339,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.3.0",
+        mod_version: "1.3.0a",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -544,6 +544,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                             let loc = Location { x: 2625., y: -2250., z: 1357. };
                             Tas::set_location(loc);
                             ARCHIPELAGO_STATE.has_goaled = true;
+                            Tas::set_screen_percentage(SETTINGS.screen_percentage, SETTINGS.screen_percentage);
+                            Tas::set_camera(0,0);
                             Tas::trigger_goal_animation();
                             // Tas::set_outro_text("Thank you ESA!");
                         }
@@ -562,6 +564,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                             let loc = Location { x: 2625., y: -2250., z: 1357. };
                             Tas::set_location(loc);
                             ARCHIPELAGO_STATE.has_goaled = true;
+                            Tas::set_screen_percentage(SETTINGS.screen_percentage, SETTINGS.screen_percentage);
+                            Tas::set_camera(0,0);
                             Tas::trigger_goal_animation();
                             // Tas::set_outro_text("Thank you ESA!");
                         }
@@ -959,6 +963,9 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
         }
         if item_id == 9999010 && !ARCHIPELAGO_STATE.has_goaled {
             Tas::set_gravity(50., SETTINGS.gravity);
+        }
+        if item_id == 9999011 && !ARCHIPELAGO_STATE.has_goaled {
+            Tas::set_camera(1, 0);
         }
     }
 }
@@ -2912,6 +2919,9 @@ fn archipelago_send_check(id: int){
 }
 
 fn archipelago_activate_stepped_on_one_button(id: int){
+    if ARCHIPELAGO_STATE.gamemode != 0 {
+        return;
+    }
     let cluster = (id - 10000000) / 100;
     let plat = (id - 10000000) % 100;
     Tas::disable_button(cluster-1, plat-1);
@@ -2930,6 +2940,9 @@ fn archipelago_activate_stepped_on_buttons(num: int){
 }
 
 fn archipelago_activate_stepped_on_platforms(list: List<int>){
+    if ARCHIPELAGO_STATE.gamemode != 0 {
+        return;
+    }
     let mut list2 = list;
     if list2.len() == 0 {
         list2 = ARCHIPELAGO_STATE.stepped_on_platforms;
@@ -2948,6 +2961,9 @@ fn collect_all_vanilla_cubes(){
     }
 }
 fn archipelago_collect_one_collected_cube(id: int){
+    if ARCHIPELAGO_STATE.gamemode != 0 {
+        return;
+    }
     let cluster = (id - 10060000) / 100;
     let plat = (id - 10060000) % 100;
 
@@ -2986,6 +3002,9 @@ fn archipelago_collect_collected_cubes(){
     }
 }
 fn archipelago_collect_one_collected_extra_cube(loc_collected: int){
+    if ARCHIPELAGO_STATE.gamemode != 0 {
+        return;
+    }
     let mut i = 0;
     let mut found_index = Option::None;
     for loc in ARCHIPELAGO_STATE.extra_cubes_locs {

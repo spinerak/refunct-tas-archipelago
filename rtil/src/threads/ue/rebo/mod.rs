@@ -1,6 +1,6 @@
 use std::{ptr, thread};
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::error::Error;
+// use std::error::Error;
 use std::sync::Mutex;
 use std::time::Duration;
 use std::cell::{Cell, RefCell};
@@ -272,43 +272,46 @@ fn cleanup_after_rebo() {
 
 fn check_for_new_version() -> Option<String> {
     const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
-    let agent: ureq::Agent = ureq::Agent::config_builder()
-        .max_redirects(0)
-        .timeout_global(Some(Duration::from_secs(3)))
-        .build().into();
-    let res = agent
-        .get("https://github.com/spinerak/refunct-tas-archipelago/releases/latest")
-        .call();
-    match res {
-        Ok(response) => {
-            assert_eq!(response.status(), 302);
-            let loc = response.headers().get("Location").unwrap().to_str().unwrap();
-            let pos = loc.rfind("/v").unwrap();
-            let version = &loc[pos+2..];
-            if version != CURRENT_VERSION {
-                let new_version = format!("New version available: v{CURRENT_VERSION} -> v{version}");
-                log!("VERSION: {new_version}");
-                Some(new_version)
-            } else {
-                log!("VERSION: rtil version v{CURRENT_VERSION} is up to date");
-                None
-            }
-        },
-        Err(err) => {
-            log!("VERSION: Error checking for new version: {}", err);
-            match err {
-                ureq::Error::StatusCode(status) => {
-                    Some(format!("Error checking for new version: Got status {status}"))
-                },
-                e => {
-                    let message = format!("{e}");
-                    let mut res = message;
-                    if let Some(source) = e.source() {
-                        res += &format!("{source}");
-                    }
-                    Some(format!("Error checking for new version: {res}"))
-                }
-            }
-        }
-    }
+    log!("Current version according to Cargo: v{CURRENT_VERSION}");
+    log!("Not checking if there is a newer version, don't really care =)");
+    return None;
+    // let agent: ureq::Agent = ureq::Agent::config_builder()
+    //     .max_redirects(0)
+    //     .timeout_global(Some(Duration::from_secs(3)))
+    //     .build().into();
+    // let res = agent
+    //     .get("https://github.com/spinerak/refunct-tas-archipelago/releases/latest")
+    //     .call();
+    // match res {
+    //     Ok(response) => {
+    //         assert_eq!(response.status(), 302);
+    //         let loc = response.headers().get("Location").unwrap().to_str().unwrap();
+    //         let pos = loc.rfind("/v").unwrap();
+    //         let version = &loc[pos+2..];
+    //         if version != CURRENT_VERSION {
+    //             let new_version = format!("New version available: v{CURRENT_VERSION} -> v{version}");
+    //             log!("VERSION: {new_version}");
+    //             Some(new_version)
+    //         } else {
+    //             log!("VERSION: rtil version v{CURRENT_VERSION} is up to date");
+    //             None
+    //         }
+    //     },
+    //     Err(err) => {
+    //         log!("VERSION: Error checking for new version: {}", err);
+    //         match err {
+    //             ureq::Error::StatusCode(status) => {
+    //                 Some(format!("Error checking for new version: Got status {status}"))
+    //             },
+    //             e => {
+    //                 let message = format!("{e}");
+    //                 let mut res = message;
+    //                 if let Some(source) = e.source() {
+    //                     res += &format!("{source}");
+    //                 }
+    //                 Some(format!("Error checking for new version: {res}"))
+    //             }
+    //         }
+    //     }
+    // }
 }
