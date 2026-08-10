@@ -29,8 +29,7 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 - Universal Tracker can help you to figure out which platforms are accessible. The mini-map should help!
 - You should be able to quit a game and continue it later, just follow the steps again. Minigames do save checks but do not save progress.
 
-## Troubleshooting
-All of these troubleshooting steps are for when the mod crashes on launch.
+## Troubleshooting - crashes on mod launch.
 ### The basics
 - Is Refunct open when you open the mod? We only support the latest version of Refunct via Steam (build id 5753767).
 - Please try it 2 or 3 times, sometimes it just crashes.
@@ -60,11 +59,14 @@ All of these troubleshooting steps are for when the mod crashes on launch.
 - `debug.bat` says `thread 'main' panicked at 'called Result::unwrap()'...`**
   - Make sure that you configured `LD_PRELOAD` correctly.
 
-
-
-     
-### Stay calm and don't panic
-- Feel free to ask in the discord (Archipelago -> future-game-design -> Refunct). We will probably ask for your operating system and the error messages you got, and how/when it crashes. 
+## Troubleshooting - crashes while connected to AP
+- If the game randomly crashes while playing, and the log doesn't say anything...
+  - Using an external hard drive? Please try to put both Refunct installation and the mod on your (default) C drive.
+  - Above doesn't work? A wild guess is you could add this to Steam launch arguments: `cmd /V /C "set WGPU_BACKEND=gles&& %command%"`.
+    
+## Stay calm and don't panic
+- Feel free to ask in [the discord](http://discord.gg/archipelago) (-> future-game-design -> Refunct). We will probably ask for your operating system and the error messages you got, and how/when it crashes.
+  
 ## Building
 If you want to build the project yourself, follow the steps from the original [refunct-tas](https://github.com/oberien/refunct-tas) project.
 - For Windows: you might need to install "NASM - The Netwide Assembler" and add it to your PATH.
