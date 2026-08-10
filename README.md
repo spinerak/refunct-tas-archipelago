@@ -56,13 +56,13 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
   - not the nicest fix, but you can adde SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt to launch options
 - **On Steam Deck: `debug.bat` says `CantConnectToRtil`.**
   - In compatibility, try if legacy mode works.
-- `debug.bat` says `thread 'main' panicked at 'called Result::unwrap()'...`**
+- **`debug.bat` says `thread 'main' panicked at 'called Result::unwrap()'...`**
   - Make sure that you configured `LD_PRELOAD` correctly.
 
 ## Troubleshooting - crashes while connected to AP
 - If the game randomly crashes while playing, and the log doesn't say anything...
   - Using an external hard drive? Please try to put both Refunct installation and the mod on your (default) C drive.
-  - Above doesn't work? A wild guess is you could add this to Steam launch arguments: `cmd /V /C "set WGPU_BACKEND=gles&& %command%"`.
+  - Above doesn't work? A wild guess is you could add this to Steam launch arguments: `cmd /V /C "set WGPU_BACKEND=gles&& %command%"`
     
 ## Stay calm and don't panic
 - Feel free to ask in [the discord](http://discord.gg/archipelago) (-> future-game-design -> Refunct). We will probably ask for your operating system and the error messages you got, and how/when it crashes.
