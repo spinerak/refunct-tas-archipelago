@@ -59,6 +59,8 @@ fn map_editor_new_hud() {
         MapEditorMode::Play => T = f"Playing map {MAP_EDITOR_STATE.map_name:?}\n",
     }
     lines.push(ColorfulText { text: T, color: COLOR_WHITE });
+
+    lines.push(ColorfulText { text: "<f> toggle flying\n", color: COLOR_WHITE });
     lines.push(ColorfulText { text: "<TAB> edit an element\n", color: COLOR_WHITE });
     lines.push(ColorfulText { text: "<E> select looked-at element\n", color: COLOR_WHITE });
     lines.push(ColorfulText { text: "<C> trigger next cluster", color: COLOR_WHITE });
@@ -127,7 +129,10 @@ static MAP_EDITOR_COMPONENT = Component {
         if key.to_small() == KEY_E.to_small() {
             let index = match Tas::get_looked_at_element_index() {
                 Option::Some(index) => index,
-                Option::None => return,
+                Option::None => {
+                    MAP_EDITOR_STATE.chosen_element_index.cluster_index = -1;
+                    return
+                },
             };
             let element = match try_get_element(index) {
                 Result::Ok(element) => element,
@@ -435,6 +440,9 @@ fn create_map_editor_input_ui() -> Ui {
                             },
                         },
                     };
+                    
+                    MAP_EDITOR_STATE.chosen_element = element;
+                    MAP_EDITOR_STATE.chosen_element_index = index;
 
                     leave_ui();
                     enter_ui(create_map_editor_element_ui(element, index, 0));

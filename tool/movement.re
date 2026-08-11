@@ -78,12 +78,7 @@ fn create_movement_menu() -> Ui {
 static MOVEMENT_COMPONENT = Component {
     id: MOVEMENT_COMPONENT_ID,
     conflicts_with: List::of(MOVEMENT_COMPONENT_ID),
-    draw_hud_text: fn(text: string) -> string {
-        match MOVEMENT_STATE.enable_fly {
-            false => f"{text}\nFlying: <f> enable flying",
-            true => f"{text}\nFlying: <f> disable flying",
-        }
-    },
+    draw_hud_text: fn(text: string) -> string { text },
     draw_hud_always: fn() {},
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
