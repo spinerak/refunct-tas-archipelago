@@ -4,6 +4,11 @@ struct MapEditorState {
     mode: MapEditorMode,
     chosen_element: Element,
     chosen_element_index: ElementIndex,
+    changing_category: int,
+    changing_coordinate: int,
+    changing_speed: int,
+    change_entire_cluster: bool,
+    hide_others: bool,
 }
 
 static mut MAP_EDITOR_STATE = MapEditorState {
@@ -26,6 +31,11 @@ static mut MAP_EDITOR_STATE = MapEditorState {
         element_type: ElementType::Platform,
         element_index: -1
     },
+    changing_category: 0,
+    changing_coordinate: 0,
+    changing_speed: 1,
+    change_entire_cluster: false,
+    hide_others: false,
 };
 
 
@@ -35,16 +45,65 @@ enum MapEditorMode {
     Edit,
 }
 
+fn map_editor_new_hud() {
+    let viewport = Tas::get_viewport_size();
+    let w = viewport.width.to_float();
+    let h = viewport.height.to_float();
+    let anchor = Anchor::TopRight;
+
+    let lines = List::new();
+
+    let mut T = "";
+    match MAP_EDITOR_STATE.mode {
+        MapEditorMode::Edit => T = f"Editing map {MAP_EDITOR_STATE.map_name:?}\n",
+        MapEditorMode::Play => T = f"Playing map {MAP_EDITOR_STATE.map_name:?}\n",
+    }
+    lines.push(ColorfulText { text: T, color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "<TAB> edit an element\n", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "<E> select looked-at element\n", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "<C> trigger next cluster", color: COLOR_WHITE });
+
+    if MAP_EDITOR_STATE.chosen_element_index.cluster_index >= 0 {
+        lines.push(ColorfulText { text: f"\n\nEditing: {MAP_EDITOR_STATE.chosen_element_index.element_type} {MAP_EDITOR_STATE.chosen_element_index.cluster_index+1}-{MAP_EDITOR_STATE.chosen_element_index.element_index+1}\n\n", color: COLOR_GREEN });
+
+        lines.push(ColorfulText { text: f"[X]: Move element  ", color: if !MAP_EDITOR_STATE.change_entire_cluster { COLOR_GREEN } else { COLOR_RED } });
+        lines.push(ColorfulText { text: f"Move entire cluster\n\n", color: if MAP_EDITOR_STATE.change_entire_cluster { COLOR_GREEN } else { COLOR_RED } });
+    
+        lines.push(ColorfulText { text: "[UIO]  ", color: COLOR_WHITE});
+        lines.push(ColorfulText { text: "Position  ", color: if MAP_EDITOR_STATE.changing_category == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
+        lines.push(ColorfulText { text: "Rotation  ", color: if MAP_EDITOR_STATE.changing_category == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
+        lines.push(ColorfulText { text: "Size\n", color: if MAP_EDITOR_STATE.changing_category == 2 { COLOR_GREEN } else { COLOR_RED } }); // 2
+
+        lines.push(ColorfulText { text: "[HJK]  ", color: COLOR_WHITE});
+        if MAP_EDITOR_STATE.changing_category == 0 || MAP_EDITOR_STATE.changing_category == 2 {
+            lines.push(ColorfulText { text: f"X         ", color: if MAP_EDITOR_STATE.changing_coordinate == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
+            lines.push(ColorfulText { text: f"Y         ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
+            lines.push(ColorfulText { text: f"Z \n", color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
+        } else if MAP_EDITOR_STATE.changing_category == 1 {
+            lines.push(ColorfulText { text: f"Pitch     ", color: if MAP_EDITOR_STATE.changing_coordinate == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
+            lines.push(ColorfulText { text: f"Yaw       ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
+            lines.push(ColorfulText { text: f"Roll \n", color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
+        }
+        lines.push(ColorfulText { text: "[1234] ", color: COLOR_WHITE});
+        lines.push(ColorfulText { text: "Slow  ", color: if MAP_EDITOR_STATE.changing_speed == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
+        lines.push(ColorfulText { text: "Normal  ", color: if MAP_EDITOR_STATE.changing_speed == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
+        lines.push(ColorfulText { text: "Fast  ", color: if MAP_EDITOR_STATE.changing_speed == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
+        lines.push(ColorfulText { text: "Nyoom\n", color: if MAP_EDITOR_STATE.changing_speed == 3 { COLOR_GREEN } else { COLOR_RED } }); //3
+        lines.push(ColorfulText { text: "Use left and right arrow to edit!\n\n", color: COLOR_WHITE});
+
+        lines.push(ColorfulText { text: f"[Z]: Show all  ", color: if !MAP_EDITOR_STATE.hide_others { COLOR_GREEN } else { COLOR_RED } });
+        lines.push(ColorfulText { text: f"Show selected cluster", color: if MAP_EDITOR_STATE.hide_others { COLOR_GREEN } else { COLOR_RED } });
+
+    }
+
+    ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, w, 5.0, anchor, 5.0);
+}
+
 static MAP_EDITOR_COMPONENT = Component {
     id: MAP_EDITOR_COMPONENT_ID,
     conflicts_with: List::of(MAP_EDITOR_COMPONENT_ID),
-    draw_hud_text: fn(text: string) -> string {
-        match MAP_EDITOR_STATE.mode {
-            MapEditorMode::Edit => f"{text}\nMap Editor - editing map {MAP_EDITOR_STATE.map_name:?}\n    <TAB> edit an element    <e> select looked-at element",
-            MapEditorMode::Play => f"{text}\nMap Editor - playing map {MAP_EDITOR_STATE.map_name:?}",
-        }
-     },
-    draw_hud_always: fn() {},
+    draw_hud_text: fn(text: string) -> string { text },
+    draw_hud_always: map_editor_new_hud,
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
     error_message: "",
@@ -74,11 +133,112 @@ static MAP_EDITOR_COMPONENT = Component {
                 Result::Ok(element) => element,
                 _ => return,
             };
-            log(f"{index} {index.cluster_index} index {index.element_index} of type {index.element_type}");
-            enter_ui(create_map_editor_element_ui(element, index, 0));
+            // log(f"{index} {index.cluster_index} index {index.element_index} of type {index.element_type}");
+            MAP_EDITOR_STATE.chosen_element = element;
+            MAP_EDITOR_STATE.chosen_element_index = index;
+            
+            // enter_ui(create_map_editor_element_ui(element, index, 0));
         }
+
+        if key.to_small() == KEY_U.to_small() {
+            MAP_EDITOR_STATE.changing_category = 0;
+        }
+        if key.to_small() == KEY_I.to_small() {
+            MAP_EDITOR_STATE.changing_category = 1;
+        }
+        if key.to_small() == KEY_O.to_small() {
+            MAP_EDITOR_STATE.changing_category = 2;
+        }
+        if key.to_small() == KEY_H.to_small() {
+            MAP_EDITOR_STATE.changing_coordinate = 0;
+        }
+        if key.to_small() == KEY_J.to_small() {
+            MAP_EDITOR_STATE.changing_coordinate = 1;
+        }
+        if key.to_small() == KEY_K.to_small() {
+            MAP_EDITOR_STATE.changing_coordinate = 2;
+        }
+        if key.to_small() == KEY_1.to_small() {
+            MAP_EDITOR_STATE.changing_speed = 0;
+        }
+        if key.to_small() == KEY_2.to_small() {
+            MAP_EDITOR_STATE.changing_speed = 1;
+        }
+        if key.to_small() == KEY_3.to_small() {
+            MAP_EDITOR_STATE.changing_speed = 2;
+        }
+        if key.to_small() == KEY_4.to_small() {
+            MAP_EDITOR_STATE.changing_speed = 3;
+        }
+
+        if key.to_small() == KEY_X.to_small() {
+            MAP_EDITOR_STATE.change_entire_cluster = !MAP_EDITOR_STATE.change_entire_cluster;
+        }
+
+        if key.to_small() == KEY_C.to_small() {
+            Tas::raise_next_cluster();
+        }
+
+        if MAP_EDITOR_STATE.chosen_element_index.cluster_index < 0 {
+            return;
+        }
+
+        if key.to_small() == KEY_Z.to_small() {
+            MAP_EDITOR_STATE.hide_others = !MAP_EDITOR_STATE.hide_others;
+            Tas::apply_map_only_one(MAP_EDITOR_STATE.map, MAP_EDITOR_STATE.chosen_element_index, if MAP_EDITOR_STATE.hide_others { 2 } else { 1 });
+        }
+        if key.to_small() == KEY_LEFT.to_small() || key.to_small() == KEY_RIGHT.to_small() {
+            let mut sign = 0.;
+            if key.to_small() == KEY_LEFT.to_small() {
+                sign = -1.;
+            }
+            if key.to_small() == KEY_RIGHT.to_small() {
+                sign = 1.;
+            }
+            let mut speed = 0.1;
+            match MAP_EDITOR_STATE.changing_speed {
+                0 => speed = 1.,
+                1 => speed = 10.,
+                2 => speed = 100.,
+                3 => speed = 1000.,
+                _ => (),
+            }
+            match MAP_EDITOR_STATE.changing_category {
+                0 => { // position
+                    match MAP_EDITOR_STATE.changing_coordinate {
+                        0 => MAP_EDITOR_STATE.chosen_element.x += sign * speed,
+                        1 => MAP_EDITOR_STATE.chosen_element.y += sign * speed,
+                        2 => MAP_EDITOR_STATE.chosen_element.z += sign * speed,
+                        _ => (),
+                    }
+                },
+                1 => { // rotation
+                    match MAP_EDITOR_STATE.changing_coordinate {
+                        0 => MAP_EDITOR_STATE.chosen_element.pitch += 0.09 * sign * speed,
+                        1 => MAP_EDITOR_STATE.chosen_element.yaw += 0.09 * sign * speed,
+                        2 => MAP_EDITOR_STATE.chosen_element.roll += 0.09 * sign * speed,
+                        _ => (),
+                    }
+                },
+                2 => { // size
+                    match MAP_EDITOR_STATE.changing_coordinate {
+                        0 => MAP_EDITOR_STATE.chosen_element.sizex += sign * speed,
+                        1 => MAP_EDITOR_STATE.chosen_element.sizey += sign * speed,
+                        2 => MAP_EDITOR_STATE.chosen_element.sizez += sign * speed,
+                        _ => (),
+                    }
+                },
+                _ => (),
+            }
+            Tas::save_map(MAP_EDITOR_STATE.map_name, MAP_EDITOR_STATE.map);
+            Tas::apply_map_only_one(MAP_EDITOR_STATE.map, MAP_EDITOR_STATE.chosen_element_index, 0);
+        }
+
+
     },
-    on_key_down_always: fn(key: KeyCode, is_repeat: bool) {},
+    on_key_down_always: fn(key: KeyCode, is_repeat: bool) {
+            
+    },
     on_key_up: fn(key: KeyCode) {},
     on_key_up_always: fn(key: KeyCode) {},
     on_key_char: fn(c: string) {},
@@ -207,84 +367,86 @@ fn try_get_element(index: ElementIndex) -> Result<Element, TryGetElementError> {
 
 static mut MAP_EDITOR_INPUT_LABEL = Text { text: "Input" };
 fn create_map_editor_input_ui() -> Ui {
-    Ui::new("Map Editor - What do you want to modify? (format: <cluster> or <cluster>pl/b/c/l/pi/s<num>, ex: 1 or 14pl2 or 25s1)", List::of(
-        UiElement::Input(Input {
-            label: MAP_EDITOR_INPUT_LABEL,
-            input: "",
-            onclick: fn(input: string) {
-                MAP_EDITOR_INPUT_LABEL.text = "Input";
-                // check if it's just one number -> edit cluster
-                match input.parse_int() {
-                    Result::Ok(cluster_index) => {
-                        let cluster = match MAP_EDITOR_STATE.map.clusters.get(cluster_index - 1) {
-                            Option::Some(cluster) => cluster,
-                            Option::None => {
-                                MAP_EDITOR_INPUT_LABEL.text = "Input (ERROR: no such cluster exists)";
-                                return
-                            }
-                        };
-                        leave_ui();
-                        enter_ui(create_map_editor_cluster_ui(cluster, cluster_index - 1));
+    Ui::new("Map Editor - What do you want to modify?\nformat: <cluster> or <cluster>pl/b/c/l/pi/s<num>\nex: 1 or 14pl2 or 25s1)", 
+        List::of(
+            UiElement::Input(Input {
+                label: MAP_EDITOR_INPUT_LABEL,
+                input: "",
+                onclick: fn(input: string) {
+                    MAP_EDITOR_INPUT_LABEL.text = "Input";
+                    // check if it's just one number -> edit cluster
+                    match input.parse_int() {
+                        Result::Ok(cluster_index) => {
+                            let cluster = match MAP_EDITOR_STATE.map.clusters.get(cluster_index - 1) {
+                                Option::Some(cluster) => cluster,
+                                Option::None => {
+                                    MAP_EDITOR_INPUT_LABEL.text = "Input (ERROR: no such cluster exists)";
+                                    return
+                                }
+                            };
+                            leave_ui();
+                            enter_ui(create_map_editor_cluster_ui(cluster, cluster_index - 1));
+                            return
+                        },
+                        Result::Err(err) => (),
+                    }
+
+                    // handle element
+                    let indexes = input.find_matches("\\d+");
+                    if indexes.len() != 2 {
+                        MAP_EDITOR_INPUT_LABEL.text = "Input (ERROR: need 1 or 2 numbers)";
+                        return;
+                    }
+                    let cluster_index = indexes.get(0).unwrap().parse_int().unwrap() - 1;
+                    let element_index = indexes.get(1).unwrap().parse_int().unwrap() - 1;
+
+                    let element_type = if input.contains("pl") {
+                        ElementType::Platform
+                    } else if input.contains("c") {
+                        ElementType::Cube
+                    } else if input.contains("b") {
+                        ElementType::Button
+                    } else if input.contains("l") {
+                        ElementType::Lift
+                    } else if input.contains("pi") {
+                        ElementType::Pipe
+                    } else if input.contains("s") {
+                        ElementType::Springpad
+                    } else {
+                        MAP_EDITOR_INPUT_LABEL.text = "Input (ERROR: must contain pl / b / c / l / pi / s)";
                         return
-                    },
-                    Result::Err(err) => (),
-                }
+                    };
 
-                // handle element
-                let indexes = input.find_matches("\\d+");
-                if indexes.len() != 2 {
-                    MAP_EDITOR_INPUT_LABEL.text = "Input (ERROR: need 1 or 2 numbers)";
-                    return;
-                }
-                let cluster_index = indexes.get(0).unwrap().parse_int().unwrap() - 1;
-                let element_index = indexes.get(1).unwrap().parse_int().unwrap() - 1;
-
-                let element_type = if input.contains("pl") {
-                    ElementType::Platform
-                } else if input.contains("c") {
-                    ElementType::Cube
-                } else if input.contains("b") {
-                    ElementType::Button
-                } else if input.contains("l") {
-                    ElementType::Lift
-                } else if input.contains("pi") {
-                    ElementType::Pipe
-                } else if input.contains("s") {
-                    ElementType::Springpad
-                } else {
-                    MAP_EDITOR_INPUT_LABEL.text = "Input (ERROR: must contain pl / b / c / l / pi / s)";
-                    return
-                };
-
-                let index = ElementIndex {
-                    cluster_index: cluster_index,
-                    element_type: element_type,
-                    element_index: element_index
-                };
-                let element = match try_get_element(index) {
-                    Result::Ok(element) => element,
-                    Result::Err(err) => match err {
-                        TryGetElementError::InvalidClusterIndex => {
-                            MAP_EDITOR_INPUT_LABEL.text = "Input (ERROR: invalid cluster index)";
-                            return
+                    let index = ElementIndex {
+                        cluster_index: cluster_index,
+                        element_type: element_type,
+                        element_index: element_index
+                    };
+                    let element = match try_get_element(index) {
+                        Result::Ok(element) => element,
+                        Result::Err(err) => match err {
+                            TryGetElementError::InvalidClusterIndex => {
+                                MAP_EDITOR_INPUT_LABEL.text = "Input (ERROR: invalid cluster index)";
+                                return
+                            },
+                            TryGetElementError::InvalidElementIndex => {
+                                MAP_EDITOR_INPUT_LABEL.text = f"Input (ERROR: invalid {index.element_type} index)";
+                                return
+                            },
                         },
-                        TryGetElementError::InvalidElementIndex => {
-                            MAP_EDITOR_INPUT_LABEL.text = f"Input (ERROR: invalid {index.element_type} index)";
-                            return
-                        },
-                    },
-                };
+                    };
 
-                leave_ui();
-                enter_ui(create_map_editor_element_ui(element, index, 0));
-            },
-            onchange: fn(input: string) {}
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: "Back" },
-            onclick: fn(label: Text) { leave_ui() },
-        }),
-    ))
+                    leave_ui();
+                    enter_ui(create_map_editor_element_ui(element, index, 0));
+                },
+                onchange: fn(input: string) {}
+            }),
+            UiElement::Button(UiButton {
+                label: Text { text: "Back" },
+                onclick: fn(label: Text) { leave_ui() },
+            }),
+        )
+    )
 }
 
 fn create_map_editor_cluster_ui(mut cluster: Cluster, cluster_index: int) -> Ui {
@@ -333,8 +495,6 @@ fn create_map_editor_cluster_ui(mut cluster: Cluster, cluster_index: int) -> Ui 
 }
 
 fn create_map_editor_element_ui(mut element: Element, index: ElementIndex, selected: int) -> Ui {
-    MAP_EDITOR_STATE.chosen_element = element;
-    MAP_EDITOR_STATE.chosen_element_index = index;
     let submit = fn() {
         let selected = match UI_STACK.last() {
             Option::Some(ui) => ui.selected,

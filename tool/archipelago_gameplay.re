@@ -19,6 +19,7 @@ struct ArchipelagoState {
     started: int,
     triggered_clusters: List<int>,
     stepped_on_buttons: List<int>,
+    self_stepped_on_buttons: List<int>,
     stepped_on_platforms: List<int>,
     collected_cubes: List<int>,
     cubes_options: int,
@@ -195,6 +196,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         started: 0,
         triggered_clusters: List::new(),
         stepped_on_buttons: List::new(),
+        self_stepped_on_buttons: List::new(),
         stepped_on_platforms: List::new(),
         collected_cubes: List::new(),
         cubes_options: -1,
@@ -489,6 +491,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         if ARCHIPELAGO_STATE.gamemode == 0 {
 
             if index.element_type == ElementType::Button {
+                ARCHIPELAGO_STATE.self_stepped_on_buttons.push(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
                 archipelago_send_check(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
 
                 let mut map = Map::new();
@@ -2660,7 +2663,9 @@ fn archipelago_checked_location(id: int){
     ARCHIPELAGO_STATE.checked_locations.push(id);
     if id >= 10000000 && id < 10010000 {
         ARCHIPELAGO_STATE.stepped_on_buttons.push(id);
-        archipelago_activate_stepped_on_one_button(id);
+        if !ARCHIPELAGO_STATE.self_stepped_on_buttons.contains(id) {
+            archipelago_activate_stepped_on_one_button(id);
+        }
     }
     if id >= 10010000 && id < 10020000 {
         ARCHIPELAGO_STATE.stepped_on_platforms.push(id);

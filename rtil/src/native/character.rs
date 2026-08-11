@@ -317,6 +317,18 @@ impl USceneComponent {
 
         unsafe { set_world_scale.call(root_component.as_ptr(), &params); }
     }
+
+    // pub fn set_hidden(yes_or_no: bool, object: &ActorWrapper) {
+    //     let set_hidden = object.class()
+    //         .find_function("SetActorHiddenInGame")
+    //         .unwrap();
+
+    //     let params = set_hidden.create_argument_struct();
+    //     params.get_field("bNewHidden").unwrap::<BoolValueWrapper>().set(yes_or_no);
+
+    //     unsafe { set_hidden.call(object.as_ptr(), &params); }
+    // }
+    
 }
 
 #[repr(C)]

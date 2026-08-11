@@ -162,6 +162,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_button_enabled_rebo)
         .add_function(trigger_goal_animation)
         .add_function(raise_cluster_rebo)
+        .add_function(raise_next_cluster)
 
         .add_function(abilities_set_wall_jump)
         .add_function(abilities_set_ledge_grab)
@@ -189,6 +190,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(original_map)
         .add_function(apply_map)
         .add_function(apply_map_cluster_speeds)
+        .add_function(apply_map_only_one)
         .add_function(get_looked_at_element_index)
         .add_function(get_element_bounds)
         .add_function(enable_player_collision)
@@ -3106,6 +3108,11 @@ fn raise_cluster(cluster_index: i32) {
     LevelState::set_level(-10000);
 }
 
+#[rebo::function("Tas::raise_next_cluster")]
+fn raise_next_cluster() {
+    UMyGameInstance::raise_next_level();
+}
+
 
 #[rebo::function("Tas::trigger_element")]
 fn trigger_element(index: ElementIndex) {
@@ -3587,6 +3594,116 @@ pub fn apply_map_internal(map: &RefunctMap) {
                     let index = ElementIndex { cluster_index, element_type, element_index };
                     set_element(scope, &levels, &map, index);
                 });
+        }
+    })
+}
+#[rebo::function("Tas::apply_map_only_one")]
+fn apply_map_only_one(map: RefunctMap, el: ElementIndex, hide_all_expect_this_cluster: i32) {
+    apply_map_internal_only_one(&map, el, hide_all_expect_this_cluster)
+}
+pub fn apply_map_internal_only_one(map: &RefunctMap, el: ElementIndex, hide_all_expect_this_cluster: i32) {
+    // hide_all_expect_this_cluster = 0 -> do nothing
+    // hide_all_expect_this_cluster = 1 -> OFF
+    // hide_all_expect_this_cluster = 2 -> ON
+
+    // initialize before we change anything
+    let _ = &*ORIGINAL_MAP;
+
+    fn set_element(scope: &UeScope, levels: &[Level], target_map: &RefunctMap, index: ElementIndex, hide: i32) {
+        let level = scope.get(levels[index.cluster_index].level);
+        let actor = get_indexed_actor(scope, levels, index);
+        let target = get_indexed_element(target_map, index);
+        let orig = get_indexed_element(&*ORIGINAL_MAP, index);
+        let (_, _, rz) = level.relative_location();
+        let (rpitch, ryaw, rroll) = level.relative_rotation();
+        let mut target_location = FVector { x: target.x, y: target.y, z: target.z + rz };
+        let target_rotation = FRotator { pitch: target.pitch + rpitch, yaw: target.yaw + ryaw, roll: target.roll + rroll };
+        let target_scale = FVector { x: target.sizex / orig.sizex, y: target.sizey / orig.sizey, z: target.sizez / orig.sizez };
+        
+        if hide == 2 {
+            target_location.z = -99999.;
+        }
+        
+        USceneComponent::set_world_location_and_rotation(target_location, target_rotation, &actor);
+        USceneComponent::set_world_scale(target_scale, &actor);
+        
+    }
+
+    UeScope::with(|scope| {
+        let levels = LEVELS.lock().unwrap();
+        assert_eq!(map.clusters.len(), levels.len());
+        for (cluster_index, (level, cluster)) in levels.iter().zip(&map.clusters).enumerate() {
+            let level_wrapper = scope.get(level.level);
+            let (rx, ry, _) = level_wrapper.source_location();
+            level_wrapper.set_source_location(rx, ry, cluster.z);
+            level_wrapper.set_speed(cluster.rise_speed);
+
+            let maybe_apply = |element_index: usize, element_type: ElementType| {
+                let index = ElementIndex { cluster_index, element_type, element_index };
+                let same_cluster = index.cluster_index == el.cluster_index && index.element_type == el.element_type && index.element_index == el.element_index;
+                let mut should_hide = hide_all_expect_this_cluster;
+                if should_hide == 2 && index.cluster_index == el.cluster_index {
+                    should_hide = 1;
+                }
+                
+                if same_cluster || should_hide > 0 {
+                    set_element(scope, &levels, &map, index, should_hide);
+                }
+            };
+
+            if hide_all_expect_this_cluster == 0 {
+                match el.element_type {
+                    ElementType::Platform => {
+                        level.platforms.iter().zip(&cluster.platforms).enumerate().for_each(|(element_index, _)| {
+                            maybe_apply(element_index, ElementType::Platform);
+                        });
+                    }
+                    ElementType::Cube => {
+                        level.cubes.iter().zip(&cluster.cubes).enumerate().for_each(|(element_index, _)| {
+                            maybe_apply(element_index, ElementType::Cube);
+                        });
+                    }
+                    ElementType::Button => {
+                        level.buttons.iter().zip(&cluster.buttons).enumerate().for_each(|(element_index, _)| {
+                            maybe_apply(element_index, ElementType::Button);
+                        });
+                    }
+                    ElementType::Lift => {
+                        level.lifts.iter().zip(&cluster.lifts).enumerate().for_each(|(element_index, _)| {
+                            maybe_apply(element_index, ElementType::Lift);
+                        });
+                    }
+                    ElementType::Pipe => {
+                        level.pipes.iter().zip(&cluster.pipes).enumerate().for_each(|(element_index, _)| {
+                            maybe_apply(element_index, ElementType::Pipe);
+                        });
+                    }
+                    ElementType::Springpad => {
+                        level.springpads.iter().zip(&cluster.springpads).enumerate().for_each(|(element_index, _)| {
+                            maybe_apply(element_index, ElementType::Springpad);
+                        });
+                    }
+                }
+            } else {
+                level.platforms.iter().zip(&cluster.platforms).enumerate().for_each(|(element_index, _)| {
+                    maybe_apply(element_index, ElementType::Platform);
+                });
+                level.cubes.iter().zip(&cluster.cubes).enumerate().for_each(|(element_index, _)| {
+                    maybe_apply(element_index, ElementType::Cube);
+                });
+                level.buttons.iter().zip(&cluster.buttons).enumerate().for_each(|(element_index, _)| {
+                    maybe_apply(element_index, ElementType::Button);
+                });
+                level.lifts.iter().zip(&cluster.lifts).enumerate().for_each(|(element_index, _)| {
+                    maybe_apply(element_index, ElementType::Lift);
+                });
+                level.pipes.iter().zip(&cluster.pipes).enumerate().for_each(|(element_index, _)| {
+                    maybe_apply(element_index, ElementType::Pipe);
+                });
+                level.springpads.iter().zip(&cluster.springpads).enumerate().for_each(|(element_index, _)| {
+                    maybe_apply(element_index, ElementType::Springpad);
+                });
+            }
         }
     })
 }
