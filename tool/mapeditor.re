@@ -1,9 +1,12 @@
 struct MapEditorState {
     map_name: string,
     map: RefunctMap,
+    original_map: RefunctMap,
     mode: MapEditorMode,
     chosen_element: Element,
     chosen_element_index: ElementIndex,
+    chosen_element_all_cluster: List<Element>,
+    chosen_element_all_cluster_index: List<ElementIndex>,
     changing_category: int,
     changing_coordinate: int,
     changing_speed: int,
@@ -14,6 +17,7 @@ struct MapEditorState {
 static mut MAP_EDITOR_STATE = MapEditorState {
     map_name: "",
     map: Tas::current_map(),
+    original_map: Tas::original_map(),
     mode: MapEditorMode::Edit,
     chosen_element: Element {
         x: 0.,
@@ -31,9 +35,11 @@ static mut MAP_EDITOR_STATE = MapEditorState {
         element_type: ElementType::Platform,
         element_index: -1
     },
+    chosen_element_all_cluster: List::new(),
+    chosen_element_all_cluster_index: List::new(),
     changing_category: 0,
     changing_coordinate: 0,
-    changing_speed: 1,
+    changing_speed: 2,
     change_entire_cluster: false,
     hide_others: false,
 };
@@ -60,10 +66,11 @@ fn map_editor_new_hud() {
     }
     lines.push(ColorfulText { text: T, color: COLOR_WHITE });
 
-    lines.push(ColorfulText { text: "<f> toggle flying\n", color: COLOR_WHITE });
-    lines.push(ColorfulText { text: "<TAB> edit an element\n", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "<F> toggle flying\n", color: COLOR_WHITE });
     lines.push(ColorfulText { text: "<E> select looked-at element\n", color: COLOR_WHITE });
-    lines.push(ColorfulText { text: "<C> trigger next cluster", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "<C> trigger next cluster\n", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "<V> to edit cluster rising\n", color: COLOR_WHITE });
+    lines.push(ColorfulText { text: "<TAB> edit an element (advanced)", color: COLOR_DARK_GRAY });
 
     if MAP_EDITOR_STATE.chosen_element_index.cluster_index >= 0 {
         lines.push(ColorfulText { text: f"\n\nEditing: {MAP_EDITOR_STATE.chosen_element_index.element_type} {MAP_EDITOR_STATE.chosen_element_index.cluster_index+1}-{MAP_EDITOR_STATE.chosen_element_index.element_index+1}\n\n", color: COLOR_GREEN });
@@ -86,12 +93,17 @@ fn map_editor_new_hud() {
             lines.push(ColorfulText { text: f"Yaw       ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
             lines.push(ColorfulText { text: f"Roll \n", color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
         }
-        lines.push(ColorfulText { text: "[1234] ", color: COLOR_WHITE});
-        lines.push(ColorfulText { text: "Slow  ", color: if MAP_EDITOR_STATE.changing_speed == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
-        lines.push(ColorfulText { text: "Normal  ", color: if MAP_EDITOR_STATE.changing_speed == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
-        lines.push(ColorfulText { text: "Fast  ", color: if MAP_EDITOR_STATE.changing_speed == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
-        lines.push(ColorfulText { text: "Nyoom\n", color: if MAP_EDITOR_STATE.changing_speed == 3 { COLOR_GREEN } else { COLOR_RED } }); //3
-        lines.push(ColorfulText { text: "Use left and right arrow to edit!\n\n", color: COLOR_WHITE});
+        lines.push(ColorfulText { text: "[12345] ", color: COLOR_WHITE});
+        lines.push(ColorfulText { text: "Slow ", color: if MAP_EDITOR_STATE.changing_speed == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
+        lines.push(ColorfulText { text: "Normal ", color: if MAP_EDITOR_STATE.changing_speed == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
+        lines.push(ColorfulText { text: "Fast ", color: if MAP_EDITOR_STATE.changing_speed == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
+        lines.push(ColorfulText { text: "Nyoom ", color: if MAP_EDITOR_STATE.changing_speed == 3 { COLOR_GREEN } else { COLOR_RED } }); //3
+        lines.push(ColorfulText { text: "Reset\n", color: if MAP_EDITOR_STATE.changing_speed == 4 { COLOR_GREEN } else { COLOR_RED } }); //4
+        if MAP_EDITOR_STATE.changing_speed == 4 {
+            lines.push(ColorfulText { text: "Press left and right TOGETHER to reset!\n\n", color: COLOR_WHITE});
+        } else {
+            lines.push(ColorfulText { text: "Use left and right arrow to edit!\n\n", color: COLOR_WHITE});
+        }
 
         lines.push(ColorfulText { text: f"[Z]: Show all  ", color: if !MAP_EDITOR_STATE.hide_others { COLOR_GREEN } else { COLOR_RED } });
         lines.push(ColorfulText { text: f"Show selected cluster", color: if MAP_EDITOR_STATE.hide_others { COLOR_GREEN } else { COLOR_RED } });
@@ -100,6 +112,9 @@ fn map_editor_new_hud() {
 
     ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, w, 5.0, anchor, 5.0);
 }
+
+static mut LEFT_PRESSED = false;
+static mut RIGHT_PRESSED = false;
 
 static MAP_EDITOR_COMPONENT = Component {
     id: MAP_EDITOR_COMPONENT_ID,
@@ -123,6 +138,12 @@ static MAP_EDITOR_COMPONENT = Component {
         if MAP_EDITOR_STATE.mode != MapEditorMode::Edit {
             return;
         }
+        if key.to_small() == KEY_LEFT.to_small() {
+            LEFT_PRESSED = true;
+        }
+        if key.to_small() == KEY_RIGHT.to_small() {
+            RIGHT_PRESSED = true;
+        }
         if key.to_small() == KEY_TAB.to_small() {
             enter_ui(create_map_editor_input_ui());
         }
@@ -141,8 +162,20 @@ static MAP_EDITOR_COMPONENT = Component {
             // log(f"{index} {index.cluster_index} index {index.element_index} of type {index.element_type}");
             MAP_EDITOR_STATE.chosen_element = element;
             MAP_EDITOR_STATE.chosen_element_index = index;
-            
-            // enter_ui(create_map_editor_element_ui(element, index, 0));
+
+            let all_index = Tas::get_all_elements_in_same_cluster(index);
+            MAP_EDITOR_STATE.chosen_element_all_cluster_index = all_index;
+            ap_log_1(f"{MAP_EDITOR_STATE.chosen_element_all_cluster_index}");
+
+            MAP_EDITOR_STATE.chosen_element_all_cluster = List::new();
+            for ind in MAP_EDITOR_STATE.chosen_element_all_cluster_index {
+                let element = match try_get_element(ind) {
+                    Result::Ok(element) => element,
+                    _ => return,
+                };
+                MAP_EDITOR_STATE.chosen_element_all_cluster.push(element);
+            }
+
         }
 
         if key.to_small() == KEY_U.to_small() {
@@ -175,22 +208,47 @@ static MAP_EDITOR_COMPONENT = Component {
         if key.to_small() == KEY_4.to_small() {
             MAP_EDITOR_STATE.changing_speed = 3;
         }
+        if key.to_small() == KEY_5.to_small() {
+            MAP_EDITOR_STATE.changing_speed = 4;
+        }
 
         if key.to_small() == KEY_X.to_small() {
             MAP_EDITOR_STATE.change_entire_cluster = !MAP_EDITOR_STATE.change_entire_cluster;
         }
 
         if key.to_small() == KEY_C.to_small() {
+            Tas::deactivate_all_buttons();
             Tas::raise_next_cluster();
+            
+            let c = Tas::get_level() + 1;
+            Tas::enable_button(c-1, 0, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+            if c == 7 || c == 10 || c == 18 || c == 26 || c == 28 {
+                Tas::enable_button(c-1, 1, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+            }
+            if c == 26 {
+                Tas::enable_button(c-1, 2, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+            }  
         }
 
         if MAP_EDITOR_STATE.chosen_element_index.cluster_index < 0 {
             return;
         }
 
+        if key.to_small() == KEY_V.to_small() {
+            let cluster = match MAP_EDITOR_STATE.map.clusters.get(MAP_EDITOR_STATE.chosen_element_index.cluster_index) {
+                Option::Some(cluster) => cluster,
+                Option::None => {
+                    ap_log_1(f"Cluster not found?");
+                    return
+                }
+            };
+            leave_ui();
+            enter_ui(create_map_editor_cluster_ui(cluster, MAP_EDITOR_STATE.chosen_element_index.cluster_index));
+        }
+
         if key.to_small() == KEY_Z.to_small() {
             MAP_EDITOR_STATE.hide_others = !MAP_EDITOR_STATE.hide_others;
-            Tas::apply_map_only_one(MAP_EDITOR_STATE.map, MAP_EDITOR_STATE.chosen_element_index, if MAP_EDITOR_STATE.hide_others { 2 } else { 1 });
+            Tas::apply_map_only_one(MAP_EDITOR_STATE.map, MAP_EDITOR_STATE.chosen_element_index, false, if MAP_EDITOR_STATE.hide_others { 2 } else { 1 });
         }
         if key.to_small() == KEY_LEFT.to_small() || key.to_small() == KEY_RIGHT.to_small() {
             let mut sign = 0.;
@@ -201,50 +259,106 @@ static MAP_EDITOR_COMPONENT = Component {
                 sign = 1.;
             }
             let mut speed = 0.1;
-            match MAP_EDITOR_STATE.changing_speed {
-                0 => speed = 1.,
-                1 => speed = 10.,
-                2 => speed = 100.,
-                3 => speed = 1000.,
-                _ => (),
+
+            let elements_to_change = List::new();
+            let elements_to_change_index = List::new();
+            if MAP_EDITOR_STATE.change_entire_cluster {
+                for el in MAP_EDITOR_STATE.chosen_element_all_cluster {
+                    elements_to_change.push(el);
+                }
+                for ind in MAP_EDITOR_STATE.chosen_element_all_cluster_index {
+                    elements_to_change_index.push(ind);
+                }
+            } else {
+                elements_to_change.push(MAP_EDITOR_STATE.chosen_element);
+                elements_to_change_index.push(MAP_EDITOR_STATE.chosen_element_index);
             }
-            match MAP_EDITOR_STATE.changing_category {
-                0 => { // position
-                    match MAP_EDITOR_STATE.changing_coordinate {
-                        0 => MAP_EDITOR_STATE.chosen_element.x += sign * speed,
-                        1 => MAP_EDITOR_STATE.chosen_element.y += sign * speed,
-                        2 => MAP_EDITOR_STATE.chosen_element.z += sign * speed,
+
+
+            let mut i = 0;
+            while i < elements_to_change.len(){
+                let mut element: Element = elements_to_change.get(i).unwrap();
+                let index: ElementIndex = elements_to_change_index.get(i).unwrap();        
+
+
+                if MAP_EDITOR_STATE.changing_speed == 4 {
+                    if LEFT_PRESSED && RIGHT_PRESSED {
+                        let original_element = Tas::get_original_element(index);
+                        
+                        if MAP_EDITOR_STATE.changing_category == 0 {
+                            element.x = original_element.x;
+                            element.y = original_element.y;
+                            element.z = original_element.z;
+                        }
+                        if MAP_EDITOR_STATE.changing_category == 1 {
+                            element.pitch = original_element.pitch;
+                            element.yaw = original_element.yaw;
+                            element.roll = original_element.roll;
+                        }
+                        if MAP_EDITOR_STATE.changing_category == 2 {
+                            element.sizex = original_element.sizex;
+                            element.sizey = original_element.sizey;
+                            element.sizez = original_element.sizez;
+                        }
+                    }
+                } else {
+                    match MAP_EDITOR_STATE.changing_speed {
+                        0 => speed = 1.,
+                        1 => speed = 10.,
+                        2 => speed = 100.,
+                        3 => speed = 1000.,
                         _ => (),
                     }
-                },
-                1 => { // rotation
-                    match MAP_EDITOR_STATE.changing_coordinate {
-                        0 => MAP_EDITOR_STATE.chosen_element.pitch += 0.09 * sign * speed,
-                        1 => MAP_EDITOR_STATE.chosen_element.yaw += 0.09 * sign * speed,
-                        2 => MAP_EDITOR_STATE.chosen_element.roll += 0.09 * sign * speed,
+                    match MAP_EDITOR_STATE.changing_category {
+                        0 => { // position
+                            match MAP_EDITOR_STATE.changing_coordinate {
+                                0 => element.x += sign * speed,
+                                1 => element.y += sign * speed,
+                                2 => element.z += sign * speed,
+                                _ => (),
+                            }
+                        },
+                        1 => { // rotation
+                            match MAP_EDITOR_STATE.changing_coordinate {
+                                0 => element.pitch += 0.09 * sign * speed,
+                                1 => element.yaw += 0.09 * sign * speed,
+                                2 => element.roll += 0.09 * sign * speed,
+                                _ => (),
+                            }
+                        },
+                        2 => { // size
+                            match MAP_EDITOR_STATE.changing_coordinate {
+                                0 => element.sizex += sign * speed,
+                                1 => element.sizey += sign * speed,
+                                2 => element.sizez += sign * speed,
+                                _ => (),
+                            }
+                        },
                         _ => (),
                     }
-                },
-                2 => { // size
-                    match MAP_EDITOR_STATE.changing_coordinate {
-                        0 => MAP_EDITOR_STATE.chosen_element.sizex += sign * speed,
-                        1 => MAP_EDITOR_STATE.chosen_element.sizey += sign * speed,
-                        2 => MAP_EDITOR_STATE.chosen_element.sizez += sign * speed,
-                        _ => (),
-                    }
-                },
-                _ => (),
+                }
+                
+                i = i + 1;
+            }
+            if MAP_EDITOR_STATE.change_entire_cluster {
+                Tas::apply_map_only_one(MAP_EDITOR_STATE.map, MAP_EDITOR_STATE.chosen_element_index, true, 0);
+            }else{
+                Tas::apply_map_only_one(MAP_EDITOR_STATE.map, MAP_EDITOR_STATE.chosen_element_index, false, 0);
             }
             Tas::save_map(MAP_EDITOR_STATE.map_name, MAP_EDITOR_STATE.map);
-            Tas::apply_map_only_one(MAP_EDITOR_STATE.map, MAP_EDITOR_STATE.chosen_element_index, 0);
         }
 
 
     },
-    on_key_down_always: fn(key: KeyCode, is_repeat: bool) {
-            
+    on_key_down_always: fn(key: KeyCode, is_repeat: bool) {},
+    on_key_up: fn(key: KeyCode) {
+        if key.to_small() == KEY_LEFT.to_small() {
+            LEFT_PRESSED = false;
+        }
+        if key.to_small() == KEY_RIGHT.to_small() {
+            RIGHT_PRESSED = false;
+        }
     },
-    on_key_up: fn(key: KeyCode) {},
     on_key_up_always: fn(key: KeyCode) {},
     on_key_char: fn(c: string) {},
     on_key_char_always: fn(c: string) {},

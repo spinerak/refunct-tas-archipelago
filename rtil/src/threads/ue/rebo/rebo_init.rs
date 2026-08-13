@@ -188,10 +188,12 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(remove_map)
         .add_function(current_map)
         .add_function(original_map)
+        .add_function(get_original_element)
         .add_function(apply_map)
         .add_function(apply_map_cluster_speeds)
         .add_function(apply_map_only_one)
         .add_function(get_looked_at_element_index)
+        .add_function(get_all_elements_in_same_cluster)
         .add_function(get_element_bounds)
         .add_function(enable_player_collision)
         .add_function(disable_player_collision)
@@ -3558,6 +3560,10 @@ pub static ORIGINAL_MAP: Lazy<RefunctMap> = Lazy::new(|| get_current_map(true));
 fn original_map() -> RefunctMap {
     ORIGINAL_MAP.clone()
 }
+#[rebo::function("Tas::get_original_element")]
+fn get_original_element(index: ElementIndex) -> Element {
+    get_indexed_element(&*ORIGINAL_MAP, index)
+}
 pub fn apply_map_internal(map: &RefunctMap) {
     // initialize before we change anything
     let _ = &*ORIGINAL_MAP;
@@ -3598,10 +3604,10 @@ pub fn apply_map_internal(map: &RefunctMap) {
     })
 }
 #[rebo::function("Tas::apply_map_only_one")]
-fn apply_map_only_one(map: RefunctMap, el: ElementIndex, hide_all_expect_this_cluster: i32) {
-    apply_map_internal_only_one(&map, el, hide_all_expect_this_cluster)
+fn apply_map_only_one(map: RefunctMap, el: ElementIndex, update_entire_cluster: bool, hide_all_expect_this_cluster: i32) {
+    apply_map_internal_only_one(&map, el, update_entire_cluster, hide_all_expect_this_cluster)
 }
-pub fn apply_map_internal_only_one(map: &RefunctMap, el: ElementIndex, hide_all_expect_this_cluster: i32) {
+pub fn apply_map_internal_only_one(map: &RefunctMap, el: ElementIndex, update_entire_cluster: bool, hide_all_expect_this_cluster: i32) {
     // hide_all_expect_this_cluster = 0 -> do nothing
     // hide_all_expect_this_cluster = 1 -> OFF
     // hide_all_expect_this_cluster = 2 -> ON
@@ -3640,18 +3646,18 @@ pub fn apply_map_internal_only_one(map: &RefunctMap, el: ElementIndex, hide_all_
 
             let maybe_apply = |element_index: usize, element_type: ElementType| {
                 let index = ElementIndex { cluster_index, element_type, element_index };
-                let same_cluster = index.cluster_index == el.cluster_index && index.element_type == el.element_type && index.element_index == el.element_index;
+                let should_update = index.cluster_index == el.cluster_index && ((index.element_type == el.element_type && index.element_index == el.element_index) || update_entire_cluster);
                 let mut should_hide = hide_all_expect_this_cluster;
                 if should_hide == 2 && index.cluster_index == el.cluster_index {
                     should_hide = 1;
                 }
                 
-                if same_cluster || should_hide > 0 {
+                if should_update || should_hide > 0 {
                     set_element(scope, &levels, &map, index, should_hide);
                 }
             };
 
-            if hide_all_expect_this_cluster == 0 {
+            if hide_all_expect_this_cluster == 0 && !update_entire_cluster {
                 match el.element_type {
                     ElementType::Platform => {
                         level.platforms.iter().zip(&cluster.platforms).enumerate().for_each(|(element_index, _)| {
@@ -3726,6 +3732,33 @@ fn apply_map_cluster_speeds(map: RefunctMap) {
 fn get_looked_at_element_index() -> Option<ElementIndex> {
     let intersected = KismetSystemLibrary::line_trace_single(AMyCharacter::get_player());
     try_find_element_index(intersected as *mut UObject)
+}
+
+#[rebo::function("Tas::get_all_elements_in_same_cluster")]
+fn get_all_elements_in_same_cluster(index_el: ElementIndex) -> Vec<ElementIndex>{
+    let mut list_of_elements = vec![];
+    UeScope::with(|scope| {
+        let levels = LEVELS.lock().unwrap();
+        for (cluster_index, (level, cluster)) in levels.iter().zip(&ORIGINAL_MAP.clusters).enumerate() {
+            let level_wrapper = scope.get(level.level);
+            let (rx, ry, _) = level_wrapper.source_location();
+            level_wrapper.set_source_location(rx, ry, cluster.z);
+            level_wrapper.set_speed(cluster.rise_speed);
+            level.platforms.iter().zip(&cluster.platforms).enumerate().map(|i| (i.0, ElementType::Platform))
+                .chain(level.cubes.iter().zip(&cluster.cubes).enumerate().map(|i| (i.0, ElementType::Cube)))
+                .chain(level.buttons.iter().zip(&cluster.buttons).enumerate().map(|i| (i.0, ElementType::Button)))
+                .chain(level.lifts.iter().zip(&cluster.lifts).enumerate().map(|i| (i.0, ElementType::Lift)))
+                .chain(level.pipes.iter().zip(&cluster.pipes).enumerate().map(|i| (i.0, ElementType::Pipe)))
+                .chain(level.springpads.iter().zip(&cluster.springpads).enumerate().map(|i| (i.0, ElementType::Springpad)))
+                .for_each(|(element_index, element_type)| {
+                    let index = ElementIndex { cluster_index, element_type, element_index };
+                    if cluster_index == index_el.cluster_index {
+                        list_of_elements.push(index)
+                    }
+                });
+        }
+    });
+    list_of_elements
 }
 
 fn get_indexed_element(map: &RefunctMap, index: ElementIndex) -> Element {
