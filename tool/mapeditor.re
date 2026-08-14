@@ -165,7 +165,7 @@ static MAP_EDITOR_COMPONENT = Component {
 
             let all_index = Tas::get_all_elements_in_same_cluster(index);
             MAP_EDITOR_STATE.chosen_element_all_cluster_index = all_index;
-            ap_log_1(f"{MAP_EDITOR_STATE.chosen_element_all_cluster_index}");
+            // ap_log_1(f"{MAP_EDITOR_STATE.chosen_element_all_cluster_index}");
 
             MAP_EDITOR_STATE.chosen_element_all_cluster = List::new();
             for ind in MAP_EDITOR_STATE.chosen_element_all_cluster_index {
