@@ -44,6 +44,7 @@ impl Ui {
 
 enum UiElement {
     Button(UiButton),
+    ColorButton(UiColorButton),
     Input(Input),
     FloatInput(FloatInput),
     Slider(Slider),
@@ -51,6 +52,12 @@ enum UiElement {
 }
 struct UiButton {
     label: Text,
+    onclick: fn(Text),
+}
+struct UiColorButton {
+    label: Text,
+    color_default: Color,
+    color_selected: Color,
     onclick: fn(Text),
 }
 struct Input {
@@ -359,8 +366,9 @@ impl Ui {
 
         let mut i = 0;
         for element in self.elements {
-            let color = if self.selected == i { COLOR_GREEN } else { COLOR_WHITE };
-            element.draw(10. + padding + i.to_float() * padding, color);
+            let is_selected = self.selected == i;
+            let color = if is_selected { COLOR_GREEN } else { COLOR_WHITE };
+            element.draw(10. + padding + i.to_float() * padding, color, is_selected);
             i = i + 1;
         }
     }
@@ -370,6 +378,7 @@ impl UiElement {
     fn onclick(self) {
         match self {
             UiElement::Button(button) => button.onclick(),
+            UiElement::ColorButton(button) => button.onclick(),
             UiElement::Input(input) => input.onclick(),
             UiElement::FloatInput(input) => input.onclick(),
             UiElement::Slider(slider) => (),
@@ -379,6 +388,7 @@ impl UiElement {
     fn onkey(self, key: KeyCode) {
         match self {
             UiElement::Button(button) => (),
+            UiElement::ColorButton(button) => (),
             UiElement::Input(input) => input.onkey(key),
             UiElement::FloatInput(input) => input.onkey(key),
             UiElement::Slider(slider) => slider.onkey(key),
@@ -388,15 +398,17 @@ impl UiElement {
     fn onchar(self, c: string) {
         match self {
             UiElement::Button(button) => (),
+            UiElement::ColorButton(button) => (),
             UiElement::Input(input) => input.onchar(c),
             UiElement::FloatInput(input) => input.onchar(c),
             UiElement::Slider(slider) => (),
             UiElement::Chooser(chooser) => (),
         }
     }
-    fn draw(self, y: float, color: Color) {
+    fn draw(self, y: float, color: Color, is_selected: bool) {
         match self {
             UiElement::Button(button) => button.draw(y, color),
+            UiElement::ColorButton(button) => button.draw(y, if is_selected { button.color_selected } else { button.color_default }),
             UiElement::Input(input) => input.draw(y, color),
             UiElement::FloatInput(input) => input.draw(y, color),
             UiElement::Slider(slider) => slider.draw(y, color),
@@ -406,6 +418,7 @@ impl UiElement {
     fn text(self) -> string {
         match self {
             UiElement::Button(button) => button.text(),
+            UiElement::ColorButton(button) => button.text(),
             UiElement::Input(input) => input.text(),
             UiElement::FloatInput(input) => input.text(),
             UiElement::Slider(slider) => slider.text(),
@@ -415,6 +428,25 @@ impl UiElement {
 }
 
 impl UiButton {
+    fn onclick(self) {
+        let f = self.onclick;
+        f(self.label);
+    }
+    fn draw(self, y: float, color: Color) {
+        Tas::draw_text(DrawText {
+            text: self.text(),
+            color: color,
+            x: 0.,
+            y: y,
+            scale: SETTINGS.ui_scale,
+            scale_position: true,
+        })
+    }
+    fn text(self) -> string {
+        f"    {self.label.text}"
+    }
+}
+impl UiColorButton {
     fn onclick(self) {
         let f = self.onclick;
         f(self.label);

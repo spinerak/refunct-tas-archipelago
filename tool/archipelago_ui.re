@@ -697,317 +697,358 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
 }
 
 fn create_archipelago_gamemodes_menu() -> Ui {
-    Ui::new("Select Game Mode:", List::of(
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.just_clique {
-                    "Move rando (locked)"
-                } else {
-                    "Move rando (main)"
-                }
-            } },
-            onclick: fn(label: Text) {
-                if ARCHIPELAGO_STATE.just_clique {
-                    // log("Move rando gamemode is locked!");
-                    return;
-                }
-                // log("Set gamemode to main game");
-                archipelago_init(0);
-                leave_ui();
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_vanilla_minigame {
-                    "Vanilla game"
-                } else {
-                    "Vanilla game (locked)"
-                }
-            } },
-            onclick: fn(label: Text) {
-                if !ARCHIPELAGO_STATE.unlock_vanilla_minigame {
-                    // log("Vanilla game gamemode is locked!");
-                    return;
-                }
-                // log("Set gamemode to OG game");
-                archipelago_init(1);
-                leave_ui();
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_button_galore_minigame {
-                    "Button Galore"
-                } else {
-                    "Button Galore (locked)"
-                }
-            } },
-            onclick: fn(label: Text) {
-                if !ARCHIPELAGO_STATE.unlock_button_galore_minigame {
-                    // log("Button Galore gamemode is locked!");
-                    return;
-                }
-                // log("Set gamemode to Button Galore");
-                archipelago_init(2);
-                leave_ui();
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_seeker_minigame {
-                    "Seeker"
-                } else {
-                    "Seeker (locked)"
-                }
-            } },
-            onclick: fn(label: Text) {
-                if !ARCHIPELAGO_STATE.unlock_seeker_minigame {
-                    // log("Seeker gamemode is locked!");
-                    return;
-                }
-                // log("Set gamemode to Seeker");
-                archipelago_init(3);
-                leave_ui();
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_OG_randomizer {
-                    "OG Randomizer"
-                } else {
-                    "OG Randomizer (locked)"
-                }
-            } },
-            onclick: fn(label: Text) {
-                if !ARCHIPELAGO_STATE.unlock_OG_randomizer {
-                    // log("OG Randomizer gamemode is locked!");
-                    return;
-                }
-                // log("Set gamemode to OG Randomizer");
-                archipelago_init(4);
-                leave_ui();
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_block_brawl {
-                    "Block Brawl"
-                } else {
-                    "Block Brawl (locked)"
-                }
-            } },
-            onclick: fn(label: Text) { 
-                if !ARCHIPELAGO_STATE.unlock_block_brawl {
-                    // log("Block Brawl gamemode is locked!");
-                    return;
-                }
-                // log("Set gamemode to Block Brawl");
-                ARCHIPELAGO_STATE.block_brawl_alt = false;
-                archipelago_init(5); 
-                leave_ui(); 
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_block_brawl {
-                    "Block Brawl ALT"
-                } else {
-                    "Block Brawl ALT (locked)"
-                }
-            } },
-            onclick: fn(label: Text) { 
-                if !ARCHIPELAGO_STATE.unlock_block_brawl {
-                    // log("Block Brawl gamemode is locked!");
-                    return;
-                }
-                // log("Set gamemode to Block Brawl ALT");
-                ARCHIPELAGO_STATE.block_brawl_alt = true;
-                archipelago_init(5); 
-                leave_ui(); 
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_climb_line {
-                    "Climb Line"
-                } else {
-                    "Climb Line (locked)"
-                }
-            } },
-            onclick: fn(label: Text) { 
-                if !ARCHIPELAGO_STATE.unlock_climb_line {
-                    // log("Climb Line gamemode is locked!");
-                    return;
-                }
-                archipelago_init(6); 
-                leave_ui(); 
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_climb_spiral {
-                    "Climb Spiral"
-                } else {
-                    "Climb Spiral (locked)"
-                }
-            } },
-            onclick: fn(label: Text) { 
-                if !ARCHIPELAGO_STATE.unlock_climb_spiral {
-                    // log("Climb Spiral gamemode is locked!");
-                    return;
-                }
-                archipelago_init(7); 
-                leave_ui(); 
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_climb_chaos {
-                    "Climb Chaos"
-                } else {
-                    "Climb Chaos (locked)"
-                }
-            } },
-            onclick: fn(label: Text) { 
-                if !ARCHIPELAGO_STATE.unlock_climb_chaos {
-                    // log("Climb Chaos gamemode is locked!");
-                    return;
-                }
-                archipelago_init(8); 
-                leave_ui(); 
-            },
-        }),
-        // UiElement::Button(UiButton {
-        //     label: Text { text: "[test] Hillside Cave Secret" },
-        //     onclick: fn(label: Text) { 
-        //         archipelago_init(9); 
-        //         leave_ui(); 
-        //     },
-        // }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_block_blub {
-                    "Block Blub"
-                } else {
-                    "Block Blub (locked)"
-                }
-            } },
-            onclick: fn(label: Text) { 
-                if !ARCHIPELAGO_STATE.unlock_block_blub {
-                    // log("Block Blub gamemode is locked!");
-                    return;
-                }
-                // log("Set gamemode to Block Blub");
-                archipelago_init(11); 
-                leave_ui(); 
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame {
-                    "Refunct Mountain"
-                } else {
-                    "Refunct Mountain (locked)"
-                }
-            } },
-            onclick: fn(label: Text) {
-                if !ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame {
-                    // log("Refunct Mountain gamemode is locked!");
-                    return;
-                }
-                // log("Set gamemode to Refunct Mountain");
-                archipelago_init(12);
-                leave_ui();
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_rando_mountain_minigame {
-                    "Rando Mountain"
-                } else {
-                    "Rando Mountain (locked)"
-                }
-            } },
-            onclick: fn(label: Text) {
-                if !ARCHIPELAGO_STATE.unlock_rando_mountain_minigame {
-                    // log("Rando Mountain gamemode is locked!");
-                    return;
-                }
-                // log("Set gamemode to Rando Mountain");
-                archipelago_init(13);
-                leave_ui();
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_climb_narrow {
-                    "Climb Narrow"
-                } else {
-                    "Climb Narrow (locked)"
-                }
-            } },
-            onclick: fn(label: Text) { 
-                if !ARCHIPELAGO_STATE.unlock_climb_narrow {
-                    // log("Climb Narrow gamemode is locked!");
-                    return;
-                }
-                archipelago_init(14); 
-                leave_ui(); 
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame {
-                    "Funny Bridge Game"
-                } else {
-                    "Funny Bridge Game (locked)"
-                }
-            } },
-            onclick: fn(label: Text) { 
-                if !ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame {
-                    // log("Funny Bridge Game gamemode is locked!");
-                    return;
-                }
-                archipelago_init(16); 
-                leave_ui(); 
-            },
-        }),
-        UiElement::Button(UiButton {
-            label: Text { text: {
-                if ARCHIPELAGO_STATE.has_clique {
-                    "Clique"
-                } else {
-                    "Clique (locked)"
-                }
-            } },
-            onclick: fn(label: Text) { 
-                if !ARCHIPELAGO_STATE.has_clique {
-                    // log("Clique gamemode is locked!");
-                    return;
-                }
-                archipelago_init(17); 
-                leave_ui(); 
-            },
-        }),
-        UiElement::Button(UiButton {
+    let unlocked = List::new();
+    let locked = List::new();
+
+    let make_gamemode_button: fn(UiButton, bool) = fn(button: UiButton, is_unlocked: bool) {
+        let el = UiElement::ColorButton(UiColorButton {
+            label: button.label,
+            onclick: button.onclick,
+            color_default: if is_unlocked { COLOR_WHITE } else { COLOR_DARK_GRAY },
+            color_selected: if is_unlocked { COLOR_GREEN } else { AP_COLOR_RED },
+        });
+        if is_unlocked { unlocked.push(el) } else { locked.push(el) }
+    };
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.just_clique {
+                "Move rando (locked)"
+            } else {
+                "Move rando (main)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if ARCHIPELAGO_STATE.just_clique {
+                // log("Move rando gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to main game");
+            archipelago_init(0);
+            leave_ui();
+        },
+    }, !ARCHIPELAGO_STATE.just_clique);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_vanilla_minigame {
+                "Vanilla game"
+            } else {
+                "Vanilla game (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_vanilla_minigame {
+                // log("Vanilla game gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to OG game");
+            archipelago_init(1);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_vanilla_minigame);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_button_galore_minigame {
+                "Button Galore"
+            } else {
+                "Button Galore (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_button_galore_minigame {
+                // log("Button Galore gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Button Galore");
+            archipelago_init(2);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_button_galore_minigame);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_seeker_minigame {
+                "Seeker"
+            } else {
+                "Seeker (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_seeker_minigame {
+                // log("Seeker gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Seeker");
+            archipelago_init(3);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_seeker_minigame);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_OG_randomizer {
+                "OG Randomizer"
+            } else {
+                "OG Randomizer (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_OG_randomizer {
+                // log("OG Randomizer gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to OG Randomizer");
+            archipelago_init(4);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_OG_randomizer);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_block_brawl {
+                "Block Brawl"
+            } else {
+                "Block Brawl (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_block_brawl {
+                // log("Block Brawl gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Block Brawl");
+            ARCHIPELAGO_STATE.block_brawl_alt = false;
+            archipelago_init(5);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_block_brawl);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_block_brawl {
+                "Block Brawl ALT"
+            } else {
+                "Block Brawl ALT (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_block_brawl {
+                // log("Block Brawl gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Block Brawl ALT");
+            ARCHIPELAGO_STATE.block_brawl_alt = true;
+            archipelago_init(5);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_block_brawl);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_climb_line {
+                "Climb Line"
+            } else {
+                "Climb Line (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_climb_line {
+                // log("Climb Line gamemode is locked!");
+                return;
+            }
+            archipelago_init(6);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_climb_line);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_climb_spiral {
+                "Climb Spiral"
+            } else {
+                "Climb Spiral (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_climb_spiral {
+                // log("Climb Spiral gamemode is locked!");
+                return;
+            }
+            archipelago_init(7);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_climb_spiral);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_climb_chaos {
+                "Climb Chaos"
+            } else {
+                "Climb Chaos (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_climb_chaos {
+                // log("Climb Chaos gamemode is locked!");
+                return;
+            }
+            archipelago_init(8);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_climb_chaos);
+
+    // UiElement::Button(UiButton {
+    //     label: Text { text: "[test] Hillside Cave Secret" },
+    //     onclick: fn(label: Text) {
+    //         archipelago_init(9);
+    //         leave_ui();
+    //     },
+    // }),
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_block_blub {
+                "Block Blub"
+            } else {
+                "Block Blub (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_block_blub {
+                // log("Block Blub gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Block Blub");
+            archipelago_init(11);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_block_blub);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame {
+                "Refunct Mountain"
+            } else {
+                "Refunct Mountain (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame {
+                // log("Refunct Mountain gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Refunct Mountain");
+            archipelago_init(12);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_rando_mountain_minigame {
+                "Rando Mountain"
+            } else {
+                "Rando Mountain (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_rando_mountain_minigame {
+                // log("Rando Mountain gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Rando Mountain");
+            archipelago_init(13);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_rando_mountain_minigame);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_climb_narrow {
+                "Climb Narrow"
+            } else {
+                "Climb Narrow (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_climb_narrow {
+                // log("Climb Narrow gamemode is locked!");
+                return;
+            }
+            archipelago_init(14);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_climb_narrow);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame {
+                "Funny Bridge Game"
+            } else {
+                "Funny Bridge Game (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame {
+                // log("Funny Bridge Game gamemode is locked!");
+                return;
+            }
+            archipelago_init(16);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame);
+
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.has_clique {
+                "Clique"
+            } else {
+                "Clique (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.has_clique {
+                // log("Clique gamemode is locked!");
+                return;
+            }
+            archipelago_init(17);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.has_clique);
+
+    let elems = List::new();
+    elems.extend(unlocked);
+    elems.extend(locked);
+    elems.extend(List::of(
+        UiElement::ColorButton(UiColorButton {
             label: Text { text: "[TEST] Frogger" },
-            onclick: fn(label: Text) { 
-                archipelago_init(10); 
-                leave_ui(); 
+            onclick: fn(label: Text) {
+                archipelago_init(10);
+                leave_ui();
             },
+            color_default: AP_COLOR_CYAN,
+            color_selected: COLOR_GREEN,
         }),
-        UiElement::Button(UiButton {
+        UiElement::ColorButton(UiColorButton {
             label: Text { text: "[TEST] Block Beat" },
-            onclick: fn(label: Text) { 
-                archipelago_init(15); 
-                leave_ui(); 
+            onclick: fn(label: Text) {
+                archipelago_init(15);
+                leave_ui();
             },
+            color_default: AP_COLOR_CYAN,
+            color_selected: COLOR_GREEN,
         }),
-        UiElement::Button(UiButton {
+        UiElement::ColorButton(UiColorButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
+            color_default: COLOR_WHITE,
+            color_selected: AP_COLOR_RED,
         }),
-    ))
+    ));
+
+    Ui::new("Select Game Mode:", elems)
 }
 
 fn get_status_text_lines() -> List<ColorfulText> {  
