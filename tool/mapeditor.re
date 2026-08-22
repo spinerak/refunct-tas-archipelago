@@ -152,7 +152,12 @@ static MAP_EDITOR_COMPONENT = Component {
             RIGHT_PRESSED = true;
         }
         if key.to_small() == KEY_TAB.to_small() {
-            enter_ui(create_map_editor_input_ui());
+            if MAP_EDITOR_STATE.chosen_element_index.cluster_index > -1 {
+                enter_ui(create_map_editor_element_ui(MAP_EDITOR_STATE.chosen_element, MAP_EDITOR_STATE.chosen_element_index, 0));
+            } else {
+                enter_ui(create_map_editor_input_ui());
+            }               
+
         }
         if key.to_small() == KEY_E.to_small() {
             let index = match Tas::get_looked_at_element_index() {
