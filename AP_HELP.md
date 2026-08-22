@@ -1,3 +1,5 @@
+<img width="764" height="120" alt="image" src="https://github.com/user-attachments/assets/bbe0403f-f57b-4311-8c0f-e386f33aaff7" />
+
 ## Refunct Archipelago Randomizer
 <img width="770" height="442" alt="image" src="https://github.com/user-attachments/assets/df7c9a4b-1bcf-4ef4-8e3c-bb5b932cd8c0" />
 
