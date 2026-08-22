@@ -1,3 +1,5 @@
+<img width="764" height="120" alt="image" src="https://github.com/user-attachments/assets/d87c4749-7e0d-488a-bb84-dc73b4329a44" />
+
 This mod is possible because of the amazing work from the [refunct-tas](https://github.com/oberien/refunct-tas) team!
 
 # Refunct for Archipelago
@@ -74,3 +76,5 @@ If you want to build the project yourself, follow the steps from the original [r
 ## Refunct TaS Tool
 This tool is derived from https://github.com/oberien/refunct-tas.
 There is a readme there too.
+
+<img width="605" height="135" alt="image" src="https://github.com/user-attachments/assets/00b79792-a3a0-4585-9152-952a5c39c78c" />
