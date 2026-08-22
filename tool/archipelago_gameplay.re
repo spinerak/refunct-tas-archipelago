@@ -161,6 +161,11 @@ struct ArchipelagoState {
     clique_fillers_collected: int,
     clique_item_id: int,
 
+    
+    unlock_custom_minigame: bool,
+    done_custom_minigame: bool,
+    progress_custom_minigame: string,
+
 
     last_platform_c: Option<int>,
     last_platform_p: Option<int>,
@@ -337,11 +342,15 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         has_clique: false,
         clique_fillers_collected: 0,
         clique_item_id: 0,
+        
+        unlock_custom_minigame: false,
+        done_custom_minigame: false,
+        progress_custom_minigame: "0/37",
 
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.4.0",
+        mod_version: "1.5.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -697,6 +706,13 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         if ARCHIPELAGO_STATE.gamemode == 12 {
             if index.element_type == ElementType::Button {
                 archipelago_send_check(10110000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+            }
+        }
+        
+
+        if ARCHIPELAGO_STATE.gamemode == 18 {
+            if index.element_type == ElementType::Button {
+                archipelago_send_check(10130000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
             }
         }
     },
@@ -1198,6 +1214,11 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
         return;
     }
 
+    if item_id == 9999890 {  // Custom Minigame
+        ARCHIPELAGO_STATE.unlock_custom_minigame = true;
+        return;
+    }
+
     ARCHIPELAGO_STATE.received_items.push(item_id);
     if ARCHIPELAGO_STATE.started < 2 {
         return;
@@ -1398,6 +1419,11 @@ fn archipelago_got_grass(){
 }
 
 fn archipelago_init(gamemode: int){
+    if ARCHIPELAGO_STATE.gamemode == 18 {  // revert to og map
+        Tas::abilities_set_swim(false);
+        MAP_EDITOR_STATE.map = Tas::original_map();
+        Tas::apply_map(MAP_EDITOR_STATE.map);
+    }
     ARCHIPELAGO_STATE.ap_connected = true;
     // log("Archipelago started, waiting for new game");
     ARCHIPELAGO_STATE.started = 0;
@@ -1465,6 +1491,9 @@ fn archipelago_start(){
     }
     if ARCHIPELAGO_STATE.gamemode == 17 {
         archipelago_clique_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 18 {
+        archipelago_custom_start();
     }
 
     let mut i = 0;
@@ -1602,6 +1631,16 @@ fn got_extra_cube_ap(element_index: int){
 }
 
 fn archipelago_vanilla_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
+}
+
+fn archipelago_custom_start(){
     Tas::abilities_set_swim(true);
     Tas::abilities_set_wall_jump(2, false);
     Tas::abilities_set_ledge_grab(true);
@@ -2856,6 +2895,21 @@ fn archipelago_checked_location(id: int){
     }
     if id == 10130002 {
         ARCHIPELAGO_STATE.got_clique_cube = true;
+    }
+
+    let custom_locations = List::of(10130101, 10130201, 10130301, 10130401, 10130501, 10130601, 10130701, 10130702, 10130801, 10130901, 10131001, 10131002, 10131101, 10131201, 10131301, 10131401, 10131501, 10131601, 10131701, 10131801, 10131802, 10131901, 10132001, 10132101, 10132201, 10132301, 10132401, 10132501, 10132601, 10132602, 10132603, 10132701, 10132801, 10132802, 10132901, 10133001, 10133101);
+    if custom_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in custom_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }
+        }
+        if number_pressed == custom_locations.len() {
+            ARCHIPELAGO_STATE.done_custom_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Custom Minigame!", color: AP_COLOR_GREEN }));
+        }
+        ARCHIPELAGO_STATE.progress_custom_minigame = f"{number_pressed}/{custom_locations.len()}";
     }
 
 }

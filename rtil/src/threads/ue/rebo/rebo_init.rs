@@ -142,6 +142,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
 
         .add_function(set_goal_animation_should_play)
         .add_function(disable_all_buttons)
+        .add_function(disable_button_keep_collision)
         .add_function(enable_all_buttons)
         .add_function(enable_button)
 
@@ -539,6 +540,15 @@ fn disable_button(level_index: usize, button_index: usize) {
         let button = scope.get(levels[level_index].buttons[button_index]);
         button.set_pressed(true);
         button.set_collision(false);
+    });
+}
+
+#[rebo::function("Tas::disable_button_keep_collision")]
+fn disable_button_keep_collision(level_index: usize, button_index: usize) {
+    UeScope::with(|scope| {
+        let levels = LEVELS.lock().unwrap();
+        let button = scope.get(levels[level_index].buttons[button_index]);
+        button.set_pressed(true);
     });
 }
 

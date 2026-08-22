@@ -693,6 +693,17 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
         }
     }
 
+    if ARCHIPELAGO_STATE.unlock_custom_minigame && !ARCHIPELAGO_STATE.done_custom_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nCustom",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+
     lines
 }
 
@@ -1018,6 +1029,45 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         },
     }, ARCHIPELAGO_STATE.has_clique);
 
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_custom_minigame {
+                "Custom game"
+            } else {
+                "Custom game (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_custom_minigame {
+                // log("Custom game gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to custom game");
+            archipelago_init(18);
+            leave_ui();
+            
+
+            ap_log_1("Started custom!");
+            let map_list = Tas::list_maps();
+            enter_ui(Ui::new_filechooser("Map to play", map_list, fn(input: string) {
+                MAP_EDITOR_STATE.map_name = input;
+                if map_list.contains(input) {
+                    Tas::abilities_set_swim(false);
+                    MAP_EDITOR_STATE.map = Tas::load_map(input);
+                    Tas::apply_map(MAP_EDITOR_STATE.map);
+                } else {
+                    MAP_EDITOR_STATE.map = Tas::current_map();
+                };
+                // add_component(MAP_EDITOR_COMPONENT);
+                MAP_EDITOR_STATE.mode = MapEditorMode::Play;
+                // MOVEMENT_STATE.enable_fly = false;
+                leave_ui();
+                leave_ui();
+                leave_ui();
+            }));
+        },
+    }, ARCHIPELAGO_STATE.unlock_custom_minigame);
+
     let elems = List::new();
     elems.extend(unlocked);
     elems.extend(locked);
@@ -1206,6 +1256,12 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: if ARCHIPELAGO_STATE.got_clique_cube { "✔ Got Cube  \n" } else { "✖ Got Cube  \n" }, color: if ARCHIPELAGO_STATE.got_clique_cube { AP_COLOR_GREEN } else { AP_COLOR_RED } },
                 ColorfulText { text: if ARCHIPELAGO_STATE.unlock_clique_button { "✔ Button Unlocked  \n" } else { "✖ Button Unlocked  \n" }, color: if ARCHIPELAGO_STATE.unlock_clique_button { AP_COLOR_GREEN } else { AP_COLOR_RED } },
                 ColorfulText { text: if ARCHIPELAGO_STATE.done_clique_button { "✔ Pressed Button  \n" } else { "✖ Pressed Button  \n" }, color: if ARCHIPELAGO_STATE.done_clique_button { AP_COLOR_GREEN } else { AP_COLOR_RED } },
+            ),
+            18 => List::of(
+                ColorfulText { text: "Archipelago - Custom\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"Playing custom map {MAP_EDITOR_STATE.map_name}", color: AP_COLOR_GREEN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_custom_minigame}", color: COLOR_WHITE },
             ),
 
             _ => List::of(

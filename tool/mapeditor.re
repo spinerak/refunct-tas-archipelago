@@ -78,6 +78,13 @@ fn map_editor_new_hud() {
         lines.push(ColorfulText { text: f"[X]: Move element  ", color: if !MAP_EDITOR_STATE.change_entire_cluster { COLOR_GREEN } else { COLOR_RED } });
         lines.push(ColorfulText { text: f"Move entire cluster\n\n", color: if MAP_EDITOR_STATE.change_entire_cluster { COLOR_GREEN } else { COLOR_RED } });
     
+        lines.push(ColorfulText { text: "[12345] ", color: COLOR_WHITE});
+        lines.push(ColorfulText { text: "Slow ", color: if MAP_EDITOR_STATE.changing_speed == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
+        lines.push(ColorfulText { text: "Normal ", color: if MAP_EDITOR_STATE.changing_speed == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
+        lines.push(ColorfulText { text: "Fast ", color: if MAP_EDITOR_STATE.changing_speed == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
+        lines.push(ColorfulText { text: "Nyoom ", color: if MAP_EDITOR_STATE.changing_speed == 3 { COLOR_GREEN } else { COLOR_RED } }); //3
+        lines.push(ColorfulText { text: "Reset\n", color: if MAP_EDITOR_STATE.changing_speed == 4 { COLOR_GREEN } else { COLOR_RED } }); //4
+        
         lines.push(ColorfulText { text: "[UIO]  ", color: COLOR_WHITE});
         lines.push(ColorfulText { text: "Position  ", color: if MAP_EDITOR_STATE.changing_category == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
         lines.push(ColorfulText { text: "Rotation  ", color: if MAP_EDITOR_STATE.changing_category == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
@@ -85,24 +92,24 @@ fn map_editor_new_hud() {
 
         lines.push(ColorfulText { text: "[HJK]  ", color: COLOR_WHITE});
         if MAP_EDITOR_STATE.changing_category == 0 || MAP_EDITOR_STATE.changing_category == 2 {
-            lines.push(ColorfulText { text: f"X         ", color: if MAP_EDITOR_STATE.changing_coordinate == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
-            lines.push(ColorfulText { text: f"Y         ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
-            lines.push(ColorfulText { text: f"Z \n", color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
+            lines.push(ColorfulText { text: f"X         ", color: if MAP_EDITOR_STATE.changing_coordinate == 0 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 2 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //0
+            lines.push(ColorfulText { text: f"Y         ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 0 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //1
+            lines.push(ColorfulText { text: f"Z \n"      , color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 1 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //2
         } else if MAP_EDITOR_STATE.changing_category == 1 {
-            lines.push(ColorfulText { text: f"Pitch     ", color: if MAP_EDITOR_STATE.changing_coordinate == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
-            lines.push(ColorfulText { text: f"Yaw       ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
-            lines.push(ColorfulText { text: f"Roll \n", color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
+            lines.push(ColorfulText { text: f"Pitch     ", color: if MAP_EDITOR_STATE.changing_coordinate == 0 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 2 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //0
+            lines.push(ColorfulText { text: f"Yaw       ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 0 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //1
+            lines.push(ColorfulText { text: f"Roll \n"   , color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 1 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //2
         }
-        lines.push(ColorfulText { text: "[12345] ", color: COLOR_WHITE});
-        lines.push(ColorfulText { text: "Slow ", color: if MAP_EDITOR_STATE.changing_speed == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
-        lines.push(ColorfulText { text: "Normal ", color: if MAP_EDITOR_STATE.changing_speed == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
-        lines.push(ColorfulText { text: "Fast ", color: if MAP_EDITOR_STATE.changing_speed == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
-        lines.push(ColorfulText { text: "Nyoom ", color: if MAP_EDITOR_STATE.changing_speed == 3 { COLOR_GREEN } else { COLOR_RED } }); //3
-        lines.push(ColorfulText { text: "Reset\n", color: if MAP_EDITOR_STATE.changing_speed == 4 { COLOR_GREEN } else { COLOR_RED } }); //4
+        
         if MAP_EDITOR_STATE.changing_speed == 4 {
-            lines.push(ColorfulText { text: "Press left and right TOGETHER to reset!\n\n", color: COLOR_WHITE});
+            lines.push(ColorfulText { text: "Press left and right TOGETHER to reset\n\n", color: COLOR_WHITE});
         } else {
-            lines.push(ColorfulText { text: "Use left and right arrow to edit!\n\n", color: COLOR_WHITE});
+            lines.push(ColorfulText { text: "left/right", color: COLOR_GREEN});
+            lines.push(ColorfulText { text: "/", color: COLOR_WHITE});
+            lines.push(ColorfulText { text: "up/down", color: AP_COLOR_CYAN});
+            lines.push(ColorfulText { text: "/", color: COLOR_WHITE});
+            lines.push(ColorfulText { text: "pgup/pgdn", color: AP_COLOR_YELLOW});
+            lines.push(ColorfulText { text: " to edit!\n\n", color: COLOR_WHITE});
         }
 
         lines.push(ColorfulText { text: f"[Z]: Show all  ", color: if !MAP_EDITOR_STATE.hide_others { COLOR_GREEN } else { COLOR_RED } });
@@ -217,17 +224,17 @@ static MAP_EDITOR_COMPONENT = Component {
         }
 
         if key.to_small() == KEY_C.to_small() {
-            Tas::deactivate_all_buttons();
-            Tas::raise_next_cluster();
-            
             let c = Tas::get_level() + 1;
-            Tas::enable_button(c-1, 0, Color { red: 1., green: 0., blue: 0., alpha: 1. });
-            if c == 7 || c == 10 || c == 18 || c == 26 || c == 28 {
-                Tas::enable_button(c-1, 1, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+            if c > 0 && c <= 31 {
+                Tas::disable_button_keep_collision(c-1, 0);
+                if c == 7 || c == 10 || c == 18 || c == 26 || c == 28 {
+                    Tas::disable_button_keep_collision(c-1, 1);
+                }
+                if c == 26 {
+                    Tas::disable_button_keep_collision(c-1, 2);
+                }  
             }
-            if c == 26 {
-                Tas::enable_button(c-1, 2, Color { red: 1., green: 0., blue: 0., alpha: 1. });
-            }  
+            Tas::raise_next_cluster();
         }
 
         if MAP_EDITOR_STATE.chosen_element_index.cluster_index < 0 {
@@ -250,14 +257,26 @@ static MAP_EDITOR_COMPONENT = Component {
             MAP_EDITOR_STATE.hide_others = !MAP_EDITOR_STATE.hide_others;
             Tas::apply_map_only_one(MAP_EDITOR_STATE.map, MAP_EDITOR_STATE.chosen_element_index, false, if MAP_EDITOR_STATE.hide_others { 2 } else { 1 });
         }
-        if key.to_small() == KEY_LEFT.to_small() || key.to_small() == KEY_RIGHT.to_small() {
+        if key.to_small() == KEY_LEFT.to_small() || key.to_small() == KEY_RIGHT.to_small() || key.to_small() == KEY_UP.to_small() || key.to_small() == KEY_DOWN.to_small() || key.to_small() == KEY_PAGE_UP.to_small() || key.to_small() == KEY_PAGE_DOWN.to_small() {
+            
+            let mut coordinate = MAP_EDITOR_STATE.changing_coordinate;
+            
             let mut sign = 0.;
-            if key.to_small() == KEY_LEFT.to_small() {
+            if key.to_small() == KEY_LEFT.to_small() || key.to_small() == KEY_UP.to_small() || key.to_small() == KEY_PAGE_DOWN.to_small() {
                 sign = -1.;
             }
-            if key.to_small() == KEY_RIGHT.to_small() {
+            if key.to_small() == KEY_RIGHT.to_small() || key.to_small() == KEY_DOWN.to_small() || key.to_small() == KEY_PAGE_UP.to_small() {
                 sign = 1.;
             }
+
+            if key.to_small() == KEY_UP.to_small() || key.to_small() == KEY_DOWN.to_small() {
+                coordinate = (coordinate + 1) % 3;
+            }
+
+            if key.to_small() == KEY_PAGE_UP.to_small() || key.to_small() == KEY_PAGE_DOWN.to_small() {
+                coordinate = (coordinate + 2) % 3;
+            }
+
             let mut speed = 0.1;
 
             let elements_to_change = List::new();
@@ -311,7 +330,7 @@ static MAP_EDITOR_COMPONENT = Component {
                     }
                     match MAP_EDITOR_STATE.changing_category {
                         0 => { // position
-                            match MAP_EDITOR_STATE.changing_coordinate {
+                            match coordinate {
                                 0 => element.x += sign * speed,
                                 1 => element.y += sign * speed,
                                 2 => element.z += sign * speed,
@@ -319,7 +338,7 @@ static MAP_EDITOR_COMPONENT = Component {
                             }
                         },
                         1 => { // rotation
-                            match MAP_EDITOR_STATE.changing_coordinate {
+                            match coordinate {
                                 0 => element.pitch += 0.09 * sign * speed,
                                 1 => element.yaw += 0.09 * sign * speed,
                                 2 => element.roll += 0.09 * sign * speed,
@@ -327,7 +346,7 @@ static MAP_EDITOR_COMPONENT = Component {
                             }
                         },
                         2 => { // size
-                            match MAP_EDITOR_STATE.changing_coordinate {
+                            match coordinate {
                                 0 => element.sizex += sign * speed,
                                 1 => element.sizey += sign * speed,
                                 2 => element.sizez += sign * speed,
@@ -419,11 +438,14 @@ fn create_map_editor_menu() -> Ui {
         list.push(UiElement::Button(UiButton {
             label: Text { text: "Stop Map Editor" },
             onclick: fn(label: Text) {
-               remove_component(MAP_EDITOR_COMPONENT);
-               remove_component(MOVEMENT_COMPONENT);
-               MAP_EDITOR_STATE.map = Tas::original_map();
-               Tas::apply_map(MAP_EDITOR_STATE.map);
-               leave_ui();
+                MOVEMENT_STATE.enable_fly = false;
+                Tas::set_movement_mode(1);
+                Tas::enable_player_collision();
+                remove_component(MAP_EDITOR_COMPONENT);
+                remove_component(MOVEMENT_COMPONENT);
+                MAP_EDITOR_STATE.map = Tas::original_map();
+                Tas::apply_map(MAP_EDITOR_STATE.map);
+                leave_ui();
             },
         }));
     }
