@@ -3,6 +3,7 @@ use std::path::Path;
 use std::ffi::CString;
 use std::ptr::null_mut;
 use std::mem;
+use std::error::Error;
 
 use winapi::um::processthreadsapi::{CreateRemoteThread, OpenProcess};
 use winapi::um::libloaderapi::{GetProcAddress, GetModuleHandleA};
@@ -61,11 +62,34 @@ fn pidof() -> u32 {
         ])
         .output()
         .expect("Cannot get pid of Refunct");
-
     let s = String::from_utf8(output.stdout)
         .expect("Output of pidof is not utf8");
 
-    s.trim()
+    let pid = s.trim()
         .parse()
-        .expect("Could not find or parse pid of Refunct")
+        .expect("Could not find or parse pid of Refunct");
+
+    let listener_pid = Command::new("powershell")
+        .args(&[
+            "-NoProfile",
+            "-Command",
+            "Get-Process -Id (Get-NetTCPConnection -LocalPort 21337).OwningProcess -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id"
+        ])
+        .output();
+
+    match listener_pid.map_err(|err| {Box::<dyn Error>::from(err)}).and_then(|pid| {
+        let s = String::from_utf8(pid.stdout)?;
+        Ok(s.trim().parse::<u32>()?)
+    }) {
+        Err(_) => (), // didn't get a valid pid listening on port 21337, all good
+        Ok(listening_pid) => {
+            if listening_pid != pid {
+                panic!("something other than refunct is listening on port 21337, cannot continue")
+            } else {
+                println!("WARNING: refunct is already listening on port 21337, if another instance of this program is already running code injection will fail")
+            }
+        },
+    }
+
+    return pid;
 }
