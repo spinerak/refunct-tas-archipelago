@@ -61,60 +61,63 @@ fn map_editor_new_hud() {
 
     let mut T = "";
     match MAP_EDITOR_STATE.mode {
-        MapEditorMode::Edit => T = f"Editing map {MAP_EDITOR_STATE.map_name:?}\n",
-        MapEditorMode::Play => T = f"Playing map {MAP_EDITOR_STATE.map_name:?}\n",
+        MapEditorMode::Edit => T = f"Editing map {MAP_EDITOR_STATE.map_name:?}",
+        MapEditorMode::Play => T = f"Playing map {MAP_EDITOR_STATE.map_name:?}",
     }
     lines.push(ColorfulText { text: T, color: COLOR_WHITE });
 
-    lines.push(ColorfulText { text: "<F> toggle flying\n", color: COLOR_WHITE });
-    lines.push(ColorfulText { text: "<E> select looked-at element\n", color: COLOR_WHITE });
-    lines.push(ColorfulText { text: "<C> trigger next cluster\n", color: COLOR_WHITE });
-    lines.push(ColorfulText { text: "<V> to edit cluster rising\n", color: COLOR_WHITE });
-    lines.push(ColorfulText { text: "<TAB> edit an element (advanced)", color: COLOR_DARK_GRAY });
+    if MAP_EDITOR_STATE.mode == MapEditorMode::Edit {
 
-    if MAP_EDITOR_STATE.chosen_element_index.cluster_index >= 0 {
-        lines.push(ColorfulText { text: f"\n\nEditing: {MAP_EDITOR_STATE.chosen_element_index.element_type} {MAP_EDITOR_STATE.chosen_element_index.cluster_index+1}-{MAP_EDITOR_STATE.chosen_element_index.element_index+1}\n\n", color: COLOR_GREEN });
+        lines.push(ColorfulText { text: "\n<F> toggle flying\n", color: COLOR_WHITE });
+        lines.push(ColorfulText { text: "<E> select looked-at element\n", color: COLOR_WHITE });
+        lines.push(ColorfulText { text: "<C> trigger next cluster\n", color: COLOR_WHITE });
+        lines.push(ColorfulText { text: "<V> to edit cluster rising\n", color: COLOR_WHITE });
+        lines.push(ColorfulText { text: "<TAB> edit an element (advanced)", color: COLOR_DARK_GRAY });
 
-        lines.push(ColorfulText { text: f"[X]: Move element  ", color: if !MAP_EDITOR_STATE.change_entire_cluster { COLOR_GREEN } else { COLOR_RED } });
-        lines.push(ColorfulText { text: f"Move entire cluster\n\n", color: if MAP_EDITOR_STATE.change_entire_cluster { COLOR_GREEN } else { COLOR_RED } });
-    
-        lines.push(ColorfulText { text: "[12345] ", color: COLOR_WHITE});
-        lines.push(ColorfulText { text: "Slow ", color: if MAP_EDITOR_STATE.changing_speed == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
-        lines.push(ColorfulText { text: "Normal ", color: if MAP_EDITOR_STATE.changing_speed == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
-        lines.push(ColorfulText { text: "Fast ", color: if MAP_EDITOR_STATE.changing_speed == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
-        lines.push(ColorfulText { text: "Nyoom ", color: if MAP_EDITOR_STATE.changing_speed == 3 { COLOR_GREEN } else { COLOR_RED } }); //3
-        lines.push(ColorfulText { text: "Reset\n", color: if MAP_EDITOR_STATE.changing_speed == 4 { COLOR_GREEN } else { COLOR_RED } }); //4
+        if MAP_EDITOR_STATE.chosen_element_index.cluster_index >= 0 {
+            lines.push(ColorfulText { text: f"\n\nEditing: {MAP_EDITOR_STATE.chosen_element_index.element_type} {MAP_EDITOR_STATE.chosen_element_index.cluster_index+1}-{MAP_EDITOR_STATE.chosen_element_index.element_index+1}\n\n", color: COLOR_GREEN });
+
+            lines.push(ColorfulText { text: f"[X]: Move element  ", color: if !MAP_EDITOR_STATE.change_entire_cluster { COLOR_GREEN } else { COLOR_RED } });
+            lines.push(ColorfulText { text: f"Move entire cluster\n\n", color: if MAP_EDITOR_STATE.change_entire_cluster { COLOR_GREEN } else { COLOR_RED } });
         
-        lines.push(ColorfulText { text: "[UIO]  ", color: COLOR_WHITE});
-        lines.push(ColorfulText { text: "Position  ", color: if MAP_EDITOR_STATE.changing_category == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
-        lines.push(ColorfulText { text: "Rotation  ", color: if MAP_EDITOR_STATE.changing_category == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
-        lines.push(ColorfulText { text: "Size\n", color: if MAP_EDITOR_STATE.changing_category == 2 { COLOR_GREEN } else { COLOR_RED } }); // 2
+            lines.push(ColorfulText { text: "[12345] ", color: COLOR_WHITE});
+            lines.push(ColorfulText { text: "Slow ", color: if MAP_EDITOR_STATE.changing_speed == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
+            lines.push(ColorfulText { text: "Normal ", color: if MAP_EDITOR_STATE.changing_speed == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
+            lines.push(ColorfulText { text: "Fast ", color: if MAP_EDITOR_STATE.changing_speed == 2 { COLOR_GREEN } else { COLOR_RED } }); //2
+            lines.push(ColorfulText { text: "Nyoom ", color: if MAP_EDITOR_STATE.changing_speed == 3 { COLOR_GREEN } else { COLOR_RED } }); //3
+            lines.push(ColorfulText { text: "Reset\n", color: if MAP_EDITOR_STATE.changing_speed == 4 { COLOR_GREEN } else { COLOR_RED } }); //4
+            
+            lines.push(ColorfulText { text: "[UIO]  ", color: COLOR_WHITE});
+            lines.push(ColorfulText { text: "Position  ", color: if MAP_EDITOR_STATE.changing_category == 0 { COLOR_GREEN } else { COLOR_RED } }); //0
+            lines.push(ColorfulText { text: "Rotation  ", color: if MAP_EDITOR_STATE.changing_category == 1 { COLOR_GREEN } else { COLOR_RED } }); //1
+            lines.push(ColorfulText { text: "Size\n", color: if MAP_EDITOR_STATE.changing_category == 2 { COLOR_GREEN } else { COLOR_RED } }); // 2
 
-        lines.push(ColorfulText { text: "[HJK]  ", color: COLOR_WHITE});
-        if MAP_EDITOR_STATE.changing_category == 0 || MAP_EDITOR_STATE.changing_category == 2 {
-            lines.push(ColorfulText { text: f"X         ", color: if MAP_EDITOR_STATE.changing_coordinate == 0 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 2 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //0
-            lines.push(ColorfulText { text: f"Y         ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 0 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //1
-            lines.push(ColorfulText { text: f"Z \n"      , color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 1 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //2
-        } else if MAP_EDITOR_STATE.changing_category == 1 {
-            lines.push(ColorfulText { text: f"Pitch     ", color: if MAP_EDITOR_STATE.changing_coordinate == 0 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 2 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //0
-            lines.push(ColorfulText { text: f"Yaw       ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 0 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //1
-            lines.push(ColorfulText { text: f"Roll \n"   , color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 1 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //2
+            lines.push(ColorfulText { text: "[HJK]  ", color: COLOR_WHITE});
+            if MAP_EDITOR_STATE.changing_category == 0 || MAP_EDITOR_STATE.changing_category == 2 {
+                lines.push(ColorfulText { text: f"X         ", color: if MAP_EDITOR_STATE.changing_coordinate == 0 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 2 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //0
+                lines.push(ColorfulText { text: f"Y         ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 0 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //1
+                lines.push(ColorfulText { text: f"Z \n"      , color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 1 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //2
+            } else if MAP_EDITOR_STATE.changing_category == 1 {
+                lines.push(ColorfulText { text: f"Pitch     ", color: if MAP_EDITOR_STATE.changing_coordinate == 0 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 2 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //0
+                lines.push(ColorfulText { text: f"Yaw       ", color: if MAP_EDITOR_STATE.changing_coordinate == 1 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 0 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //1
+                lines.push(ColorfulText { text: f"Roll \n"   , color: if MAP_EDITOR_STATE.changing_coordinate == 2 { COLOR_GREEN } else if MAP_EDITOR_STATE.changing_coordinate == 1 { AP_COLOR_CYAN } else { AP_COLOR_YELLOW } }); //2
+            }
+            
+            if MAP_EDITOR_STATE.changing_speed == 4 {
+                lines.push(ColorfulText { text: "Press left and right TOGETHER to reset\n\n", color: COLOR_WHITE});
+            } else {
+                lines.push(ColorfulText { text: "left/right", color: COLOR_GREEN});
+                lines.push(ColorfulText { text: "/", color: COLOR_WHITE});
+                lines.push(ColorfulText { text: "up/down", color: AP_COLOR_CYAN});
+                lines.push(ColorfulText { text: "/", color: COLOR_WHITE});
+                lines.push(ColorfulText { text: "pgup/pgdn", color: AP_COLOR_YELLOW});
+                lines.push(ColorfulText { text: " to edit!\n\n", color: COLOR_WHITE});
+            }
+
+            lines.push(ColorfulText { text: f"[Z]: Show all  ", color: if !MAP_EDITOR_STATE.hide_others { COLOR_GREEN } else { COLOR_RED } });
+            lines.push(ColorfulText { text: f"Show selected cluster", color: if MAP_EDITOR_STATE.hide_others { COLOR_GREEN } else { COLOR_RED } });
+
         }
-        
-        if MAP_EDITOR_STATE.changing_speed == 4 {
-            lines.push(ColorfulText { text: "Press left and right TOGETHER to reset\n\n", color: COLOR_WHITE});
-        } else {
-            lines.push(ColorfulText { text: "left/right", color: COLOR_GREEN});
-            lines.push(ColorfulText { text: "/", color: COLOR_WHITE});
-            lines.push(ColorfulText { text: "up/down", color: AP_COLOR_CYAN});
-            lines.push(ColorfulText { text: "/", color: COLOR_WHITE});
-            lines.push(ColorfulText { text: "pgup/pgdn", color: AP_COLOR_YELLOW});
-            lines.push(ColorfulText { text: " to edit!\n\n", color: COLOR_WHITE});
-        }
-
-        lines.push(ColorfulText { text: f"[Z]: Show all  ", color: if !MAP_EDITOR_STATE.hide_others { COLOR_GREEN } else { COLOR_RED } });
-        lines.push(ColorfulText { text: f"Show selected cluster", color: if MAP_EDITOR_STATE.hide_others { COLOR_GREEN } else { COLOR_RED } });
-
     }
 
     ap_draw_colorful_text(lines, AP_COLOR_GRAY_BG, w, 5.0, anchor, 5.0);
@@ -153,6 +156,7 @@ static MAP_EDITOR_COMPONENT = Component {
         }
         if key.to_small() == KEY_TAB.to_small() {
             if MAP_EDITOR_STATE.chosen_element_index.cluster_index > -1 {
+                ap_log_1(f"{MAP_EDITOR_STATE.chosen_element_index}");
                 enter_ui(create_map_editor_element_ui(MAP_EDITOR_STATE.chosen_element, MAP_EDITOR_STATE.chosen_element_index, 0));
             } else {
                 enter_ui(create_map_editor_input_ui());
@@ -160,6 +164,11 @@ static MAP_EDITOR_COMPONENT = Component {
 
         }
         if key.to_small() == KEY_E.to_small() {
+            let vanilla_cubes = Tas::get_vanilla_cubes();
+            for cube in vanilla_cubes {
+                Tas::set_cube_collision(cube, true);
+            }
+
             let index = match Tas::get_looked_at_element_index() {
                 Option::Some(index) => index,
                 Option::None => {
@@ -186,6 +195,11 @@ static MAP_EDITOR_COMPONENT = Component {
                     _ => return,
                 };
                 MAP_EDITOR_STATE.chosen_element_all_cluster.push(element);
+            }
+            
+            let vanilla_cubes = Tas::get_vanilla_cubes();
+            for cube in vanilla_cubes {
+                Tas::set_cube_collision(cube, false);
             }
 
         }
@@ -399,24 +413,29 @@ fn create_map_editor_menu() -> Ui {
         list.push(UiElement::Button(UiButton {
             label: Text { text: "Edit Map" },
             onclick: fn(label: Text) {
-               let map_list = Tas::list_maps();
-               enter_ui(Ui::new_filechooser("Map to edit", map_list, fn(input: string) {
-                   MAP_EDITOR_STATE.map_name = input;
-                   if map_list.contains(input) {
-                       MAP_EDITOR_STATE.map = Tas::load_map(input);
-                       Tas::apply_map(MAP_EDITOR_STATE.map);
-                   } else {
-                       MAP_EDITOR_STATE.map = Tas::current_map();
-                   };
-                   add_component(MAP_EDITOR_COMPONENT);
-                   add_component(MOVEMENT_COMPONENT);
-                   MAP_EDITOR_STATE.mode = MapEditorMode::Edit;
-                   MOVEMENT_STATE.enable_fly = false;
-                   leave_ui();
-                   leave_ui();
-                   leave_ui();
-               }));
-            },
+                let map_list = Tas::list_maps();
+                    enter_ui(Ui::new_filechooser("Map to edit", map_list, fn(input: string) {
+                        MAP_EDITOR_STATE.map_name = input;
+                        if map_list.contains(input) {
+                            MAP_EDITOR_STATE.map = Tas::load_map(input);
+                            Tas::apply_map(MAP_EDITOR_STATE.map);
+                            for cube in Tas::get_vanilla_cubes() {
+                                Tas::set_cube_collision(cube, false);
+                                Tas::set_cube_color(cube, Color { red: 0.8, green: 0., blue: 0., alpha: 1. });
+                            }
+                        } else {
+                            MAP_EDITOR_STATE.map = Tas::current_map();
+                        };
+                        add_component(MAP_EDITOR_COMPONENT);
+                        add_component(MOVEMENT_COMPONENT);
+                        MAP_EDITOR_STATE.mode = MapEditorMode::Edit;
+                        MOVEMENT_STATE.enable_fly = false;
+                        leave_ui();
+                        leave_ui();
+                        leave_ui();
+                        Tas::restart_game();
+                    }));
+                },
         }));
         list.push(UiElement::Button(UiButton {
             label: Text { text: "Play Map" },
@@ -436,6 +455,7 @@ fn create_map_editor_menu() -> Ui {
                     leave_ui();
                     leave_ui();
                     leave_ui();
+                    Tas::restart_game();
                 }));
             },
         }));
