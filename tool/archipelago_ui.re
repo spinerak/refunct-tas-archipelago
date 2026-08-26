@@ -12,7 +12,8 @@ struct ColorfulText {
 enum Anchor {
     TopLeft,    TopCenter,    TopRight,
     CenterLeft, Center,       CenterRight,
-    BottomLeft, BottomCenter, BottomRight
+    BottomLeft, BottomCenter, BottomRight,
+    BottomishCenter
 }
 
 static AP_COLOR_RED     = Color { red: 0.600, green: 0.160, blue: 0.227, alpha: 1. };
@@ -1052,7 +1053,7 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             enter_ui(Ui::new_filechooser("Map to play", map_list, fn(input: string) {
                 MAP_EDITOR_STATE.map_name = input;
                 if map_list.contains(input) {
-                    Tas::abilities_set_swim(false);
+                    Tas::abilities_set_swim(true);
                     MAP_EDITOR_STATE.map = Tas::load_map(input);
                     Tas::apply_map(MAP_EDITOR_STATE.map);
                 } else {
@@ -1431,6 +1432,7 @@ fn archipelago_hud_color_coded() {
             Anchor::BottomCenter => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w/2.0, h, anchor, 5.0); },
             Anchor::BottomLeft   => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, 5.0, h, anchor, 5.0); },
             Anchor::CenterLeft   => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, 5.0, h/2.0, anchor, 5.0); },
+            Anchor::BottomishCenter   => { ap_draw_colorful_text(line, AP_COLOR_GRAY_BG, w/2.0, 4.0*h/5.0, anchor, 5.0); },
 
             pos => panic(f"unknown/invalid archipelago display position: {pos}"),
         };
@@ -1466,6 +1468,15 @@ fn archipelago_hud_color_coded() {
 
         pos => panic(f"unknown/invalid archipelago display position: {pos}"),
     };
+
+    if ARCHIPELAGO_STATE.started == 0 {
+        let anchor2 = Anchor::BottomishCenter;
+        let lines2 = List::new();
+        lines2.push(ColorfulText { text: "Press New Game from the Refunct menu to start.\n", color: COLOR_WHITE });
+        lines2.push(ColorfulText { text: "You can change gamemode in the 'm' menu.", color: COLOR_WHITE });
+        ap_draw_colorful_text(lines2, AP_COLOR_GRAY_BG, w/2.0, 4.0*h/5.0, anchor2, 5.0);
+    }
+    
 }
 
 fn ap_draw_colorful_text(text_list: List<ColorfulText>, background_color: Color, x_pos: float, y_pos: float, anchor: Anchor, padding: float) {
@@ -1498,6 +1509,7 @@ fn ap_draw_colorful_text(text_list: List<ColorfulText>, background_color: Color,
         Anchor::BottomLeft   => { x_start = x_pos;                  y_start = y_pos - text_height; },
         Anchor::BottomCenter => { x_start = x_pos - text_width/2.0; y_start = y_pos - text_height; },
         Anchor::BottomRight  => { x_start = x_pos - text_width;     y_start = y_pos - text_height; },
+        Anchor::BottomishCenter => { x_start = x_pos - text_width/2.0; y_start = y_pos - 4.0 * text_height/5.0; },
     };
 
     Tas::draw_rect(background_color,
