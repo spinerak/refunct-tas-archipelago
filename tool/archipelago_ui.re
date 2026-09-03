@@ -29,7 +29,7 @@ fn create_archipelago_menu() -> Ui {
 
     if !ARCHIPELAGO_STATE.ap_connected {
         elements.push(UiElement::Button(UiButton {
-            label: Text { text: "Connect" },
+            label: Text { text: "Archipelago Connect" },
             onclick: fn(label: Text) {
                 enter_ui(create_archipelago_connection_details_menu());
             },
@@ -55,24 +55,38 @@ fn create_archipelago_menu() -> Ui {
     }
 
     elements.push(UiElement::Button(UiButton {
-        label: Text { text: "Settings" },
+        label: Text { text: "Archipelago Settings" },
         onclick: fn(label: Text) {
             enter_ui(create_archipelago_settings_menu());
         },
     }));
 
+    if !ARCHIPELAGO_STATE.ap_connected {
+        elements.push(UiElement::Button(UiButton {
+            label: Text { text: "Map Editor" },
+            onclick: fn(label: Text) {
+                enter_ui(create_map_editor_menu());
+            },
+        }));
+        elements.push(UiElement::Button(UiButton {
+            label: Text { text: "Practice Menu" },
+            onclick: fn(label: Text) {
+                enter_ui(create_practice_menu());
+            },
+        }));
+    }
+
     elements.push(UiElement::Button(UiButton {
         label: Text { text: "Back" },
         onclick: fn(label: Text) { leave_ui(); },
     }));
+    
 
-    // elements.push(
-    //     UiElement::Button(UiButton {
-    //     label: Text { text: "Map Editor" },
-    //     onclick: fn(label: Text) { enter_ui(create_map_editor_menu()); },
-    // }));
-
-    Ui::new("Archipelago:", elements)
+    if ARCHIPELAGO_STATE.ap_connected {
+        Ui::new("Archipelago Menu", elements)
+    } else {
+        Ui::new("Mod Menu", elements)
+    }
 }
 
 struct ArchipelagoConnectionDetails {

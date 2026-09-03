@@ -149,11 +149,14 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     //if key.to_small() == KEY_O.to_small() {
     //    Tas::set_all_platforms_hidden(true);
     //}
-    if (LSHIFT_PRESSED || RSHIFT_PRESSED) && (LCTRL_PRESSED || RCTRL_PRESSED) && key.to_small() == KEY_M.to_small() {
-        enter_ui(create_map_editor_menu());
-    }
-    if (LSHIFT_PRESSED || RSHIFT_PRESSED) && (LCTRL_PRESSED || RCTRL_PRESSED) && key.to_small() == KEY_P.to_small() {
-        enter_ui(create_practice_menu());
+
+    if !ARCHIPELAGO_STATE.ap_connected {
+        if (LSHIFT_PRESSED || RSHIFT_PRESSED) && (LCTRL_PRESSED || RCTRL_PRESSED) && key.to_small() == KEY_M.to_small() {
+            enter_ui(create_map_editor_menu());
+        }
+        if (LSHIFT_PRESSED || RSHIFT_PRESSED) && (LCTRL_PRESSED || RCTRL_PRESSED) && key.to_small() == KEY_P.to_small() {
+            enter_ui(create_practice_menu());
+        }
     }
 
     //Ledge, jump_pad, WallJump, Swim, Lifts, Pipes
