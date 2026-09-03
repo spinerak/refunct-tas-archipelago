@@ -52,6 +52,7 @@ struct State {
     player_minimap_image: RgbaImage,
     // will keep textures forever, even if the player doesn't exist anymore, but each texture is only a few MB
     player_minimap_textures: HashMap<Rgba<u8>, UTexture2D>,
+    defunct_map: serde_json::Value,
 
     last_death_link_time: std::time::Instant,
     last_bounce_update_time: std::time::Instant,
@@ -177,6 +178,10 @@ pub fn init(
     }
     let player_minimap_image = image::load_from_memory(PLAYER_MINIMAP).unwrap().to_rgba8();
 
+    const DEFUNCTMAP: &'static [u8] = include_bytes!("../../../../defunct");
+    let defunct_map: serde_json::Value =
+        serde_json::from_str(str::from_utf8(&DEFUNCTMAP).unwrap()).unwrap();
+
     *STATE.lock().unwrap() = Some(State {
         hooks,
         ui: ReboUi::start(),
@@ -198,6 +203,7 @@ pub fn init(
         minimap_image,
         player_minimap_image,
         player_minimap_textures: HashMap::new(),
+        defunct_map,
         last_death_link_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first death link can be sent immediately
         last_bounce_update_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
         last_bounce_update_time_others: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately

@@ -185,6 +185,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_all_cluster_speeds)
         .add_function(list_maps)
         .add_function(load_map)
+        .add_function(load_map_included)
         .add_function(save_map)
         .add_function(remove_map)
         .add_function(current_map)
@@ -3468,6 +3469,28 @@ fn load_map(filename: String) -> RefunctMap {
     let filename = sanitize_filename::sanitize(filename);
     let path = map_path().join(filename);
     let content = std::fs::read_to_string(path).unwrap();
+    let version: Version = serde_json::from_str(&content).unwrap();
+    let map = match version.version {
+        0 => {
+            let map = serde_json::from_str(&content).unwrap();
+            migrate_v0_to_v1(map)
+        }
+        1 => serde_json::from_str(&content).unwrap(),
+        version => panic!("the map lives in the future (unknown map version {version})"),
+    };
+    map
+}
+#[rebo::function("Tas::load_map_included")]
+fn load_map_included(filename: String) -> RefunctMap {
+    #[derive(Deserialize)]
+    struct Version {
+        #[serde(default)]
+        version: u32,
+    }
+    let mut content = String::new();
+    if filename == "defunct" {
+        content = STATE.lock().unwrap().as_ref().unwrap().defunct_map.to_string();
+    }
     let version: Version = serde_json::from_str(&content).unwrap();
     let map = match version.version {
         0 => {

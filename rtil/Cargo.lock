@@ -4078,7 +4078,7 @@ dependencies = [
 
 [[package]]
 name = "refunct-tas-archipelago"
-version = "1.5.1"
+version = "1.6.0"
 dependencies = [
  "archipelago_rs",
  "atomic_float",

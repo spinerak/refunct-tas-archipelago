@@ -705,6 +705,17 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
         added_minigame_header = true;
     }
 
+    if ARCHIPELAGO_STATE.unlock_defunct_minigame && !ARCHIPELAGO_STATE.done_defunct_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nDefunct",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
+    }
+
     lines
 }
 
@@ -1069,28 +1080,47 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         },
     }, ARCHIPELAGO_STATE.unlock_custom_minigame);
 
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_defunct_minigame {
+                "Defunct"
+            } else {
+                "Defunct (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_defunct_minigame {
+                // log("Defunct gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Defunct");
+            archipelago_init(19);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_defunct_minigame);
+
     let elems = List::new();
     elems.extend(unlocked);
     elems.extend(locked);
     elems.extend(List::of(
-        UiElement::ColorButton(UiColorButton {
-            label: Text { text: "[TEST] Frogger" },
-            onclick: fn(label: Text) {
-                archipelago_init(10);
-                leave_ui();
-            },
-            color_default: AP_COLOR_CYAN,
-            color_selected: COLOR_GREEN,
-        }),
-        UiElement::ColorButton(UiColorButton {
-            label: Text { text: "[TEST] Block Beat" },
-            onclick: fn(label: Text) {
-                archipelago_init(15);
-                leave_ui();
-            },
-            color_default: AP_COLOR_CYAN,
-            color_selected: COLOR_GREEN,
-        }),
+        // UiElement::ColorButton(UiColorButton {
+        //     label: Text { text: "[TEST] Frogger" },
+        //     onclick: fn(label: Text) {
+        //         archipelago_init(10);
+        //         leave_ui();
+        //     },
+        //     color_default: AP_COLOR_CYAN,
+        //     color_selected: COLOR_GREEN,
+        // }),
+        // UiElement::ColorButton(UiColorButton {
+        //     label: Text { text: "[TEST] Block Beat" },
+        //     onclick: fn(label: Text) {
+        //         archipelago_init(15);
+        //         leave_ui();
+        //     },
+        //     color_default: AP_COLOR_CYAN,
+        //     color_selected: COLOR_GREEN,
+        // }),
         UiElement::ColorButton(UiColorButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
@@ -1199,7 +1229,6 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: "Archipelago - Frogger\n", color: COLOR_WHITE },
                 ColorfulText { text: "UNTESTED MINIGAME\n", color: AP_COLOR_RED },
                 ColorfulText { text: "WITH NO CHECKS\n", color: AP_COLOR_RED },
-                ColorfulText { text: "Press R to reset to start", color: COLOR_WHITE },
             ),
             11 => List::of(
                 ColorfulText { text: "Archipelago - Block Blub\n", color: COLOR_WHITE },
@@ -1264,6 +1293,11 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: f"Playing custom map {MAP_EDITOR_STATE.map_name}", color: AP_COLOR_GREEN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_custom_minigame}", color: COLOR_WHITE },
             ),
+            19 => List::of(
+                ColorfulText { text: "Archipelago - Defunct\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_defunct_minigame}", color: COLOR_WHITE },
+            ),
 
             _ => List::of(
                 ColorfulText { text: "Archipelago\n", color: COLOR_WHITE },
@@ -1272,7 +1306,17 @@ fn get_status_text_lines() -> List<ColorfulText> {
         }
     });
 
-    let mut txt = "Checks in:";
+    let warplist = List::of(5,6,7,8,10,14,19);
+    if warplist.contains(ARCHIPELAGO_STATE.gamemode) {
+        if ARCHIPELAGO_STATE.r_count > 0 {
+            let tttt = f"\n[{ARCHIPELAGO_STATE.r_count}/10]: warp to start";
+            lines.push(ColorfulText { text: tttt, color: AP_COLOR_RED });
+        } else {
+            lines.push(ColorfulText { text: "\nHold R: warp to start", color: COLOR_WHITE });
+        }
+    }
+
+    let mut txt = "\nChecks in:";
     if ARCHIPELAGO_STATE.gamemode == 0 {
         txt = "\n\nMinigames with checks:";
     }
