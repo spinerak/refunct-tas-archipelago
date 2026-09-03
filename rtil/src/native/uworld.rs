@@ -181,8 +181,10 @@ impl UWorld {
             .field("FloatCurves")
             .field("Keys")
             .unwrap::<ArrayWrapper<StructValueWrapper>>();
-        for key in keys.into_iter() {
-            key.get_field("Value").unwrap::<&Cell<f32>>().set(redness);
+        for (index, key) in keys.into_iter().enumerate() {
+            let multiplier = if index == 0 { 1.0 } else { 1.0 / 0.21960786 };
+            key.get_field("Value").unwrap::<&Cell<f32>>().set(redness * multiplier);
+            // break;
         }
     }
 
@@ -194,8 +196,16 @@ impl UWorld {
             .field("FloatCurves")
             .field("Keys")
             .unwrap::<ArrayWrapper<StructValueWrapper>>();
-        for key in keys.into_iter() {
-            key.get_field("Value").unwrap::<&Cell<f32>>().set(red);
+        for (index, key) in keys.into_iter().enumerate() {
+            let multiplier = match index {
+                0 => 1.0,
+                1 => 0.3 / 0.23137257,
+                2 => 0.8000001 / 0.23137257,
+                3 => 0.24499995 / 0.23137257,
+                _ => 1.0,
+            };
+            key.get_field("Value").unwrap::<&Cell<f32>>().set(red * multiplier);
+            // break;
         }
     }
     pub fn set_stars_brightness(brightness: f32) {

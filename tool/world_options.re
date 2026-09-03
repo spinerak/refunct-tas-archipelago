@@ -3,7 +3,7 @@ Tas::set_lighting_casts_shadows(SETTINGS.lighting_casts_shadows, SETTINGS.lighti
 Tas::set_sky_light_enabled(SETTINGS.sky_light_enabled, SETTINGS.sky_light_enabled);
 Tas::set_time_dilation(SETTINGS.time_dilation, SETTINGS.time_dilation);
 Tas::set_gravity(SETTINGS.gravity, SETTINGS.gravity);
-Tas::set_time_of_day(SETTINGS.time_of_day);
+// Tas::set_time_of_day(SETTINGS.time_of_day);
 Tas::set_sky_time_speed(SETTINGS.sky_time_speed, SETTINGS.sky_time_speed);
 Tas::set_sky_light_brightness(SETTINGS.sky_light_brightness);
 Tas::set_sky_light_intensity(SETTINGS.sky_light_intensity);
