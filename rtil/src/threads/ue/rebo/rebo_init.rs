@@ -3392,6 +3392,9 @@ fn migrate_v0_to_v1(map: RefunctMapV0) -> RefunctMap {
             sizex: e.xscale * orig.sizex,
             sizey: e.yscale * orig.sizey,
             sizez: e.zscale * orig.sizez,
+            ogsizex: orig.sizex,
+            ogsizey: orig.sizey,
+            ogsizez: orig.sizez,
         }
     }
     let orig = &*ORIGINAL_MAP;
@@ -3437,6 +3440,9 @@ struct Element {
     sizex: f32,
     sizey: f32,
     sizez: f32,
+    ogsizex: f32,
+    ogsizey: f32,
+    ogsizez: f32,
 }
 
 fn map_path() -> PathBuf {
@@ -3533,7 +3539,7 @@ fn get_current_map(original: bool) -> RefunctMap {
                 let (ax, ay, az) = actor.absolute_location();
                 let (pitch, yaw, roll) = actor.relative_rotation();
                 let (xscale, yscale, zscale) = actor.relative_scale();
-                Element { x: ax, y: ay, z: az - lz, pitch, yaw, roll, sizex: sizex / xscale, sizey: sizey / yscale, sizez: sizez / zscale }
+                Element { x: ax, y: ay, z: az - lz, pitch, yaw, roll, sizex: sizex / xscale, sizey: sizey / yscale, sizez: sizez / zscale, ogsizex: xscale, ogsizey: yscale, ogsizez: zscale }
             }).collect()
         }
         let get_orig_size: Box<for<'a> fn(&'a ActorWrapper, _) -> _> = if original {

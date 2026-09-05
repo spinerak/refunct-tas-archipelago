@@ -29,6 +29,9 @@ static mut MAP_EDITOR_STATE = MapEditorState {
         sizex: 0.,
         sizey: 0.,
         sizez: 0.,
+        ogsizex: 0.,
+        ogsizey: 0.,
+        ogsizez: 0.,
     },
     chosen_element_index: ElementIndex {
         cluster_index: -1,
