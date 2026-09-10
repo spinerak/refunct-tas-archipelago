@@ -642,6 +642,10 @@ fn get_minigames_with_checks() -> List<string> {
         minigames.push("Defunct");
     }
 
+    if ARCHIPELAGO_STATE.unlock_defunct_rando_minigame && !ARCHIPELAGO_STATE.done_defunct_rando_minigame {
+        minigames.push("Defunct Rando");
+    }
+
     minigames
 }
 
@@ -670,17 +674,6 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
         let result = List::of(ColorfulText { text: txt, color: COLOR_WHITE });
         result.extend(lines);
         lines = result;
-    }
-
-    if ARCHIPELAGO_STATE.unlock_defunct_rando_minigame && !ARCHIPELAGO_STATE.done_defunct_rando_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nDefunct Rando",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
     }
 
     lines
@@ -1060,6 +1053,25 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         },
     }, ARCHIPELAGO_STATE.unlock_defunct_minigame);
 
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_defunct_rando_minigame {
+                "Defunct Rando"
+            } else {
+                "Defunct Rando (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_defunct_rando_minigame {
+                // log("Defunct Rando gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Defunct Rando");
+            archipelago_init(20);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_defunct_rando_minigame);
+
     let elems = List::of(
         UiElement::ColorButton(UiColorButton {
             label: Text { text: {
@@ -1083,24 +1095,6 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         })
     );
     elems.extend(unlocked_checks);
-    make_gamemode_button(UiButton {
-        label: Text { text: {
-            if ARCHIPELAGO_STATE.unlock_defunct_rando_minigame {
-                "Defunct Rando"
-            } else {
-                "Defunct Rando (locked)"
-            }
-        } },
-        onclick: fn(label: Text) {
-            if !ARCHIPELAGO_STATE.unlock_defunct_rando_minigame {
-                // log("Defunct Rando gamemode is locked!");
-                return;
-            }
-            // log("Set gamemode to Defunct Rando");
-            archipelago_init(20);
-            leave_ui();
-        },
-    }, ARCHIPELAGO_STATE.unlock_defunct_rando_minigame);
 
     let elems = List::new();
     elems.extend(unlocked);
