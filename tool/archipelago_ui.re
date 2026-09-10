@@ -1015,15 +1015,35 @@ fn create_archipelago_gamemodes_menu() -> Ui {
 
             ap_log_1("Started custom!");
             let map_list = Tas::list_maps();
+            // map_list.push("|preloaded| Heaven");
+            map_list.push("|preloaded| Smol");
+
             enter_ui(Ui::new_filechooser("Map to play", map_list, fn(input: string) {
+                let mut preloaded = false;
+                let mut input = input;
+                if input == "|preloaded| Heaven" {
+                    preloaded = true;
+                    input = "heaven.rmap";
+                }
+                if input == "|preloaded| Smol" {
+                    preloaded = true;
+                    input = "smol.rmap";
+                }
+
                 MAP_EDITOR_STATE.map_name = input;
-                if map_list.contains(input) {
-                    Tas::abilities_set_swim(true);
-                    MAP_EDITOR_STATE.map = Tas::load_map(input);
+                Tas::abilities_set_swim(true);
+
+                if preloaded {
+                    MAP_EDITOR_STATE.map = Tas::load_map_included(input);
                     Tas::apply_map(MAP_EDITOR_STATE.map);
                 } else {
-                    MAP_EDITOR_STATE.map = Tas::current_map();
-                };
+                    if map_list.contains(input) {
+                        MAP_EDITOR_STATE.map = Tas::load_map(input);
+                        Tas::apply_map(MAP_EDITOR_STATE.map);
+                    } else {
+                        MAP_EDITOR_STATE.map = Tas::current_map();
+                    }
+                }
                 // add_component(MAP_EDITOR_COMPONENT);
                 MAP_EDITOR_STATE.mode = MapEditorMode::Play;
                 // MOVEMENT_STATE.enable_fly = false;

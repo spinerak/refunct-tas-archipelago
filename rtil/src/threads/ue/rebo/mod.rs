@@ -53,6 +53,8 @@ struct State {
     // will keep textures forever, even if the player doesn't exist anymore, but each texture is only a few MB
     player_minimap_textures: HashMap<Rgba<u8>, UTexture2D>,
     defunct_map: serde_json::Value,
+    smol_map: serde_json::Value,
+    heaven_map: serde_json::Value,
 
     last_death_link_time: std::time::Instant,
     last_bounce_update_time: std::time::Instant,
@@ -178,9 +180,17 @@ pub fn init(
     }
     let player_minimap_image = image::load_from_memory(PLAYER_MINIMAP).unwrap().to_rgba8();
 
-    const DEFUNCTMAP: &'static [u8] = include_bytes!("../../../../defunct");
+    const DEFUNCT_MAP: &'static [u8] = include_bytes!("../../../../defunct");
     let defunct_map: serde_json::Value =
-        serde_json::from_str(str::from_utf8(&DEFUNCTMAP).unwrap()).unwrap();
+        serde_json::from_str(str::from_utf8(&DEFUNCT_MAP).unwrap()).unwrap();
+
+    const SMOL_MAP: &'static [u8] = include_bytes!("../../../../smol.rmap");
+    let smol_map: serde_json::Value =
+        serde_json::from_str(str::from_utf8(&SMOL_MAP).unwrap()).unwrap();
+
+    const HEAVEN_MAP: &'static [u8] = include_bytes!("../../../../heaven.rmap");
+    let heaven_map: serde_json::Value =
+        serde_json::from_str(str::from_utf8(&HEAVEN_MAP).unwrap()).unwrap();
 
     *STATE.lock().unwrap() = Some(State {
         hooks,
@@ -204,6 +214,8 @@ pub fn init(
         player_minimap_image,
         player_minimap_textures: HashMap::new(),
         defunct_map,
+        smol_map,
+        heaven_map,
         last_death_link_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first death link can be sent immediately
         last_bounce_update_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
         last_bounce_update_time_others: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately

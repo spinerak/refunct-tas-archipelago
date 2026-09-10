@@ -3554,6 +3554,12 @@ fn load_map_included(filename: String) -> RefunctMap {
     if filename == "defunct" {
         content = STATE.lock().unwrap().as_ref().unwrap().defunct_map.to_string();
     }
+    if filename == "heaven.rmap" {
+        content = STATE.lock().unwrap().as_ref().unwrap().heaven_map.to_string();
+    }
+    if filename == "smol.rmap" {
+        content = STATE.lock().unwrap().as_ref().unwrap().smol_map.to_string();
+    }
     let version: Version = serde_json::from_str(&content).unwrap();
     let map = match version.version {
         0 => {
