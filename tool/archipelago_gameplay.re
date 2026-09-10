@@ -166,22 +166,16 @@ struct ArchipelagoState {
     done_custom_minigame: bool,
     progress_custom_minigame: string,
 
+    pressed_defunct_buttons: Set<int>,
+    possible_defunct_buttons: List<int>,
 
     unlock_defunct_minigame: bool,
     done_defunct_minigame: bool,
     progress_defunct_minigame: string,
-    defunct_7_1: bool,
-    defunct_7_2: bool,
-    defunct_10_1: bool,
-    defunct_10_2: bool,
-    defunct_18_1: bool,
-    defunct_18_2: bool,
-    defunct_26_1: bool,
-    defunct_26_2: bool,
-    defunct_26_3: bool,
-    defunct_28_1: bool,
-    defunct_28_2: bool,
-    defunct_count: int,
+
+    unlock_defunct_rando_minigame: bool,
+    done_defunct_rando_minigame: bool,
+    progress_defunct_rando_minigame: string,
 
 
     last_platform_c: Option<int>,
@@ -368,26 +362,21 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         done_custom_minigame: false,
         progress_custom_minigame: "0/37",
 
+        pressed_defunct_buttons: Set::new(),
+        possible_defunct_buttons: List::of(21,31,41,51,61,71,72,81,91,101,102,111,121,131,141,151,161,171,181,182,191,201,211,221,231,241,251,261,262,263,271,281,282,291,301,311),
+
         unlock_defunct_minigame: false,
         done_defunct_minigame: false,
         progress_defunct_minigame: "0/37",
-        defunct_7_1: false,
-        defunct_7_2: false,
-        defunct_10_1: false,
-        defunct_10_2: false,
-        defunct_18_1: false,
-        defunct_18_2: false,
-        defunct_26_1: false,
-        defunct_26_2: false,
-        defunct_26_3: false,
-        defunct_28_1: false,
-        defunct_28_2: false,
-        defunct_count: 0,
+
+        unlock_defunct_rando_minigame: false,
+        done_defunct_rando_minigame: false,
+        progress_defunct_rando_minigame: "0/37",
 
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.6.0",
+        mod_version: "1.7.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -472,6 +461,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         update_block_blub_in_logic_counts();
 
         ARCHIPELAGO_STATE.multiplayer_info = Map::new();
+        
+        Tas::restart_bounces(5.);
     },
     on_level_change: ap_on_level_change_function,
     on_buttons_change: fn(old: int, new: int) {
@@ -693,62 +684,28 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             }
         }
 
-        if ARCHIPELAGO_STATE.gamemode == 19 {
+        if ARCHIPELAGO_STATE.gamemode == 19 || ARCHIPELAGO_STATE.gamemode == 20 {
             if index.element_type == ElementType::Button {
-                //archipelago_send_check(10040000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
-
+                ARCHIPELAGO_STATE.pressed_defunct_buttons.insert((index.cluster_index + 1) * 10 + index.element_index + 1);
                 let mut act = false;
                 if index.cluster_index + 1 == 7 {
-                    if index.element_index + 1 == 1 {
-                        ARCHIPELAGO_STATE.defunct_7_1 = true;
-                    }
-                    if index.element_index + 1 == 2 {
-                        ARCHIPELAGO_STATE.defunct_7_2 = true;
-                    }
-                    if ARCHIPELAGO_STATE.defunct_7_1 && ARCHIPELAGO_STATE.defunct_7_2 {
+                    if ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(71) && ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(72) {
                         act = true;
                     }
                 } else if index.cluster_index + 1 == 10 {
-                    if index.element_index + 1 == 1 {
-                        ARCHIPELAGO_STATE.defunct_10_1 = true;
-                    }
-                    if index.element_index + 1 == 2 {
-                        ARCHIPELAGO_STATE.defunct_10_2 = true;
-                    }
-                    if ARCHIPELAGO_STATE.defunct_10_1 && ARCHIPELAGO_STATE.defunct_10_2 {
+                    if ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(101) && ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(102) {
                         act = true;
                     }
                 } else if index.cluster_index + 1 == 18 {
-                    if index.element_index + 1 == 1 {
-                        ARCHIPELAGO_STATE.defunct_18_1 = true;
-                    }
-                    if index.element_index + 1 == 2 {
-                        ARCHIPELAGO_STATE.defunct_18_2 = true;
-                    }
-                    if ARCHIPELAGO_STATE.defunct_18_1 && ARCHIPELAGO_STATE.defunct_18_2 {
+                    if ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(181) && ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(182) {
                         act = true;
                     }
                 } else if index.cluster_index + 1 == 26 {
-                    if index.element_index + 1 == 1 {
-                        ARCHIPELAGO_STATE.defunct_26_1 = true;
-                    }
-                    if index.element_index + 1 == 2 {
-                        ARCHIPELAGO_STATE.defunct_26_2 = true;
-                    }
-                    if index.element_index + 1 == 3 {
-                        ARCHIPELAGO_STATE.defunct_26_3 = true;
-                    }
-                    if ARCHIPELAGO_STATE.defunct_26_1 && ARCHIPELAGO_STATE.defunct_26_2 && ARCHIPELAGO_STATE.defunct_26_3 {
+                    if ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(261) && ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(262) && ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(263) {
                         act = true;
                     }
                 } else if index.cluster_index + 1 == 28 {
-                    if index.element_index + 1 == 1 {
-                        ARCHIPELAGO_STATE.defunct_28_1 = true;
-                    }
-                    if index.element_index + 1 == 2 {
-                        ARCHIPELAGO_STATE.defunct_28_2 = true;
-                    }
-                    if ARCHIPELAGO_STATE.defunct_28_1 && ARCHIPELAGO_STATE.defunct_28_2 {
+                    if ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(281) && ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(282) {
                         act = true;
                     }
                 } else {
@@ -766,28 +723,32 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                     if c == 26 {
                         Tas::disable_button(c-1, 2);
                     } 
+                    
+                    if ARCHIPELAGO_STATE.gamemode == 19 {
+                        if c == 16 {
+                            Tas::enable_button(1, 0, Color { red: 0., green: 1., blue: 0., alpha: 1. }); // disable until button 16 (15) is hit
+                        }
+                        if c == 18 {
+                            Tas::enable_button(7, 0, Color { red: 0., green: 1., blue: 0., alpha: 1. }); // disable until button 18 (17) is hit
+                        }
+                        if c == 13 {
+                            Tas::enable_button(10, 0, Color { red: 0., green: 1., blue: 0., alpha: 1. }); // disable until button 13 (12) is hit
+                        }
+                        if c == 22 {
+                            Tas::enable_button(19, 0, Color { red: 0., green: 1., blue: 0., alpha: 1. }); // disable until button 22 (21) is hit
+                        }
 
-                    if c == 16 {
-                        Tas::enable_button(1, 0, Color { red: 0., green: 1., blue: 0., alpha: 1. }); // disable until button 16 (15) is hit
-                    }
-                    if c == 18 {
-                        Tas::enable_button(7, 0, Color { red: 0., green: 1., blue: 0., alpha: 1. }); // disable until button 18 (17) is hit
-                    }
-                    if c == 13 {
-                        Tas::enable_button(10, 0, Color { red: 0., green: 1., blue: 0., alpha: 1. }); // disable until button 13 (12) is hit
-                    }
-                    if c == 22 {
-                        Tas::enable_button(19, 0, Color { red: 0., green: 1., blue: 0., alpha: 1. }); // disable until button 22 (21) is hit
-                    }
-
-                    ARCHIPELAGO_STATE.defunct_count += 1;
-                    if ARCHIPELAGO_STATE.defunct_count == 30 {
-                        Tas::enable_button(0, 0, Color { red: 0., green: 1., blue: 1., alpha: 1. }); // disable until button 16 (15) is hit
+                        if ARCHIPELAGO_STATE.pressed_defunct_buttons.len() == 36 {
+                            Tas::enable_button(0, 0, Color { red: 0., green: 1., blue: 1., alpha: 1. }); // disable until button 16 (15) is hit
+                        }
                     }
 
                     if c == 1 {
                         Tas::trigger_goal_animation();
                     }
+                }
+                if ARCHIPELAGO_STATE.gamemode == 20 {
+                    defunct_rando_activate_three();
                 }
             }
         }
@@ -860,6 +821,11 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                 archipelago_send_check(10150000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
             }
         }
+        if ARCHIPELAGO_STATE.gamemode == 20 {
+            if index.element_type == ElementType::Button {
+                archipelago_send_check(10160000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
+            }
+        }
     },
     on_element_released: fn(index: ElementIndex) {},
     on_key_down: fn(key: KeyCode, is_repeat: bool) {
@@ -868,12 +834,12 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         }
         if ARCHIPELAGO_STATE.gamemode == 12 || ARCHIPELAGO_STATE.gamemode == 13 {
             if key.to_small() == KEY_E.to_small() {
-                Tas::dash(1500.0);
+                Tas::dash(1500.0, SETTINGS.downward_dash_enabled);
             }
         }
         if ARCHIPELAGO_STATE.gamemode == 5 && SETTINGS.block_brawl_dash_instead {
             if key.to_small() == KEY_E.to_small() {
-                Tas::dash(1000.0);
+                Tas::dash(1000.0, SETTINGS.downward_dash_enabled);
             }
         }
         if ARCHIPELAGO_STATE.gamemode == 5 {
@@ -903,10 +869,10 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 
 fn on_wall_jump_input() {
     if ARCHIPELAGO_STATE.gamemode == 12 || ARCHIPELAGO_STATE.gamemode == 13 {
-        Tas::dash(1500.0);
+        Tas::dash(1500.0, SETTINGS.downward_dash_enabled);
     }
     if ARCHIPELAGO_STATE.gamemode == 5 && SETTINGS.block_brawl_dash_instead {
-        Tas::dash(1000.0);
+        Tas::dash(1000.0, SETTINGS.downward_dash_enabled);
     }
 }
 
@@ -1118,8 +1084,8 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
             Tas::set_stars_brightness(1000., SETTINGS.day_stars_brightness);
         }
         if item_id == 9999007{
-            Tas::set_sun_redness(20., SETTINGS.sun_redness);
-            Tas::set_cloud_redness(20., SETTINGS.cloud_redness);
+            Tas::set_sun_redness(7., SETTINGS.sun_redness);
+            Tas::set_cloud_redness(7., SETTINGS.cloud_redness);
         }
         if item_id == 9999008{
             Tas::set_cloud_speed(200., SETTINGS.cloud_speed);
@@ -1167,6 +1133,10 @@ fn archipelago_tick(time: int) {
                     Tas::set_rotation(Rotation { pitch: 0., yaw: 90., roll: 0. });
                 }
                 if ARCHIPELAGO_STATE.gamemode == 19 {
+                    Tas::set_location(Location { x: -500., y: -1125., z: 90. }); 
+                    Tas::set_rotation(Rotation { pitch: 0., yaw: 90., roll: 0. });
+                }
+                if ARCHIPELAGO_STATE.gamemode == 20 {
                     Tas::set_location(Location { x: -500., y: -1125., z: 90. }); 
                     Tas::set_rotation(Rotation { pitch: 0., yaw: 90., roll: 0. });
                 }
@@ -1415,6 +1385,11 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
         return;
     }
 
+    if item_id == 9999870 {  // Defunct Rando Minigame
+        ARCHIPELAGO_STATE.unlock_defunct_rando_minigame = true;
+        return;
+    }
+
     ARCHIPELAGO_STATE.received_items.push(item_id);
     if ARCHIPELAGO_STATE.started < 2 {
         return;
@@ -1615,12 +1590,7 @@ fn archipelago_got_grass(){
 }
 
 fn archipelago_init(gamemode: int){
-    if ARCHIPELAGO_STATE.gamemode == 18 || ARCHIPELAGO_STATE.gamemode == 19 {  // revert to og map
-        Tas::abilities_set_swim(true);
-        MAP_EDITOR_STATE.map = Tas::original_map();
-        Tas::apply_map(MAP_EDITOR_STATE.map);
-    }
-    if ARCHIPELAGO_STATE.gamemode == 19 {  // revert to og map
+    if ARCHIPELAGO_STATE.gamemode == 18 || ARCHIPELAGO_STATE.gamemode == 19 || ARCHIPELAGO_STATE.gamemode == 20 {  // revert to og map
         Tas::abilities_set_swim(true);
         MAP_EDITOR_STATE.map = Tas::original_map();
         Tas::apply_map(MAP_EDITOR_STATE.map);
@@ -1635,7 +1605,7 @@ fn archipelago_init(gamemode: int){
         Tas::set_level(30);
     }
 
-    if gamemode == 19 {
+    if gamemode == 19 || gamemode == 20 {
         MAP_EDITOR_STATE.map = Tas::load_map_included("defunct");
         Tas::apply_map(MAP_EDITOR_STATE.map);
     }
@@ -1704,6 +1674,9 @@ fn archipelago_start(){
     if ARCHIPELAGO_STATE.gamemode == 19 {
         archipelago_defunct_start();
     }
+    if ARCHIPELAGO_STATE.gamemode == 20 {
+        archipelago_defunct_rando_start();
+    }
 
     let mut i = 0;
     for item in ARCHIPELAGO_STATE.received_items {
@@ -1711,7 +1684,7 @@ fn archipelago_start(){
         i += 1;
     }
     ARCHIPELAGO_STATE.started = 2;
-    Tas::restart_bounces();
+    Tas::restart_bounces(0.);
 
 }
 
@@ -1947,19 +1920,43 @@ fn archipelago_defunct_start(){
     Tas::disable_button(10, 0); // disable until button 13 (12) is hit
     Tas::disable_button(19, 0); // disable until button 22 (21) is hit
 
-    
-    ARCHIPELAGO_STATE.defunct_7_1 = false;
-    ARCHIPELAGO_STATE.defunct_7_2 = false;
-    ARCHIPELAGO_STATE.defunct_10_1 = false;
-    ARCHIPELAGO_STATE.defunct_10_2 = false;
-    ARCHIPELAGO_STATE.defunct_18_1 = false;
-    ARCHIPELAGO_STATE.defunct_18_2 = false;
-    ARCHIPELAGO_STATE.defunct_26_1 = false;
-    ARCHIPELAGO_STATE.defunct_26_2 = false;
-    ARCHIPELAGO_STATE.defunct_26_3 = false;
-    ARCHIPELAGO_STATE.defunct_28_1 = false;
-    ARCHIPELAGO_STATE.defunct_28_2 = false;
-    ARCHIPELAGO_STATE.defunct_count = 0;
+    ARCHIPELAGO_STATE.pressed_defunct_buttons = Set::new();
+}
+
+fn archipelago_defunct_rando_start(){
+    Tas::set_level(-10000);
+    Tas::set_goal_animation_should_play(false);
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
+
+    ARCHIPELAGO_STATE.pressed_defunct_buttons = Set::new();
+    defunct_rando_activate_three();
+}
+
+fn defunct_rando_activate_three(){
+    Tas::deactivate_all_buttons();
+    let possible_buttons = List::new();
+    for i in ARCHIPELAGO_STATE.possible_defunct_buttons {
+        if !ARCHIPELAGO_STATE.pressed_defunct_buttons.contains(i) {
+            possible_buttons.push(i);
+        }
+    }
+    if possible_buttons.len() < 1 {
+        possible_buttons.push(11); // final button
+    }
+
+    let three = Tas::get_defunct_rando_sample(possible_buttons, 3);
+    for b in three {
+        let cluster = b / 10;
+        let button = b % 10;
+        Tas::enable_button(cluster-1, button-1, Color { red: 1., green: 0., blue: 0., alpha: 1. });
+    }
+
 }
 
 fn archipelago_og_randomizer_start(){
@@ -3169,6 +3166,21 @@ fn archipelago_checked_location(id: int){
             ap_log(List::of(ColorfulText { text:"Completed Defunct Minigame!", color: AP_COLOR_GREEN }));
         }
         ARCHIPELAGO_STATE.progress_defunct_minigame = f"{number_pressed}/{defunct_locations.len()}";
+    }
+
+    let defunct_rando_locations = List::of(10160101, 10160201, 10160301, 10160401, 10160501, 10160601, 10160701, 10160702, 10160801, 10160901, 10161001, 10161002, 10161101, 10161201, 10161301, 10161401, 10161501, 10161601, 10161701, 10161801, 10161802, 10161901, 10162001, 10162101, 10162201, 10162301, 10162401, 10162501, 10162601, 10162602, 10162603, 10162701, 10162801, 10162802, 10162901, 10163001, 10163101);
+    if defunct_rando_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in defunct_rando_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }
+        }
+        if number_pressed == defunct_rando_locations.len() {
+            ARCHIPELAGO_STATE.done_defunct_rando_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Defunct Rando Minigame!", color: AP_COLOR_GREEN }));
+        }
+        ARCHIPELAGO_STATE.progress_defunct_rando_minigame = f"{number_pressed}/{defunct_rando_locations.len()}";
     }
 
 }

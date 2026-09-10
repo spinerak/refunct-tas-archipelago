@@ -161,7 +161,8 @@ struct Settings {
     archipelago_log_display_time_sec: int,
     archipelago_log_max_count: int,
 
-    block_brawl_dash_instead: bool
+    block_brawl_dash_instead: bool,
+    downward_dash_enabled: bool,
 }
 static mut SETTINGS = Settings::load();
 
@@ -305,6 +306,7 @@ impl Settings {
             archipelago_log_display_time_sec: get_int("archipelago_log_display_time_sec", 10),
             archipelago_log_max_count: get_int("archipelago_log_max_count", 8),
             block_brawl_dash_instead: get_bool("block_brawl_dash_instead", false),
+            downward_dash_enabled: get_bool("downward_dash_enabled", true),
         }
     }
 
@@ -363,6 +365,7 @@ impl Settings {
         map.insert("archipelago_log_display_time_sec", f"{SETTINGS.archipelago_log_display_time_sec}");
         map.insert("archipelago_log_max_count", f"{SETTINGS.archipelago_log_max_count}");
         map.insert("block_brawl_dash_instead", f"{SETTINGS.block_brawl_dash_instead}");
+        map.insert("downward_dash_enabled", f"{SETTINGS.downward_dash_enabled}");
         Tas::store_settings(map);
     }
 

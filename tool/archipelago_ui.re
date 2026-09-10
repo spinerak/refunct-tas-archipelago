@@ -546,6 +546,26 @@ fn create_archipelago_settings_menu() -> Ui {
             },
         }),
         UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Add down-dash (certain minigames)" },
+            options: List::of(
+                Text { text: "Yes" },
+                Text { text: "No" },
+            ),
+            selected: match SETTINGS.downward_dash_enabled {
+                true => 0,
+                false => 1,
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.downward_dash_enabled = true; },
+                    1 => { SETTINGS.downward_dash_enabled = false; },
+                    _ => panic(f"unknown index {index}"),
+                };
+                SETTINGS.store();
+            },
+        }),
+        UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
         UiElement::Button(UiButton {
             label: Text { text: "Back" },
             onclick: fn(label: Text) { leave_ui(); },
@@ -650,6 +670,17 @@ fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
         let result = List::of(ColorfulText { text: txt, color: COLOR_WHITE });
         result.extend(lines);
         lines = result;
+    }
+
+    if ARCHIPELAGO_STATE.unlock_defunct_rando_minigame && !ARCHIPELAGO_STATE.done_defunct_rando_minigame {
+        if !added_minigame_header {
+            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        }
+        lines.push(ColorfulText {
+            text:  "\nDefunct Rando",
+            color: AP_COLOR_GREEN
+        });
+        added_minigame_header = true;
     }
 
     lines
@@ -1052,6 +1083,26 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         })
     );
     elems.extend(unlocked_checks);
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_defunct_rando_minigame {
+                "Defunct Rando"
+            } else {
+                "Defunct Rando (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_defunct_rando_minigame {
+                // log("Defunct Rando gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Defunct Rando");
+            archipelago_init(20);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_defunct_rando_minigame);
+
+    let elems = List::new();
     elems.extend(unlocked);
     elems.extend(locked);
     elems.extend(List::of(
@@ -1250,6 +1301,11 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_defunct_minigame}", color: COLOR_WHITE },
             ),
+            20 => List::of(
+                ColorfulText { text: "Archipelago - Defunct Rando\n", color: COLOR_WHITE },
+                ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_defunct_rando_minigame}", color: COLOR_WHITE },
+            ),
 
             _ => List::of(
                 ColorfulText { text: "Archipelago\n", color: COLOR_WHITE },
@@ -1258,7 +1314,7 @@ fn get_status_text_lines() -> List<ColorfulText> {
         }
     });
 
-    let warplist = List::of(5,6,7,8,10,14,19);
+    let warplist = List::of(5,6,7,8,10,14,19,20);
     if warplist.contains(ARCHIPELAGO_STATE.gamemode) {
         if ARCHIPELAGO_STATE.r_count > 0 {
             let tttt = f"\n[{ARCHIPELAGO_STATE.r_count}/10]: warp to start";
