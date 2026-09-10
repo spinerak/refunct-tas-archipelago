@@ -1084,8 +1084,8 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
             Tas::set_stars_brightness(1000., SETTINGS.day_stars_brightness);
         }
         if item_id == 9999007{
-            Tas::set_sun_redness(7., SETTINGS.sun_redness);
-            Tas::set_cloud_redness(7., SETTINGS.cloud_redness);
+            Tas::set_sun_redness(2., SETTINGS.sun_redness);
+            Tas::set_cloud_redness(2., SETTINGS.cloud_redness);
         }
         if item_id == 9999008{
             Tas::set_cloud_speed(200., SETTINGS.cloud_speed);
