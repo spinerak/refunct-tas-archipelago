@@ -1072,6 +1072,7 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         },
     }, ARCHIPELAGO_STATE.unlock_defunct_rando_minigame);
 
+
     let elems = List::of(
         UiElement::ColorButton(UiColorButton {
             label: Text { text: {
@@ -1095,8 +1096,6 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         })
     );
     elems.extend(unlocked_checks);
-
-    let elems = List::new();
     elems.extend(unlocked);
     elems.extend(locked);
     elems.extend(List::of(
