@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Write;
 use std::ops::Deref;
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::sync::Arc;
 use archipelago_rs::protocol::{BounceData, ClientMessage, DataStorageOperation, DeathLink, Get, GetDataPackage, ItemsHandlingFlags, NetworkItem, RichMessageColor, RichMessagePart, RichPrint, ServerMessage, Set, SetNotify};
 use crossbeam_channel::{Sender, TryRecvError};
@@ -164,6 +164,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(trigger_goal_animation)
         .add_function(raise_cluster_rebo)
         .add_function(raise_next_cluster)
+        .add_function(get_defunct_rando_sample)
 
         .add_function(abilities_set_wall_jump)
         .add_function(abilities_set_ledge_grab)
@@ -1148,19 +1149,20 @@ impl PlatformSpawner {
 }
 
 #[rebo::function("Tas::restart_bounces")]
-fn restart_bounces_rebo() {
-    restart_bounces();
+fn restart_bounces_rebo(seconds: f32) {
+    restart_bounces(seconds);
 }
 
-fn restart_bounces() {
+fn restart_bounces(seconds: f32) {
     log!("Start restart bounces");
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
     state.bounce_locations_xs.clear();
     state.bounce_locations_ys.clear();
     state.bounce_locations_zs.clear();
-    state.last_bounce_update_time_others = std::time::Instant::now();
-    state.last_bounce_refresh_slots = std::time::Instant::now();
+    let offset = std::time::Duration::from_secs_f32(seconds);
+    state.last_bounce_update_time_others = std::time::Instant::now() + offset;
+    state.last_bounce_refresh_slots = std::time::Instant::now() + offset;
     state.slots_in_action.clear();
     state.slots_in_action_new.clear();
     state.full_bounce_next = true;
@@ -1858,7 +1860,7 @@ fn get_viewport_size() -> Size {
 }
 
 #[rebo::function("Tas::dash")]
-fn dash(dash_velocity: f32) {
+fn dash(dash_velocity: f32, do_downward_dash: bool) {
     let mut state = STATE.lock().unwrap();
     let state = state.as_mut().unwrap();
     if state.dashes_left == 0 {
@@ -1873,6 +1875,9 @@ fn dash(dash_velocity: f32) {
 
     let mut pitch: f32 = 55.0;
     if state.dashes_left == 0 {
+        if !do_downward_dash {
+            return; // no more dashes left, and not doing downward dash, so return
+        }
         pitch = -60.0; // downward dash
     }
     
@@ -3124,6 +3129,64 @@ fn raise_cluster(cluster_index: i32) {
 #[rebo::function("Tas::raise_next_cluster")]
 fn raise_next_cluster() {
     UMyGameInstance::raise_next_level();
+}
+
+
+#[rebo::function("Tas::get_defunct_rando_sample")]
+fn get_defunct_rando_sample(list: Vec<usize>, amount: usize) -> Vec<usize> {
+    log!("get_defunct_rando_sample called with list: {:?}, amount: {}", list, amount);
+    // pick "amount" random elements from "list" and return them
+    // first, exclude candidates based on the following rule:
+    // there is an important rule, if the value on the left is in the list and exactly one value on the right is in the list, the value on the right can NOT be selected.
+    // collect all of these numbers and after the five rules, remove them from the list.
+    //    dependences[131] = [31, 111, 141, 151, 241, 271]
+    //    dependences[161] = [21, 171, 281, 282]
+    //    dependences[181] = [81]
+    //    dependences[182] = [81]
+    //    dependences[221] = [31, 111, 121, 201, 301]
+    // afterwards sample "amount" and if the list is smaller that is fine, simply return less
+    let dependencies: &[(usize, &[usize])] = &[
+        (131, &[31, 111, 141, 151, 241, 271]),
+        (161, &[21, 171, 281, 282]),
+        (181, &[81]),
+        (182, &[81]),
+        (221, &[31, 111, 121, 201, 301]),
+    ];
+
+    let mut excluded = Vec::new();
+    for &(left, rights) in dependencies {
+        if list.contains(&left) {
+            let present: Vec<usize> = rights
+                .iter()
+                .copied()
+                .filter(|value| list.contains(value))
+                .collect();
+            if present.len() == 1 {
+                excluded.push(present[0]);
+            }
+        }
+    }
+
+    let mut candidates: Vec<usize> = list
+        .into_iter()
+        .filter(|value| !excluded.contains(value))
+        .collect();
+
+    // Fisher-Yates shuffle using the current time as a lightweight seed.
+    let mut state = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos() as usize;
+    for i in (1..candidates.len()).rev() {
+        state = state
+            .wrapping_mul(1664525)
+            .wrapping_add(1013904223);
+        let j = state % (i + 1);
+        candidates.swap(i, j);
+    }
+
+    candidates.truncate(amount);
+    candidates
 }
 
 
