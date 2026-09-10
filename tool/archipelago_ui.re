@@ -16,6 +16,7 @@ enum Anchor {
     BottomishCenter
 }
 
+static AP_COLOR_REFUNCT = Color { red: 0.996, green: 0.000, blue: 0.443, alpha: 1. };
 static AP_COLOR_RED     = Color { red: 0.600, green: 0.160, blue: 0.227, alpha: 1. };
 static AP_COLOR_CYAN    = Color { red: 0.000, green: 0.627, blue: 0.698, alpha: 1. };
 static AP_COLOR_GREEN   = Color { red: 0.231, green: 0.600, blue: 0.165, alpha: 1. };
@@ -552,226 +553,141 @@ fn create_archipelago_settings_menu() -> Ui {
     ))
 }
 
-fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
-    let lines = List::new();
-    let mut added_minigame_header = false;
+fn get_minigames_with_checks() -> List<string> {
+    let minigames = List::new();
+
     if ARCHIPELAGO_STATE.unlock_vanilla_minigame && !ARCHIPELAGO_STATE.done_vanilla_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nVanilla",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Vanilla");
     }
+
     if ARCHIPELAGO_STATE.unlock_seeker_minigame && !ARCHIPELAGO_STATE.done_seeker_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nSeeker",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Seeker");
     }
+
     if ARCHIPELAGO_STATE.unlock_button_galore_minigame && !ARCHIPELAGO_STATE.done_button_galore_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nButton Galore",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Button Galore");
     }
+
     if ARCHIPELAGO_STATE.unlock_OG_randomizer && !ARCHIPELAGO_STATE.done_OG_randomizer_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nOG Randomizer",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("OG Randomizer");
     }
 
     if ARCHIPELAGO_STATE.block_brawl_check_in_logic > 0 {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  f"\nBlock Brawl: {ARCHIPELAGO_STATE.block_brawl_check_in_logic} in logic",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Block Brawl");
     }
 
     if ARCHIPELAGO_STATE.unlock_climb_line && !ARCHIPELAGO_STATE.done_climb_line_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nClimb Line",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Climb Line");
     }
+
     if ARCHIPELAGO_STATE.unlock_climb_spiral && !ARCHIPELAGO_STATE.done_climb_spiral_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nClimb Spiral",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Climb Spiral");
     }
+
     if ARCHIPELAGO_STATE.unlock_climb_chaos && !ARCHIPELAGO_STATE.done_climb_chaos_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nClimb Chaos",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Climb Chaos");
     }
+
     if ARCHIPELAGO_STATE.unlock_climb_narrow && !ARCHIPELAGO_STATE.done_climb_narrow_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nClimb Narrow",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Climb Narrow");
     }
-    
 
     if ARCHIPELAGO_STATE.block_blub_check_in_logic > 0 {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  f"\nBlock Blub: {ARCHIPELAGO_STATE.block_blub_check_in_logic} in logic",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Block Blub");
     }
-    
+
     if ARCHIPELAGO_STATE.unlock_refunct_mountain_minigame && !ARCHIPELAGO_STATE.done_refunct_mountain_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nRefunct Mountain",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Refunct Mountain");
     }
-    
+
     if ARCHIPELAGO_STATE.unlock_rando_mountain_minigame && !ARCHIPELAGO_STATE.done_rando_mountain_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nRando Mountain",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Rando Mountain");
     }
 
     if ARCHIPELAGO_STATE.unlock_funny_bridge_game_minigame && !ARCHIPELAGO_STATE.done_funny_bridge_game_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nFunny Bridge Game",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Funny Bridge Game");
     }
 
-    //ap_log_1(f"Checking if we should show Clique in minigames list: has_clique = {ARCHIPELAGO_STATE.has_clique}, got_clique_cube = {ARCHIPELAGO_STATE.got_clique_cube}, unlock_clique_button = {ARCHIPELAGO_STATE.unlock_clique_button}, done_clique_button = {ARCHIPELAGO_STATE.done_clique_button}");
     if ARCHIPELAGO_STATE.has_clique {
-        //ap_log_1("Player has Clique, checking if we should show it in minigames list...");
         if !ARCHIPELAGO_STATE.got_clique_cube || (ARCHIPELAGO_STATE.unlock_clique_button && !ARCHIPELAGO_STATE.done_clique_button) {
-            if !added_minigame_header {
-                lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-            }
-            lines.push(ColorfulText {
-                text:  "\nClique",
-                color: AP_COLOR_GREEN
-            });
-            added_minigame_header = true;
+            minigames.push("Clique");
         }
     }
 
     if ARCHIPELAGO_STATE.unlock_custom_minigame && !ARCHIPELAGO_STATE.done_custom_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
-        }
-        lines.push(ColorfulText {
-            text:  "\nCustom",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+        minigames.push("Custom");
     }
 
     if ARCHIPELAGO_STATE.unlock_defunct_minigame && !ARCHIPELAGO_STATE.done_defunct_minigame {
-        if !added_minigame_header {
-            lines.push(ColorfulText { text: txt, color: COLOR_WHITE });
+        minigames.push("Defunct");
+    }
+
+    minigames
+}
+
+fn create_list_of_minigames_with_checks(txt: string) -> List<ColorfulText> {
+    let mut lines = List::new();
+    for minigame in get_minigames_with_checks() {
+        if minigame == "Block Brawl" {
+            lines.push(ColorfulText {
+                text:  f"\nBlock Brawl: {ARCHIPELAGO_STATE.block_brawl_check_in_logic} in logic",
+                color: AP_COLOR_GREEN
+            });
+        } else if minigame == "Block Blub" {
+            lines.push(ColorfulText {
+                text:  f"\nBlock Blub: {ARCHIPELAGO_STATE.block_blub_check_in_logic} in logic",
+                color: AP_COLOR_GREEN
+            });
+        } else {
+            lines.push(ColorfulText {
+                text:  f"\n{minigame}",
+                color: AP_COLOR_GREEN
+            });
         }
-        lines.push(ColorfulText {
-            text:  "\nDefunct",
-            color: AP_COLOR_GREEN
-        });
-        added_minigame_header = true;
+    }
+
+    if lines.len() > 0 {
+        let result = List::of(ColorfulText { text: txt, color: COLOR_WHITE });
+        result.extend(lines);
+        lines = result;
     }
 
     lines
 }
 
 fn create_archipelago_gamemodes_menu() -> Ui {
+    let minigames_with_checks = get_minigames_with_checks();
+    if minigames_with_checks.contains("Block Brawl") {
+        minigames_with_checks.push("Block Brawl ALT");
+    }
+
+    let unlocked_checks = List::new();
     let unlocked = List::new();
     let locked = List::new();
 
     let make_gamemode_button: fn(UiButton, bool) = fn(button: UiButton, is_unlocked: bool) {
+        let has_checks = minigames_with_checks.contains(button.label.text);
         let el = UiElement::ColorButton(UiColorButton {
             label: button.label,
             onclick: button.onclick,
-            color_default: if is_unlocked { COLOR_WHITE } else { COLOR_DARK_GRAY },
-            color_selected: if is_unlocked { COLOR_GREEN } else { AP_COLOR_RED },
+            color_default: if has_checks { AP_COLOR_GREEN } else if is_unlocked { COLOR_WHITE } else { COLOR_DARK_GRAY },
+            color_selected: if is_unlocked { AP_COLOR_CYAN } else { AP_COLOR_RED },
         });
-        if is_unlocked { unlocked.push(el) } else { locked.push(el) }
+        if has_checks {
+            unlocked_checks.push(el)
+        } else if is_unlocked {
+            unlocked.push(el)
+        } else {
+            locked.push(el)
+        }
     };
 
     make_gamemode_button(UiButton {
         label: Text { text: {
-            if ARCHIPELAGO_STATE.just_clique {
-                "Move rando (locked)"
-            } else {
-                "Move rando (main)"
-            }
-        } },
-        onclick: fn(label: Text) {
-            if ARCHIPELAGO_STATE.just_clique {
-                // log("Move rando gamemode is locked!");
-                return;
-            }
-            // log("Set gamemode to main game");
-            archipelago_init(0);
-            leave_ui();
-        },
-    }, !ARCHIPELAGO_STATE.just_clique);
-
-    make_gamemode_button(UiButton {
-        label: Text { text: {
             if ARCHIPELAGO_STATE.unlock_vanilla_minigame {
-                "Vanilla game"
+                "Vanilla"
             } else {
-                "Vanilla game (locked)"
+                "Vanilla (locked)"
             }
         } },
         onclick: fn(label: Text) {
@@ -1058,9 +974,9 @@ fn create_archipelago_gamemodes_menu() -> Ui {
     make_gamemode_button(UiButton {
         label: Text { text: {
             if ARCHIPELAGO_STATE.unlock_custom_minigame {
-                "Custom game"
+                "Custom"
             } else {
-                "Custom game (locked)"
+                "Custom (locked)"
             }
         } },
         onclick: fn(label: Text) {
@@ -1113,7 +1029,29 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         },
     }, ARCHIPELAGO_STATE.unlock_defunct_minigame);
 
-    let elems = List::new();
+    let elems = List::of(
+        UiElement::ColorButton(UiColorButton {
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.just_clique {
+                    "Move rando (locked)"
+                } else {
+                    "Move rando (main)"
+                }
+            } },
+            onclick: fn(label: Text) {
+                if ARCHIPELAGO_STATE.just_clique {
+                    // log("Move rando gamemode is locked!");
+                    return;
+                }
+                // log("Set gamemode to main game");
+                archipelago_init(0);
+                leave_ui();
+            },
+            color_default: AP_COLOR_REFUNCT,
+            color_selected: AP_COLOR_CYAN,
+        })
+    );
+    elems.extend(unlocked_checks);
     elems.extend(unlocked);
     elems.extend(locked);
     elems.extend(List::of(
