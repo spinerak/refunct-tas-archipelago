@@ -410,22 +410,22 @@ impl UiElement {
     }
     fn draw(self, y: float, color: Color, is_selected: bool) {
         match self {
-            UiElement::Button(button) => button.draw(y, color),
-            UiElement::ColorButton(button) => button.draw(y, if is_selected { button.color_selected } else { button.color_default }),
-            UiElement::Input(input) => input.draw(y, color),
-            UiElement::FloatInput(input) => input.draw(y, color),
-            UiElement::Slider(slider) => slider.draw(y, color),
-            UiElement::Chooser(chooser) => chooser.draw(y, color),
+            UiElement::Button(button) => button.draw(y, color, is_selected),
+            UiElement::ColorButton(button) => button.draw(y, if is_selected { button.color_selected } else { button.color_default }, is_selected),
+            UiElement::Input(input) => input.draw(y, color, is_selected),
+            UiElement::FloatInput(input) => input.draw(y, color, is_selected),
+            UiElement::Slider(slider) => slider.draw(y, color, is_selected),
+            UiElement::Chooser(chooser) => chooser.draw(y, color, is_selected),
         }
     }
     fn text(self) -> string {
         match self {
-            UiElement::Button(button) => button.text(),
-            UiElement::ColorButton(button) => button.text(),
-            UiElement::Input(input) => input.text(),
-            UiElement::FloatInput(input) => input.text(),
-            UiElement::Slider(slider) => slider.text(),
-            UiElement::Chooser(chooser) => chooser.text(),
+            UiElement::Button(button) => button.text(false),
+            UiElement::ColorButton(button) => button.text(false),
+            UiElement::Input(input) => input.text(false),
+            UiElement::FloatInput(input) => input.text(false),
+            UiElement::Slider(slider) => slider.text(false),
+            UiElement::Chooser(chooser) => chooser.text(false),
         }
     }
 }
@@ -435,9 +435,9 @@ impl UiButton {
         let f = self.onclick;
         f(self.label);
     }
-    fn draw(self, y: float, color: Color) {
+    fn draw(self, y: float, color: Color, selected: bool) {
         Tas::draw_text(DrawText {
-            text: self.text(),
+            text: self.text(selected),
             color: color,
             x: 0.,
             y: y,
@@ -445,8 +445,9 @@ impl UiButton {
             scale_position: true,
         })
     }
-    fn text(self) -> string {
-        f"    {self.label.text}"
+    fn text(self, selected: bool) -> string {
+        let indicator = if selected { "➤" } else { " " };
+        f"  {indicator} {self.label.text}"
     }
 }
 impl UiColorButton {
@@ -454,9 +455,9 @@ impl UiColorButton {
         let f = self.onclick;
         f(self.label);
     }
-    fn draw(self, y: float, color: Color) {
+    fn draw(self, y: float, color: Color, selected: bool) {
         Tas::draw_text(DrawText {
-            text: self.text(),
+            text: self.text(selected),
             color: color,
             x: 0.,
             y: y,
@@ -464,8 +465,9 @@ impl UiColorButton {
             scale_position: true,
         })
     }
-    fn text(self) -> string {
-        f"    {self.label.text}"
+    fn text(self, selected: bool) -> string {
+        let indicator = if selected { "➤" } else { " " };
+        f"  {indicator} {self.label.text}"
     }
 }
 impl Input {
@@ -489,9 +491,9 @@ impl Input {
         let onchange = self.onchange;
         onchange(self.input);
     }
-    fn draw(self, y: float, color: Color) {
+    fn draw(self, y: float, color: Color, selected: bool) {
         Tas::draw_text(DrawText {
-            text: self.text(),
+            text: self.text(selected),
             color: color,
             x: 0.,
             y: y,
@@ -499,8 +501,9 @@ impl Input {
             scale_position: true,
         })
     }
-    fn text(self) -> string {
-        f"    {self.label.text}: {self.input}"
+    fn text(self, selected: bool) -> string {
+        let indicator = if selected { "➤" } else { " " };
+        f"  {indicator} {self.label.text}: {self.input}"
     }
 }
 
@@ -531,9 +534,9 @@ impl FloatInput {
         let onchange = self.onchange;
         onchange(self.input);
     }
-    fn draw(self, y: float, color: Color) {
+    fn draw(self, y: float, color: Color, selected: bool) {
         Tas::draw_text(DrawText {
-            text: self.text(),
+            text: self.text(selected),
             color: color,
             x: 0.,
             y: y,
@@ -541,8 +544,9 @@ impl FloatInput {
             scale_position: true,
         })
     }
-    fn text(self) -> string {
-        f"    {self.label.text}: {self.input}"
+    fn text(self, selected: bool) -> string {
+        let indicator = if selected { "➤" } else { " " };
+        f"  {indicator} {self.label.text}: {self.input}"
     }
 
 }
@@ -557,9 +561,9 @@ impl Slider {
             f();
         }
     }
-    fn draw(self, y: float, color: Color) {
+    fn draw(self, y: float, color: Color, selected: bool) {
         Tas::draw_text(DrawText {
-            text: self.text(),
+            text: self.text(selected),
             color: color,
             x: 0.,
             y: y,
@@ -567,8 +571,9 @@ impl Slider {
             scale_position: true,
         })
     }
-    fn text(self) -> string {
-        f"    {self.label.text}: < {self.content.text} >"
+    fn text(self, selected: bool) -> string {
+        let indicator = if selected { "➤" } else { " " };
+        f"  {indicator} {self.label.text}: < {self.content.text} >"
     }
 }
 
@@ -592,9 +597,9 @@ impl Chooser {
             f(self.selected);
         }
     }
-    fn draw(self, y: float, color: Color) {
+    fn draw(self, y: float, color: Color, selected: bool) {
         Tas::draw_text(DrawText {
-            text: self.text(),
+            text: self.text(selected),
             color: color,
             x: 0.,
             y: y,
@@ -602,8 +607,9 @@ impl Chooser {
             scale_position: true,
         })
     }
-    fn text(self) -> string {
-        f"    {self.label.text}: < {self.options.get(self.selected).unwrap().text} >"
+    fn text(self, selected: bool) -> string {
+        let indicator = if selected { "➤" } else { " " };
+        f"  {indicator} {self.label.text}: < {self.options.get(self.selected).unwrap().text} >"
     }
 }
 
