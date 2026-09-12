@@ -620,8 +620,8 @@ static mut ARCHIPELAGO_COMPONENT = Component {
             if index.element_type == ElementType::Springpad {
                 let mut map = Map::new();
                 map.insert(10002401, 10012405);
-                map.insert(10002501, 10012501);
-                map.insert(10002502, 10012507);
+                map.insert(10002501, 10012507);
+                map.insert(10002502, 10012501);
                 map.insert(10002701, 10012704);
 
                 let mapped_loc = map.get(10000000 + (index.cluster_index + 1) * 100 + index.element_index + 1);
