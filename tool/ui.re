@@ -49,6 +49,7 @@ enum UiElement {
     FloatInput(FloatInput),
     Slider(Slider),
     Chooser(Chooser),
+    ChooserButton(ChooserButton),
 }
 struct UiButton {
     label: Text,
@@ -86,6 +87,16 @@ struct Chooser {
     selected: int,
     options: List<Text>,
     onchange: fn(int),
+}
+struct ChooserButton {
+    label: Text,
+    suffix: Text,
+    color_default: Color,
+    color_selected: Color,
+    selected: int,
+    options: List<Text>,
+    onchange: fn(int),
+    onclick: fn(int),
 }
 
 static mut UI_STACK: List<Ui> = List::new();
@@ -131,9 +142,9 @@ fn on_key_down(key_code: int, character_code: int, is_repeat: bool) {
     if key.to_small() == KEY_P.to_small() {
         Tas::get_location_and_log();
     }
-    if key.to_small() == KEY_S.to_small() {
-        Tas::set_input_mode_game_only();
-    }
+    //if key.to_small() == KEY_S.to_small() {
+    //    Tas::set_input_mode_game_only();
+    //}
     //if key.to_small() == KEY_T.to_small() {
     //    Tas::test_stuff();
     //}
@@ -386,6 +397,7 @@ impl UiElement {
             UiElement::FloatInput(input) => input.onclick(),
             UiElement::Slider(slider) => (),
             UiElement::Chooser(chooser) => (),
+            UiElement::ChooserButton(chooserButton) => chooserButton.onclick(),
         }
     }
     fn onkey(self, key: KeyCode) {
@@ -396,6 +408,7 @@ impl UiElement {
             UiElement::FloatInput(input) => input.onkey(key),
             UiElement::Slider(slider) => slider.onkey(key),
             UiElement::Chooser(chooser) => chooser.onkey(key),
+            UiElement::ChooserButton(chooserButton) => chooserButton.onkey(key),
         }
     }
     fn onchar(self, c: string) {
@@ -406,16 +419,18 @@ impl UiElement {
             UiElement::FloatInput(input) => input.onchar(c),
             UiElement::Slider(slider) => (),
             UiElement::Chooser(chooser) => (),
+            UiElement::ChooserButton(chooserButton) => (),
         }
     }
     fn draw(self, y: float, color: Color, is_selected: bool) {
         match self {
             UiElement::Button(button) => button.draw(y, color, is_selected),
-            UiElement::ColorButton(button) => button.draw(y, if is_selected { button.color_selected } else { button.color_default }, is_selected),
+            UiElement::ColorButton(button) => button.draw(y, color, is_selected),
             UiElement::Input(input) => input.draw(y, color, is_selected),
             UiElement::FloatInput(input) => input.draw(y, color, is_selected),
             UiElement::Slider(slider) => slider.draw(y, color, is_selected),
             UiElement::Chooser(chooser) => chooser.draw(y, color, is_selected),
+            UiElement::ChooserButton(chooserButton) => chooserButton.draw(y, color, is_selected),
         }
     }
     fn text(self) -> string {
@@ -426,6 +441,7 @@ impl UiElement {
             UiElement::FloatInput(input) => input.text(false),
             UiElement::Slider(slider) => slider.text(false),
             UiElement::Chooser(chooser) => chooser.text(false),
+            UiElement::ChooserButton(chooserButton) => chooserButton.text(false),
         }
     }
 }
@@ -458,7 +474,7 @@ impl UiColorButton {
     fn draw(self, y: float, color: Color, selected: bool) {
         Tas::draw_text(DrawText {
             text: self.text(selected),
-            color: color,
+            color: if selected { self.color_selected } else { self.color_default },
             x: 0.,
             y: y,
             scale: SETTINGS.ui_scale,
@@ -573,7 +589,7 @@ impl Slider {
     }
     fn text(self, selected: bool) -> string {
         let indicator = if selected { "➤" } else { " " };
-        f"  {indicator} {self.label.text}: < {self.content.text} >"
+        f"  {indicator} {self.label.text}: ❮ {self.content.text} ❯"
     }
 }
 
@@ -609,7 +625,70 @@ impl Chooser {
     }
     fn text(self, selected: bool) -> string {
         let indicator = if selected { "➤" } else { " " };
-        f"  {indicator} {self.label.text}: < {self.options.get(self.selected).unwrap().text} >"
+        f"  {indicator} {self.label.text}: ❮ {self.options.get(self.selected).unwrap().text} ❯"
+    }
+}
+
+impl ChooserButton {
+    fn onclick(self) {
+        let f = self.onclick;
+        f(self.selected);
+    }
+    fn onkey(mut self, key: KeyCode) {
+        if key.to_small() == KEY_RIGHT.to_small() {
+            self.selected = if self.selected == self.options.len() - 1 {
+                0
+            } else {
+                self.selected + 1
+            };
+            let f = self.onchange;
+            f(self.selected);
+        } else if key.to_small() == KEY_LEFT.to_small() {
+            self.selected = if self.selected == 0 {
+                self.options.len() - 1
+            } else {
+                self.selected - 1
+            };
+            let f = self.onchange;
+            f(self.selected);
+        }
+    }
+    fn draw(self, y: float, color: Color, selected: bool) {
+        Tas::draw_text(DrawText {
+            text: self.buttons(),
+            color: COLOR_WHITE,
+            x: 0.,
+            y: y,
+            scale: SETTINGS.ui_scale,
+            scale_position: true,
+        });
+        Tas::draw_text(DrawText {
+            text: self.text(selected),
+            color: if selected { self.color_selected } else { self.color_default },
+            x: 0.,
+            y: y,
+            scale: SETTINGS.ui_scale,
+            scale_position: true,
+        })
+    }
+    fn text(self, selected: bool) -> string {
+        let indicator = if selected { "➤" } else { " " };
+        if self.label.text == "" {
+            f"  {indicator}   {self.options.get(self.selected).unwrap().text}   {self.suffix.text}"
+        } else {
+            f"  {indicator} {self.label.text}:   {self.options.get(self.selected).unwrap().text}   {self.suffix.text}"
+        }
+    }
+    fn buttons(self) -> string {
+        let space = " ";
+        let label = space.repeat(self.label.text.len_utf8());
+        let value = space.repeat(self.options.get(self.selected).unwrap().text.len_utf8());
+
+        if self.label.text == "" {
+            f"    ❮ {value} ❯"
+        } else {
+            f"    {label}  ❮ {value} ❯"
+        }
     }
 }
 

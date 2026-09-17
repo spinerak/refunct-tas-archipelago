@@ -706,6 +706,27 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         }
     };
 
+    let make_gamemode_chooser_button: fn(string, List<Text>, int, bool, bool, fn(int)) = fn(label: string, options: List<Text>, selected: int, is_unlocked: bool, show_label: bool, onclick: fn(int)) {
+        let has_checks = minigames_with_checks.contains(label);
+        let el = UiElement::ChooserButton(ChooserButton {
+            label: Text { text: { if show_label { label } else { "" } } },
+            suffix: Text { text: { if is_unlocked { "" } else { "(locked)" } } },
+            color_default: if has_checks { AP_COLOR_GREEN } else if is_unlocked { COLOR_WHITE } else { COLOR_DARK_GRAY },
+            color_selected: if is_unlocked { AP_COLOR_CYAN } else { AP_COLOR_RED },
+            selected: selected,
+            options: options,
+            onchange: fn(index: int) {},
+            onclick: onclick,
+        });
+        if has_checks {
+            unlocked_checks.push(el);
+        } else if is_unlocked {
+            unlocked.push(el);
+        } else {
+            locked.push(el);
+        }
+    };
+
     make_gamemode_button(UiButton {
         label: Text { text: {
             if ARCHIPELAGO_STATE.unlock_vanilla_minigame {
@@ -782,45 +803,24 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         },
     }, ARCHIPELAGO_STATE.unlock_OG_randomizer);
 
-    make_gamemode_button(UiButton {
-        label: Text { text: {
-            if ARCHIPELAGO_STATE.unlock_block_brawl {
-                "Block Brawl"
-            } else {
-                "Block Brawl (locked)"
-            }
-        } },
-        onclick: fn(label: Text) {
+    make_gamemode_chooser_button(
+        "Block Brawl",
+        List::of(
+            Text { text: "Block Brawl" },
+            Text { text: "Block Brawl ALT" },
+        ),
+        if ARCHIPELAGO_STATE.block_brawl_alt { 1 } else { 0 },
+        ARCHIPELAGO_STATE.unlock_block_brawl,
+        false,
+        fn(index: int) {
             if !ARCHIPELAGO_STATE.unlock_block_brawl {
-                // log("Block Brawl gamemode is locked!");
                 return;
             }
-            // log("Set gamemode to Block Brawl");
-            ARCHIPELAGO_STATE.block_brawl_alt = false;
+            ARCHIPELAGO_STATE.block_brawl_alt = index != 0;
             archipelago_init(5);
             leave_ui();
-        },
-    }, ARCHIPELAGO_STATE.unlock_block_brawl);
-
-    make_gamemode_button(UiButton {
-        label: Text { text: {
-            if ARCHIPELAGO_STATE.unlock_block_brawl {
-                "Block Brawl ALT"
-            } else {
-                "Block Brawl ALT (locked)"
-            }
-        } },
-        onclick: fn(label: Text) {
-            if !ARCHIPELAGO_STATE.unlock_block_brawl {
-                // log("Block Brawl gamemode is locked!");
-                return;
-            }
-            // log("Set gamemode to Block Brawl ALT");
-            ARCHIPELAGO_STATE.block_brawl_alt = true;
-            archipelago_init(5);
-            leave_ui();
-        },
-    }, ARCHIPELAGO_STATE.unlock_block_brawl);
+        }
+    );
 
     make_gamemode_button(UiButton {
         label: Text { text: {
@@ -995,64 +995,57 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         },
     }, ARCHIPELAGO_STATE.has_clique);
 
-    make_gamemode_button(UiButton {
-        label: Text { text: {
-            if ARCHIPELAGO_STATE.unlock_custom_minigame {
-                "Custom"
-            } else {
-                "Custom (locked)"
-            }
-        } },
-        onclick: fn(label: Text) {
+    let custom_maps = Tas::list_maps();
+    custom_maps.push("|preloaded| Heaven");
+    custom_maps.push("|preloaded| Smol");
+    let custom_maps_options = List::new();
+    for map in custom_maps {
+        custom_maps_options.push(Text { text: map });
+    }
+    make_gamemode_chooser_button(
+        "Custom",
+        custom_maps_options,
+        0,
+        ARCHIPELAGO_STATE.unlock_custom_minigame,
+        true,
+        fn(index: int) {
             if !ARCHIPELAGO_STATE.unlock_custom_minigame {
-                // log("Custom game gamemode is locked!");
                 return;
             }
-            // log("Set gamemode to custom game");
             archipelago_init(18);
-            leave_ui();
-            
+            let mut preloaded = false;
+            let mut input = custom_maps.get(index).unwrap();
+            if input == "|preloaded| Heaven" {
+                preloaded = true;
+                input = "heaven.rmap";
+            }
+            if input == "|preloaded| Smol" {
+                preloaded = true;
+                input = "smol.rmap";
+            }
 
-            ap_log_1("Started custom!");
-            let map_list = Tas::list_maps();
-            // map_list.push("|preloaded| Heaven");
-            map_list.push("|preloaded| Smol");
+            MAP_EDITOR_STATE.map_name = input;
+            Tas::abilities_set_swim(true);
 
-            enter_ui(Ui::new_filechooser("Map to play", map_list, fn(input: string) {
-                let mut preloaded = false;
-                let mut input = input;
-                if input == "|preloaded| Heaven" {
-                    preloaded = true;
-                    input = "heaven.rmap";
-                }
-                if input == "|preloaded| Smol" {
-                    preloaded = true;
-                    input = "smol.rmap";
-                }
-
-                MAP_EDITOR_STATE.map_name = input;
-                Tas::abilities_set_swim(true);
-
-                if preloaded {
-                    MAP_EDITOR_STATE.map = Tas::load_map_included(input);
+            if preloaded {
+                MAP_EDITOR_STATE.map = Tas::load_map_included(input);
+                Tas::apply_map(MAP_EDITOR_STATE.map);
+            } else {
+                if custom_maps.contains(input) {
+                    MAP_EDITOR_STATE.map = Tas::load_map(input);
                     Tas::apply_map(MAP_EDITOR_STATE.map);
                 } else {
-                    if map_list.contains(input) {
-                        MAP_EDITOR_STATE.map = Tas::load_map(input);
-                        Tas::apply_map(MAP_EDITOR_STATE.map);
-                    } else {
-                        MAP_EDITOR_STATE.map = Tas::current_map();
-                    }
+                    MAP_EDITOR_STATE.map = Tas::current_map();
                 }
-                // add_component(MAP_EDITOR_COMPONENT);
-                MAP_EDITOR_STATE.mode = MapEditorMode::Play;
-                // MOVEMENT_STATE.enable_fly = false;
-                leave_ui();
-                leave_ui();
-                leave_ui();
-            }));
-        },
-    }, ARCHIPELAGO_STATE.unlock_custom_minigame);
+            }
+            // add_component(MAP_EDITOR_COMPONENT);
+            MAP_EDITOR_STATE.mode = MapEditorMode::Play;
+            // MOVEMENT_STATE.enable_fly = false;
+            leave_ui();
+            leave_ui();
+            leave_ui();
+        }
+    );
 
     make_gamemode_button(UiButton {
         label: Text { text: {
