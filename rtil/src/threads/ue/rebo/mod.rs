@@ -80,6 +80,7 @@ struct State {
     block_beat_block_phase: i32,
     block_beat_enabled: bool,
 
+    fancy_movement_progress: f64,
 }
 
 pub(super) fn poll(event: UeEvent) {
@@ -236,6 +237,7 @@ pub fn init(
         slots_in_action_new: Vec::new(),
         full_bounce_next: true,
         bounce_active: 0,
+        fancy_movement_progress: 0.0,
     });
 }
 

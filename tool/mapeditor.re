@@ -12,6 +12,9 @@ struct MapEditorState {
     changing_speed: int,
     change_entire_cluster: bool,
     hide_others: bool,
+    hide_ui: bool,
+    show_time_of_day: bool,
+    time_of_day_stop: bool,
 }
 
 static mut MAP_EDITOR_STATE = MapEditorState {
@@ -42,6 +45,9 @@ static mut MAP_EDITOR_STATE = MapEditorState {
     changing_speed: 2,
     change_entire_cluster: false,
     hide_others: false,
+    hide_ui: false,
+    show_time_of_day: false,
+    time_of_day_stop: false,
 };
 
 
@@ -52,6 +58,10 @@ enum MapEditorMode {
 }
 
 fn map_editor_new_hud() {
+    if MAP_EDITOR_STATE.hide_ui {
+        return;
+    }
+
     let viewport = Tas::get_viewport_size();
     let w = viewport.width.to_float();
     let h = viewport.height.to_float();
@@ -72,7 +82,23 @@ fn map_editor_new_hud() {
         lines.push(ColorfulText { text: "<E> select looked-at element\n", color: COLOR_WHITE });
         lines.push(ColorfulText { text: "<C> trigger next cluster\n", color: COLOR_WHITE });
         lines.push(ColorfulText { text: "<V> to edit cluster rising\n", color: COLOR_WHITE });
-        lines.push(ColorfulText { text: "<TAB> edit an element (advanced)", color: COLOR_DARK_GRAY });
+        lines.push(ColorfulText { text: "<TAB> edit an element (advanced)\n", color: COLOR_DARK_GRAY });
+        lines.push(ColorfulText { text: "<F2> hide all UI\n", color: COLOR_DARK_GRAY });
+        lines.push(ColorfulText { text: "<F3> change time of day", color: COLOR_DARK_GRAY });
+        if MAP_EDITOR_STATE.show_time_of_day {
+            lines.push(ColorfulText { text: "\n<1> toggle time-of-day stop\n", color: COLOR_WHITE });
+            lines.push(ColorfulText { text: "<2> decrease time-of-day by 500\n", color: COLOR_WHITE });
+            lines.push(ColorfulText { text: "<3> decrease time-of-day by 50\n", color: COLOR_WHITE });
+            lines.push(ColorfulText { text: "<4> decrease time-of-day by 5\n", color: COLOR_WHITE });
+            lines.push(ColorfulText { text: "<5> decrease time-of-day by 0.5\n", color: COLOR_WHITE });
+            lines.push(ColorfulText { text: "<6> increase time-of-day by 0.5\n", color: COLOR_WHITE });
+            lines.push(ColorfulText { text: "<7> increase time-of-day by 5\n", color: COLOR_WHITE });
+            lines.push(ColorfulText { text: "<8> increase time-of-day by 50\n", color: COLOR_WHITE });
+            lines.push(ColorfulText { text: "<9> increase time-of-day by 500\n", color: COLOR_WHITE });
+            // show current time of day:
+            let time_of_day = Tas::get_time_of_day();
+            lines.push(ColorfulText { text: f"\nCurrent time of day: {time_of_day:.2}", color: COLOR_WHITE });
+        }
 
         if MAP_EDITOR_STATE.chosen_element_index.cluster_index >= 0 {
             lines.push(ColorfulText { text: f"\n\nEditing: {MAP_EDITOR_STATE.chosen_element_index.element_type} {MAP_EDITOR_STATE.chosen_element_index.cluster_index+1}-{MAP_EDITOR_STATE.chosen_element_index.element_index+1}\n\n", color: COLOR_GREEN });
@@ -153,6 +179,68 @@ static MAP_EDITOR_COMPONENT = Component {
         }
         if key.to_small() == KEY_RIGHT.to_small() {
             RIGHT_PRESSED = true;
+        }
+        if key.to_small() == KEY_F2.to_small() {
+            MAP_EDITOR_STATE.hide_ui = !MAP_EDITOR_STATE.hide_ui;
+        }
+        if key.to_small() == KEY_F3.to_small() {
+            MAP_EDITOR_STATE.show_time_of_day = !MAP_EDITOR_STATE.show_time_of_day;
+        }
+        if MAP_EDITOR_STATE.show_time_of_day {
+            if key.to_small() == KEY_1.to_small() {
+                MAP_EDITOR_STATE.time_of_day_stop = !MAP_EDITOR_STATE.time_of_day_stop;
+                if MAP_EDITOR_STATE.time_of_day_stop {
+                    Tas::set_sky_time_speed(0.0, 0.0);
+                } else {
+                    Tas::set_sky_time_speed(SETTINGS.sky_time_speed, SETTINGS.sky_time_speed);
+                }
+            }
+            if key.to_small() == KEY_2.to_small() {
+                Tas::set_time_of_day(Tas::get_time_of_day() - 500.0);
+            }
+            if key.to_small() == KEY_3.to_small() {
+                Tas::set_time_of_day(Tas::get_time_of_day() - 50.0);
+            }
+            if key.to_small() == KEY_4.to_small() {
+                Tas::set_time_of_day(Tas::get_time_of_day() - 5.0);
+            }
+            if key.to_small() == KEY_5.to_small() {
+                Tas::set_time_of_day(Tas::get_time_of_day() - 0.5);
+            }
+            if key.to_small() == KEY_6.to_small() {
+                Tas::set_time_of_day(Tas::get_time_of_day() + 0.5);
+            }
+            if key.to_small() == KEY_7.to_small() {
+                Tas::set_time_of_day(Tas::get_time_of_day() + 5.0);
+            }
+            if key.to_small() == KEY_8.to_small() {
+                Tas::set_time_of_day(Tas::get_time_of_day() + 50.0);
+            }
+            if key.to_small() == KEY_9.to_small() {
+                Tas::set_time_of_day(Tas::get_time_of_day() + 500.0);
+            }
+        }
+        if key.to_small() == KEY_F4.to_small() {
+            Tas::set_stars_brightness(1000., SETTINGS.day_stars_brightness);
+        }
+        if key.to_small() == KEY_F5.to_small() {
+            Tas::set_fog_enabled(false, SETTINGS.fog_enabled);
+        }
+        if key.to_small() == KEY_F6.to_small() {
+            Tas::set_sky_light_enabled(false, SETTINGS.sky_light_enabled);
+        }
+        if key.to_small() == KEY_F7.to_small() {
+            Tas::set_sun_redness(2., SETTINGS.sun_redness);
+            Tas::set_cloud_redness(2., SETTINGS.cloud_redness);
+        }
+        if key.to_small() == KEY_F8.to_small() {
+            Tas::set_cloud_speed(200., SETTINGS.cloud_speed);
+        }
+        if key.to_small() == KEY_F9.to_small() {
+            Tas::set_camera(1, 0);
+        }
+        if key.to_small() == KEY_F10.to_small() {
+            Tas::fancy_camera_movement();
         }
         if key.to_small() == KEY_TAB.to_small() {
             if MAP_EDITOR_STATE.chosen_element_index.cluster_index > -1 {

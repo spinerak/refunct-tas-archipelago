@@ -32,6 +32,9 @@ fn create_start_menu() -> Ui {
         elements: List::new(),
         on_draw: Option::Some(fn() {
             let mut text = "Press 'm' for menu.";
+            if MAP_EDITOR_STATE.mode == MapEditorMode::Edit && MAP_EDITOR_STATE.hide_ui {
+                text = "";
+            }
             for comp in CURRENT_COMPONENTS {
                 let draw_hud_text = comp.draw_hud_text;
                 text = draw_hud_text(text);
@@ -57,6 +60,10 @@ loop {
         }
     }
     Tas::show_hud();
-    Tas::set_sky_time_speed(SETTINGS.sky_time_speed, SETTINGS.sky_time_speed);
+    if MAP_EDITOR_STATE.time_of_day_stop {
+        Tas::set_sky_time_speed(0.0, 0.0);
+    } else {
+        Tas::set_sky_time_speed(SETTINGS.sky_time_speed, SETTINGS.sky_time_speed);
+    }
     step_frame(tick_mode);
 }

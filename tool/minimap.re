@@ -90,6 +90,9 @@ static MINIMAP_COMPONENT = Component {
     conflicts_with: List::of(MINIMAP_COMPONENT_ID),
     draw_hud_text: fn(text: string) -> string { text },
     draw_hud_always: fn() {
+        if MAP_EDITOR_STATE.mode == MapEditorMode::Edit && MAP_EDITOR_STATE.hide_ui {
+            return;
+        }
         Tas::draw_minimap(MINIMAP_STATE.x, MINIMAP_STATE.y, MINIMAP_STATE.scale, false);
         minimap_draw_player(Tas::get_location(), Tas::get_rotation(), Color {
             red: SETTINGS.player_color_red,

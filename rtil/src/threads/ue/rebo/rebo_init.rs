@@ -9,6 +9,7 @@ use std::sync::Arc;
 use archipelago_rs::protocol::{BounceData, ClientMessage, DataStorageOperation, DeathLink, Get, GetDataPackage, ItemsHandlingFlags, NetworkItem, RichMessageColor, RichMessagePart, RichPrint, ServerMessage, Set, SetNotify};
 use crossbeam_channel::{Sender, TryRecvError};
 use image::Rgba;
+use num_traits::ToPrimitive;
 use rebo::{DisplayValue, ExecError, IncludeConfig, Map, Output, ReboConfig, Span, Stdlib, VmContext};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
@@ -237,6 +238,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(flush_pressed_keys)
         .add_function(test_stuff)
         .add_function(disable_button)
+        .add_function(fancy_camera_movement)
         .add_external_type(Location)
         .add_external_type(LocationY)
         .add_external_type(Size3D)
@@ -1199,6 +1201,39 @@ pub fn tick(){
     if last == bits {
         // Already ticked this frame
         return;
+    }
+
+    // let mut state = STATE.lock().unwrap();
+    let mut f_m_progress = STATE.lock().unwrap().as_ref().unwrap().fancy_movement_progress;
+
+    if f_m_progress > 0.0 {
+        f_m_progress += delta;
+
+        let center_x = -500.0_f64;
+        let center_y = -1125.0_f64;
+        let radius = 4000.0_f64;
+
+        // 60 seconds = one complete circle
+        let angle =
+            (f_m_progress / 1.0) * std::f64::consts::TAU;
+
+        let x = center_x + angle.cos() * radius;
+        let y = center_y + angle.sin() * radius;
+        let z = 3431.0_f64;
+
+        // Look at (-500, -1125, 202.38799)
+        let dx = center_x - x;
+        let dy = center_y - y;
+        let dz = 202.38799_f64 - z;
+
+        let yaw = dy.atan2(dx).to_degrees();
+        let horizontal_distance = (dx * dx + dy * dy).sqrt();
+        let pitch = dz.atan2(horizontal_distance).to_degrees();
+
+        AMyCharacter::get_player().set_location(x.to_f32().unwrap(), y.to_f32().unwrap(), z.to_f32().unwrap());
+        AMyCharacter::get_player().set_rotation(pitch.to_f32().unwrap(), yaw.to_f32().unwrap(), 0.0);
+
+        STATE.lock().unwrap().as_mut().unwrap().fancy_movement_progress = f_m_progress;
     }
 
     if STATE.lock().unwrap().as_ref().unwrap().bounce_active > 0 {
@@ -4164,4 +4199,15 @@ fn set_input_mode_ui_only() {
 #[rebo::function("Tas::flush_pressed_keys")]
 fn flush_pressed_keys() {
     AMyCharacter::flush_pressed_keys();
+}
+
+#[rebo::function("Tas::fancy_camera_movement")]
+fn fancy_camera_movement() {
+    // if STATE.lock().unwrap().as_ref().unwrap().fancy_movement_progress  = 0, make it 1, otherwise make it 0
+    let mut state = STATE.lock().unwrap();
+    if state.as_ref().unwrap().fancy_movement_progress == 0. {
+        state.as_mut().unwrap().fancy_movement_progress = 1.;
+    } else {
+        state.as_mut().unwrap().fancy_movement_progress = 0.;
+    }
 }
