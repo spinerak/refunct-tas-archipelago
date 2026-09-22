@@ -15,6 +15,9 @@ include "archipelago_gameplay.re";
 include "archipelago_log.re"
 include "archipelago_meta.re"
 include "archipelago_ui.re";
+include "gamemode_block_brawl.re";
+include "gamemode_block_brawl_ui.re";
+include "gamemode_main.re";
 include "movement.re";
 include "misc.re";
 include "mapeditor.re";
@@ -25,7 +28,6 @@ static mut NEW_VERSION: Option<string> = Tas::new_version_string();
 
 fn create_start_menu() -> Ui {
     let mut start_menu_text = Text { text: "Press 'm' for menu." };
-    add_component(AP_LOG_COMPONENT);
     add_component(ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT);
     Ui {
         name: start_menu_text,

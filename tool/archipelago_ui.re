@@ -28,10 +28,15 @@ static AP_COLOR_CLEAR   = Color { red: 0., green: 0., blue: 0., alpha: 0.0 };
 fn create_archipelago_menu() -> Ui {
     let elements = List::new();
 
+    if GAMEMODE_STATE.started {
+        return create_minigames_menu();
+    }
+
     if !ARCHIPELAGO_STATE.ap_connected {
         elements.push(UiElement::Button(UiButton {
             label: Text { text: "Archipelago Connect" },
             onclick: fn(label: Text) {
+                add_component(AP_LOG_COMPONENT);
                 enter_ui(create_archipelago_connection_details_menu());
             },
         }));
@@ -73,6 +78,12 @@ fn create_archipelago_menu() -> Ui {
             label: Text { text: "Practice Menu" },
             onclick: fn(label: Text) {
                 enter_ui(create_practice_menu());
+            },
+        }));
+        elements.push(UiElement::Button(UiButton {
+            label: Text { text: "Offline Minigames" },
+            onclick: fn(label: Text) {
+                enter_ui(create_minigames_menu());
             },
         }));
     }

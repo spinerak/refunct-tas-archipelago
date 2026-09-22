@@ -376,7 +376,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.7.0",
+        mod_version: "1.7.0a",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -404,7 +404,7 @@ static mut ARCHIPELAGO_STATE = fresh_archipelago_state();
 
 static mut ARCHIPELAGO_COMPONENT = Component {
     id: ARCHIPELAGO_COMPONENT_ID,
-    conflicts_with: List::of(MAP_EDITOR_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID),
+    conflicts_with: List::of(BLOCK_BRAWL_COMPONENT_ID, MAP_EDITOR_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID),
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
     error_message: "",
@@ -871,14 +871,15 @@ fn on_wall_jump_input() {
     if ARCHIPELAGO_STATE.gamemode == 12 || ARCHIPELAGO_STATE.gamemode == 13 {
         Tas::dash(1500.0, SETTINGS.downward_dash_enabled);
     }
-    if ARCHIPELAGO_STATE.gamemode == 5 && SETTINGS.block_brawl_dash_instead {
+    if (ARCHIPELAGO_STATE.gamemode == 5) && SETTINGS.block_brawl_dash_instead {
         Tas::dash(1000.0, SETTINGS.downward_dash_enabled);
     }
+    block_brawl_wall_jump_input();
 }
 
 static mut ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT = Component {
     id: ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT_ID,
-    conflicts_with: List::of(MAP_EDITOR_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID),
+    conflicts_with: List::of(BLOCK_BRAWL_COMPONENT_ID, MAP_EDITOR_COMPONENT_ID, MULTIPLAYER_COMPONENT_ID, NEW_GAME_100_PERCENT_COMPONENT_ID, NEW_GAME_ALL_BUTTONS_COMPONENT_ID, NEW_GAME_NGG_COMPONENT_ID, PRACTICE_COMPONENT_ID, RANDOMIZER_COMPONENT_ID, TAS_COMPONENT_ID, WINDSCREEN_WIPERS_COMPONENT_ID, ARCHIPELAGO_COMPONENT_ID),
     tick_mode: TickMode::DontCare,
     requested_delta_time: Option::None,
     error_message: "",

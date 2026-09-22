@@ -294,6 +294,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_received_death)
         .add_required_rebo_function(archipelago_received_bounce)
         .add_required_rebo_function(archipelago_tick)
+        .add_required_rebo_function(block_brawl_tick)
         .add_required_rebo_function(archipelago_init)
         .add_required_rebo_function(archipelago_set_own_id)
         .add_required_rebo_function(ap_log_error)
@@ -967,6 +968,8 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
         let before = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
         
         let _ = archipelago_tick(vm, before)?;
+        let _ = block_brawl_tick(vm, before)?;
+        log!("ticked the following value: {}", before);
         
         tick();
 
@@ -1372,6 +1375,7 @@ extern "rebo" {
     fn archipelago_received_death(source: String, cause: String);
     fn archipelago_received_bounce(slot: i64, playername: String, timenow: i64, milliseconds: i64, xs: Vec<i64>, ys: Vec<i64>, zs: Vec<i64>);
     fn archipelago_tick(time: u64);
+    fn block_brawl_tick(time: u64);
     fn ap_log_error(message: String);
 }
 
