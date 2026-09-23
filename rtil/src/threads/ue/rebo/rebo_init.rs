@@ -87,6 +87,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_minimap_alpha)
         .add_function(draw_player_minimap)
         .add_function(player_minimap_size)
+        .add_function(set_relocate_image)
         .add_function(minimap_size)
         .add_function(project)
         .add_function(get_viewport_size)
@@ -145,6 +146,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(disable_button_keep_collision)
         .add_function(enable_all_buttons)
         .add_function(enable_button)
+        .add_function(enable_all_buttons_no_col_color)
 
         .add_function(archipelago_connect)
         .add_function(archipelago_disconnect)
@@ -599,6 +601,21 @@ fn enable_all_buttons() {
     });
 }
 
+#[rebo::function("Tas::enable_all_buttons_no_col_color")]
+fn enable_all_buttons_no_col_color(color: Color) {
+    let levels = LEVELS.lock().unwrap();
+    UeScope::with(|scope| {
+        for level in levels.iter() {
+            for button_index in level.buttons.iter() {
+                let button = scope.get(*button_index);
+                button.set_pressed(false);
+                button.set_collision(false);
+                button.set_beacon_color(color.red, color.green, color.blue);
+            }
+        }
+    });
+}
+
 #[rebo::function("Tas::set_goal_animation_should_play")]
 fn set_goal_animation_should_play(enabled: bool) {
     // Enables/disables the endgame animation that is triggered by the final button
@@ -969,7 +986,6 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
         
         let _ = archipelago_tick(vm, before)?;
         let _ = block_brawl_tick(vm, before)?;
-        log!("ticked the following value: {}", before);
         
         tick();
 
@@ -1616,9 +1632,8 @@ fn get_location() -> Location {
 #[rebo::function("Tas::get_location_and_log")]
 fn get_location_and_log() {
     let (x, y, z) = AMyCharacter::get_player().location();
-    log!("LOG get_location: x={}, y={}, z={}", x, y, z);
     let (pitch, yaw, roll) = AMyCharacter::get_player().rotation();
-    log!("LOG get_rotation: pitch={}, yaw={}, roll={}", pitch, yaw, roll);
+    log!("LOG location: x={}, y={}, z={}, pitch={}, yaw={}, roll={}, tod={}", x, y, z, pitch, yaw, roll, UWorld::get_time_of_day());
 }
 #[rebo::function("Tas::set_location")]
 fn set_location(loc: Location) {
@@ -1836,6 +1851,73 @@ fn player_minimap_size() -> Size {
         height: image.height().try_into().unwrap(),
     }
 }
+#[rebo::function("Tas::set_relocate_image")]
+fn set_relocate_image(checks: i64, seed: f64) -> Vec<f32>{
+    let mut lock = STATE.lock().unwrap();
+    let state = lock.as_mut().unwrap();
+    let mut image;
+    if seed < 0. {
+        image = state.minimap_image.clone();
+        for pixel in image.pixels_mut() {
+            pixel.0[3] = 255.0 as u8;
+        }
+        state.minimap_texture.as_mut().unwrap().set_image(&image);
+        return Vec::new();
+    } else{
+        let mut possible: Vec<usize> = (0..state.relocate_images.len()).collect();
+        let mut random = seed;
+        for i in (1..possible.len()).rev() {
+            random = (random * 16807.0) % 1.0;
+            let j = (random * (i + 1) as f64) as usize;
+            possible.swap(i, j);
+        }
+        let number_1 = possible[0];
+        let number_2 = possible[1];
+        let number_3 = possible[2];
+
+        let mut number = number_1;
+        if checks >= 2 {
+            number = number_2;
+        }
+        if checks >= 4 {
+            number = number_3;
+        }
+        image = state.relocate_images[number].clone();
+        for pixel in image.pixels_mut() {
+            pixel.0[3] = 255.0 as u8;
+        }
+        state.minimap_texture.as_mut().unwrap().set_image(&image);
+
+        let answertotal = r#"
+        LOG location: x=-500.00146, y=-1125, z=89.27002, pitch=5.871101, yaw=271.21884, roll=0, tod=682.494
+        LOG location: x=-715.8799, y=-1130.5776, z=89.149704, pitch=6.960443, yaw=267.91937, roll=0, tod=726.3608
+        LOG location: x=-715.8799, y=-1130.5776, z=89.149704, pitch=26.537197, yaw=268.16098, roll=0, tod=741.58997
+        LOG location: x=-715.8799, y=-1130.5776, z=89.149704, pitch=340.36963, yaw=267.85498, roll=0, tod=745.8702
+        LOG location: x=-715.8799, y=-1130.5776, z=89.149704, pitch=5.1346655, yaw=289.09, roll=0, tod=760.21796
+        "#;
+
+        let answers: Vec<Vec<f32>> = answertotal
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| {
+                line.split(',')
+                    .map(|part| {
+                        part.split('=')
+                            .nth(1)
+                            .unwrap()
+                            .trim()
+                            .parse::<f32>()
+                            .unwrap()
+                    })
+                    .collect()
+            })
+            .collect();
+
+        return answers[number].clone();
+    }
+}
+
+
 #[derive(Debug, Clone, Copy, rebo::ExternalType)]
 struct Vector {
     x: f32,

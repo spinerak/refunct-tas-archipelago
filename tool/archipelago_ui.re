@@ -657,6 +657,10 @@ fn get_minigames_with_checks() -> List<string> {
         minigames.push("Defunct Rando");
     }
 
+    if ARCHIPELAGO_STATE.unlock_relocate_minigame && !ARCHIPELAGO_STATE.done_relocate_minigame {
+        minigames.push("Relocate");
+    }
+
     minigames
 }
 
@@ -1095,6 +1099,25 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             leave_ui();
         },
     }, ARCHIPELAGO_STATE.unlock_defunct_rando_minigame);
+    
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_relocate_minigame {
+                "Relocate"
+            } else {
+                "Relocate (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_relocate_minigame {
+                // log("Relocate gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Relocate");
+            archipelago_init(21);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_relocate_minigame);
 
 
     let elems = List::of(
@@ -1322,6 +1345,13 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: "Archipelago - Defunct Rando\n", color: COLOR_WHITE },
                 ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_defunct_rando_minigame}", color: COLOR_WHITE },
+            ),
+            21 => List::of(
+                ColorfulText { text: "Archipelago - Relocate\n", color: COLOR_WHITE },
+                ColorfulText { text: "Recreate the exact picture:\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: "Find the exact location and camera point\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: "Press T to submit..\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_relocate_minigame}", color: COLOR_WHITE },
             ),
 
             _ => List::of(

@@ -177,6 +177,17 @@ struct ArchipelagoState {
     done_defunct_rando_minigame: bool,
     progress_defunct_rando_minigame: string,
 
+    unlock_relocate_minigame: bool,
+    done_relocate_minigame: bool,
+    progress_relocate_minigame: string,
+    progress_relocate_minigame_n: int,
+    relocate_seed: float,
+    relocate_x: float,
+    relocate_y: float,
+    relocate_z: float,
+    relocate_pitch: float,
+    relocate_yaw: float,
+
 
     last_platform_c: Option<int>,
     last_platform_p: Option<int>,
@@ -372,11 +383,22 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         unlock_defunct_rando_minigame: false,
         done_defunct_rando_minigame: false,
         progress_defunct_rando_minigame: "0/37",
+        
+        unlock_relocate_minigame: false,
+        done_relocate_minigame: false,
+        progress_relocate_minigame: "0/6",
+        progress_relocate_minigame_n: 0,
+        relocate_seed: 0.,
+        relocate_x: 0.,
+        relocate_y: 0.,
+        relocate_z: 0.,
+        relocate_pitch: 0.,
+        relocate_yaw: 0.,
 
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.7.0a",
+        mod_version: "1.8.0",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -847,6 +869,42 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                 SETTINGS.block_brawl_dash_instead = !SETTINGS.block_brawl_dash_instead;
                 SETTINGS.store();
                 Tas::abilities_set_wall_jump(if SETTINGS.block_brawl_dash_instead { 0 } else { 2 }, false);
+            }
+        }
+        if ARCHIPELAGO_STATE.gamemode == 21 {
+            if key.to_small() == KEY_T.to_small() {
+                let loc = Tas:get_location(); //x y z
+                let rot = Tas:get_rotation(); //yaw pitch, yaw goes 360
+                
+                let loc_close =
+                    (loc.x - ARCHIPELAGO_STATE.relocate.x).abs() <= 200 &&
+                    (loc.y - ARCHIPELAGO_STATE.relocate.y).abs() <= 200 &&
+                    (loc.z - ARCHIPELAGO_STATE.relocate.z).abs() <= 200;
+
+                let pitch_close =
+                    (rot.pitch - ARCHIPELAGO_STATE.relocate.pitch).abs() <= 20;
+
+                // Calculate the shortest distance around the 360-degree yaw circle.
+                let yaw_diff = (rot.yaw - ARCHIPELAGO_STATE.relocate.yaw).abs();
+                let yaw_close = yaw_diff <= 20 || yaw_diff >= 340;
+
+                if loc_close || !pitch_close || !yaw_close {
+                    return;
+                }
+
+                if ARCHIPELAGO_STATE.progress_relocate_minigame_n < 2 {
+                    archipelago_send_check(10170000);
+                    archipelago_send_check(10171000);
+                    ARCHIPELAGO_STATE.progress_relocate_minigame_n += 2;
+                } else if ARCHIPELAGO_STATE.progress_relocate_minigame_n < 4 {
+                    archipelago_send_check(10170001);
+                    archipelago_send_check(10171001);
+                    ARCHIPELAGO_STATE.progress_relocate_minigame_n += 2;
+                } else {
+                    archipelago_send_check(10170002);
+                    archipelago_send_check(10171002);
+                }
+                new_relocate_image();
             }
         }
     },
@@ -1390,6 +1448,10 @@ fn archipelago_received_item(index: int, item_id: int, starting_index: int) {
         ARCHIPELAGO_STATE.unlock_defunct_rando_minigame = true;
         return;
     }
+    if item_id == 9999860 {  // Relocate Minigame
+        ARCHIPELAGO_STATE.unlock_relocate_minigame = true;
+        return;
+    }
 
     ARCHIPELAGO_STATE.received_items.push(item_id);
     if ARCHIPELAGO_STATE.started < 2 {
@@ -1596,13 +1658,18 @@ fn archipelago_init(gamemode: int){
         MAP_EDITOR_STATE.map = Tas::original_map();
         Tas::apply_map(MAP_EDITOR_STATE.map);
     }
+    if ARCHIPELAGO_STATE.gamemode == 21 {
+        Tas::set_reticle_width(SETTINGS.reticle_w);
+        Tas::set_reticle_height(SETTINGS.reticle_h);
+        Tas::set_relocate_image(0, -1.0);
+    }
     ARCHIPELAGO_STATE.ap_connected = true;
     // log("Archipelago started, waiting for new game");
     ARCHIPELAGO_STATE.started = 0;
     ARCHIPELAGO_STATE.gamemode = gamemode;
     ARCHIPELAGO_STATE.triggering_clusters.clear();
 
-    if gamemode == 2 || gamemode == 11 {
+    if gamemode == 2 || gamemode == 11 || gamemode == 21 {
         Tas::set_level(30);
     }
 
@@ -1677,6 +1744,9 @@ fn archipelago_start(){
     }
     if ARCHIPELAGO_STATE.gamemode == 20 {
         archipelago_defunct_rando_start();
+    }
+    if ARCHIPELAGO_STATE.gamemode == 21 {
+        archipelago_relocate_start();
     }
 
     let mut i = 0;
@@ -1899,6 +1969,29 @@ fn archipelago_button_galore_start(){
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
     collect_all_vanilla_cubes();
+}
+
+fn archipelago_relocate_start(){
+    Tas::abilities_set_swim(true);
+    Tas::abilities_set_wall_jump(2, false);
+    Tas::abilities_set_ledge_grab(true);
+    Tas::abilities_set_jump_pads(true);
+    Tas::abilities_set_pipes(true);
+    Tas::abilities_set_lifts(true);
+    collect_all_vanilla_cubes();
+    Tas::enable_all_buttons_no_col_color(Color {red: 0., green: 0., blue: 0., alpha: 1. });
+    Tas::set_reticle_width(20.);
+    Tas::set_reticle_height(20.);
+    new_relocate_image();
+}
+
+fn new_relocate_image(){
+    let ans = Tas::set_relocate_image(ARCHIPELAGO_STATE.progress_relocate_minigame_n, ARCHIPELAGO_STATE.relocate_seed);
+    ARCHIPELAGO_STATE.relocate_x = ans.get(0).unwrap();
+    ARCHIPELAGO_STATE.relocate_y = ans.get(1).unwrap();
+    ARCHIPELAGO_STATE.relocate_z = ans.get(2).unwrap();
+    ARCHIPELAGO_STATE.relocate_pitch = ans.get(3).unwrap();
+    ARCHIPELAGO_STATE.relocate_yaw = ans.get(4).unwrap();
 }
 
 fn archipelago_defunct_start(){
@@ -2896,7 +2989,7 @@ fn archipelago_the_climb_start(mode: int){
 }
 
 fn ap_on_level_change_function(old: int, new: int) {
-    if ARCHIPELAGO_STATE.gamemode == 2 || ARCHIPELAGO_STATE.gamemode == 11 {
+    if ARCHIPELAGO_STATE.gamemode == 2 || ARCHIPELAGO_STATE.gamemode == 11 || ARCHIPELAGO_STATE.gamemode == 21 {
         // log(f"[AP] on_level_change: {old} -> {new}");
         Tas::set_level(30);
     }
@@ -3183,6 +3276,23 @@ fn archipelago_checked_location(id: int){
         }
         ARCHIPELAGO_STATE.progress_defunct_rando_minigame = f"{number_pressed}/{defunct_rando_locations.len()}";
     }
+    let relocate_locations = List::of(10170001,10170002,10170003,10171001,10171002,10171003);
+    if relocate_locations.contains(id) {
+        let mut number_pressed = 0;
+        for lid in relocate_locations {
+            if ARCHIPELAGO_STATE.checked_locations.contains(lid) {
+                number_pressed += 1;
+            }else{
+                // log(f"Relocate - still need to press location {lid}");
+            }
+        }
+        if number_pressed == relocate_locations.len() {
+            ARCHIPELAGO_STATE.done_relocate_minigame = true;
+            ap_log(List::of(ColorfulText { text:"Completed Relocate Minigame!", color: AP_COLOR_GREEN }));
+        }
+        ARCHIPELAGO_STATE.progress_relocate_minigame_n = number_pressed;
+        ARCHIPELAGO_STATE.progress_relocate_minigame = f"{number_pressed}/{relocate_locations.len()}";
+    }
 
 }
 
@@ -3441,5 +3551,8 @@ fn archipelago_received_slot_data(key: string, value: string){
         if value.parse_int().unwrap() > 0 {
             Tas::set_bounce(value.parse_int().unwrap());
         }
+    }
+    if key == "relocate_minigame_seed" {
+        ARCHIPELAGO_STATE.relocate_seed = value.parse_float().unwrap();
     }
 }

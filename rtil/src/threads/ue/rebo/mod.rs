@@ -55,6 +55,7 @@ struct State {
     defunct_map: serde_json::Value,
     smol_map: serde_json::Value,
     heaven_map: serde_json::Value,
+    relocate_images: Vec<RgbaImage>,
 
     last_death_link_time: std::time::Instant,
     last_bounce_update_time: std::time::Instant,
@@ -192,6 +193,30 @@ pub fn init(
     let heaven_map: serde_json::Value =
         serde_json::from_str(str::from_utf8(&HEAVEN_MAP).unwrap()).unwrap();
 
+    const RELOCATE_1: &'static [u8] = include_bytes!("../../../../relocate/r1.png");
+    const RELOCATE_2: &'static [u8] = include_bytes!("../../../../relocate/r2.png");
+    const RELOCATE_3: &'static [u8] = include_bytes!("../../../../relocate/r3.png");
+
+    let relocate_data = [
+        RELOCATE_1,
+        RELOCATE_2,
+        RELOCATE_3,
+    ];
+
+    let mut relocate_images = Vec::new();
+
+    for bytes in relocate_data {
+        let mut image = image::load_from_memory(bytes)
+            .unwrap()
+            .to_rgba8();
+
+        for pixel in image.pixels_mut() {
+            pixel.0[3] = 100;
+        }
+
+        relocate_images.push(image);
+    }
+
     *STATE.lock().unwrap() = Some(State {
         hooks,
         ui: ReboUi::start(),
@@ -216,6 +241,7 @@ pub fn init(
         defunct_map,
         smol_map,
         heaven_map,
+        relocate_images,
         last_death_link_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first death link can be sent immediately
         last_bounce_update_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
         last_bounce_update_time_others: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
