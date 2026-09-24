@@ -48,6 +48,7 @@ struct State {
     pawns: HashMap<u32, AMyCharacter>,
     pawn_id: u32,
     minimap_texture: Option<UTexture2D>,
+    current_image: RgbaImage,
     minimap_image: RgbaImage,
     player_minimap_image: RgbaImage,
     // will keep textures forever, even if the player doesn't exist anymore, but each texture is only a few MB
@@ -55,6 +56,7 @@ struct State {
     defunct_map: serde_json::Value,
     smol_map: serde_json::Value,
     heaven_map: serde_json::Value,
+    soon_image: RgbaImage,
     relocate_images: Vec<RgbaImage>,
 
     last_death_link_time: std::time::Instant,
@@ -174,11 +176,12 @@ pub fn init(
     log!("rebo waiting until all this* have been acquired");
 
     const MINIMAP: &'static [u8] = include_bytes!("../../../../minimap.png");
-    const PLAYER_MINIMAP: &'static [u8] = include_bytes!("../../../../player_minimap.png");
     let mut minimap_image = image::load_from_memory(MINIMAP).unwrap().to_rgba8();
     for pixel in minimap_image.pixels_mut() {
         pixel.0[3] = 100;
     }
+    let current_image = minimap_image.clone();
+    const PLAYER_MINIMAP: &'static [u8] = include_bytes!("../../../../player_minimap.png");
     let player_minimap_image = image::load_from_memory(PLAYER_MINIMAP).unwrap().to_rgba8();
 
     const DEFUNCT_MAP: &'static [u8] = include_bytes!("../../../../defunct");
@@ -192,6 +195,12 @@ pub fn init(
     const HEAVEN_MAP: &'static [u8] = include_bytes!("../../../../heaven.rmap");
     let heaven_map: serde_json::Value =
         serde_json::from_str(str::from_utf8(&HEAVEN_MAP).unwrap()).unwrap();
+
+    const RELOCATE_SOON: &'static [u8] = include_bytes!("../../../../relocate/soon.png");
+    let mut soon_image = image::load_from_memory(RELOCATE_SOON).unwrap().to_rgba8();
+    for pixel in soon_image.pixels_mut() {
+        pixel.0[3] = 100;
+    }
 
     const RELOCATE_1: &'static [u8] = include_bytes!("../../../../relocate/r1.png");
     const RELOCATE_2: &'static [u8] = include_bytes!("../../../../relocate/r2.png");
@@ -235,6 +244,7 @@ pub fn init(
         pawns: HashMap::new(),
         pawn_id: 0,
         minimap_texture: None,
+        current_image,
         minimap_image,
         player_minimap_image,
         player_minimap_textures: HashMap::new(),
@@ -242,6 +252,7 @@ pub fn init(
         smol_map,
         heaven_map,
         relocate_images,
+        soon_image,
         last_death_link_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first death link can be sent immediately
         last_bounce_update_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
         last_bounce_update_time_others: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately

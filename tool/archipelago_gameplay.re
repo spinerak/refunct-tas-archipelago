@@ -204,6 +204,7 @@ struct ArchipelagoState {
     last_r_tick: int,
     r_pressed: bool,
     r_count: int,
+    hide_ui: bool,
 }
 
 fn fresh_archipelago_state() -> ArchipelagoState {
@@ -410,6 +411,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_r_tick: 0,
         r_pressed: false,
         r_count: 0,
+        hide_ui: false,
     }
 }
 
@@ -851,6 +853,10 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     },
     on_element_released: fn(index: ElementIndex) {},
     on_key_down: fn(key: KeyCode, is_repeat: bool) {
+        if key.to_small() == KEY_F2.to_small() {
+            ARCHIPELAGO_STATE.hide_ui = !ARCHIPELAGO_STATE.hide_ui;
+        }
+
         if key.to_small() == KEY_R.to_small() {
             ARCHIPELAGO_STATE.r_pressed = true;
         }
@@ -873,22 +879,39 @@ static mut ARCHIPELAGO_COMPONENT = Component {
         }
         if ARCHIPELAGO_STATE.gamemode == 21 {
             if key.to_small() == KEY_T.to_small() {
-                let loc = Tas:get_location(); //x y z
-                let rot = Tas:get_rotation(); //yaw pitch, yaw goes 360
+                let loc = Tas::get_location(); //x y z
+                let rot = Tas::get_rotation(); //yaw pitch, yaw goes 360
+
+                let mut xdiff = loc.x - ARCHIPELAGO_STATE.relocate_x;
+                let mut ydiff = loc.y - ARCHIPELAGO_STATE.relocate_y;
+                let mut zdiff = loc.x - ARCHIPELAGO_STATE.relocate_z;
+                if xdiff < 0.0 { xdiff = -xdiff };
+                if ydiff < 0.0 { ydiff = -ydiff };
+                if zdiff < 0.0 { zdiff = -zdiff };
                 
                 let loc_close =
-                    (loc.x - ARCHIPELAGO_STATE.relocate.x).abs() <= 200 &&
-                    (loc.y - ARCHIPELAGO_STATE.relocate.y).abs() <= 200 &&
-                    (loc.z - ARCHIPELAGO_STATE.relocate.z).abs() <= 200;
+                    xdiff <= 200. &&
+                    ydiff <= 200. &&
+                    zdiff <= 200.;
 
-                let pitch_close =
-                    (rot.pitch - ARCHIPELAGO_STATE.relocate.pitch).abs() <= 20;
+                let mut pitchdiff = rot.pitch - ARCHIPELAGO_STATE.relocate_pitch;
+                if pitchdiff < 0.0 { pitchdiff = -pitchdiff };
+                let pitch_close = pitchdiff <= 20.;
 
                 // Calculate the shortest distance around the 360-degree yaw circle.
-                let yaw_diff = (rot.yaw - ARCHIPELAGO_STATE.relocate.yaw).abs();
-                let yaw_close = yaw_diff <= 20 || yaw_diff >= 340;
+                let mut yawdiff = rot.yaw - ARCHIPELAGO_STATE.relocate_yaw;
+                if yawdiff < 0.0 { yawdiff = -yawdiff };
+                let yaw_close = yawdiff <= 20. || yawdiff >= 340.;
 
-                if loc_close || !pitch_close || !yaw_close {
+                let rot_close = pitch_close && yaw_close;
+
+                if !loc_close {
+                    ap_log_1("Location is not correct :[");
+                }
+                if !rot_close{
+                    ap_log_1("Camera orientation is not correct :(");
+                }
+                if !loc_close || !rot_close {
                     return;
                 }
 
@@ -1661,7 +1684,11 @@ fn archipelago_init(gamemode: int){
     if ARCHIPELAGO_STATE.gamemode == 21 {
         Tas::set_reticle_width(SETTINGS.reticle_w);
         Tas::set_reticle_height(SETTINGS.reticle_h);
-        Tas::set_relocate_image(0, -1.0);
+        Tas::set_relocate_image(0, -1.0 - MINIMAP_STATE.alpha);
+        MINIMAP_STATE.calculate_minimap_size(MINIMAP_STATE.size);
+        if !SETTINGS.minimap_enabled {
+            remove_component(MINIMAP_COMPONENT);
+        }
     }
     ARCHIPELAGO_STATE.ap_connected = true;
     // log("Archipelago started, waiting for new game");
@@ -1671,6 +1698,12 @@ fn archipelago_init(gamemode: int){
 
     if gamemode == 2 || gamemode == 11 || gamemode == 21 {
         Tas::set_level(30);
+    }
+
+    if gamemode == 21 {
+        add_component(MINIMAP_COMPONENT);
+        Tas::set_relocate_image(1, -2.0);
+        MINIMAP_STATE.calculate_minimap_size(MINIMAP_STATE.size);
     }
 
     if gamemode == 19 || gamemode == 20 {
@@ -1987,6 +2020,7 @@ fn archipelago_relocate_start(){
 
 fn new_relocate_image(){
     let ans = Tas::set_relocate_image(ARCHIPELAGO_STATE.progress_relocate_minigame_n, ARCHIPELAGO_STATE.relocate_seed);
+    MINIMAP_STATE.calculate_minimap_size(MINIMAP_STATE.size);
     ARCHIPELAGO_STATE.relocate_x = ans.get(0).unwrap();
     ARCHIPELAGO_STATE.relocate_y = ans.get(1).unwrap();
     ARCHIPELAGO_STATE.relocate_z = ans.get(2).unwrap();

@@ -27,13 +27,20 @@ include "player.re";
 static mut NEW_VERSION: Option<string> = Tas::new_version_string();
 
 fn create_start_menu() -> Ui {
-    let mut start_menu_text = Text { text: "Press 'm' for menu." };
+    let mut ttext = "Press 'm' for menu.";
+    if ARCHIPELAGO_STATE.hide_ui {
+        ttext = "";
+    }
+    let mut start_menu_text = Text { text: ttext };
     add_component(ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT);
     Ui {
         name: start_menu_text,
         elements: List::new(),
         on_draw: Option::Some(fn() {
             let mut text = "Press 'm' for menu.";
+            if ARCHIPELAGO_STATE.hide_ui {
+                text = "";
+            }
             for comp in CURRENT_COMPONENTS {
                 let draw_hud_text = comp.draw_hud_text;
                 text = draw_hud_text(text);

@@ -1349,7 +1349,7 @@ fn get_status_text_lines() -> List<ColorfulText> {
             21 => List::of(
                 ColorfulText { text: "Archipelago - Relocate\n", color: COLOR_WHITE },
                 ColorfulText { text: "Recreate the exact picture:\n", color: AP_COLOR_CYAN },
-                ColorfulText { text: "Find the exact location and camera point\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: "Find the exact location and camera orientation\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: "Press T to submit..\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_relocate_minigame}", color: COLOR_WHITE },
             ),
@@ -1490,6 +1490,9 @@ fn archipelago_hud_text(text: string) -> string {
 }
 
 fn archipelago_hud_color_coded() {
+    if ARCHIPELAGO_STATE.hide_ui {
+        return;
+    }
     let viewport = Tas::get_viewport_size();
     let w = viewport.width.to_float();
     let h = viewport.height.to_float();
@@ -1642,6 +1645,9 @@ fn ap_draw_colorful_text(text_list: List<ColorfulText>, background_color: Color,
 }
 
 fn archipelago_disconnected_info_hud() {
+    if ARCHIPELAGO_STATE.hide_ui {
+        return;
+    }
     let viewport = Tas::get_viewport_size();
     let w = viewport.width.to_float();
     let h = viewport.height.to_float();

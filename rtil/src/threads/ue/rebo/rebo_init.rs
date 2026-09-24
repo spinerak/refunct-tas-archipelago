@@ -1794,7 +1794,7 @@ fn draw_minimap(x: f32, y: f32, scale: f32, scale_position: bool) {
 fn set_minimap_alpha(alpha: f32) {
     let mut lock = STATE.lock().unwrap();
     let state = lock.as_mut().unwrap();
-    let mut image = state.minimap_image.clone();
+    let mut image = state.current_image.clone();
     for pixel in image.pixels_mut() {
         pixel.0[3] = (255.0 * alpha).round() as u8;
     }
@@ -1857,10 +1857,19 @@ fn set_relocate_image(checks: i64, seed: f64) -> Vec<f32>{
     let state = lock.as_mut().unwrap();
     let mut image;
     if seed < 0. {
-        image = state.minimap_image.clone();
-        for pixel in image.pixels_mut() {
-            pixel.0[3] = 255.0 as u8;
+        if checks == 0 {
+            image = state.minimap_image.clone();
+        } else {
+            image = state.soon_image.clone();
         }
+        let alpha = - seed - 1.;
+        for pixel in image.pixels_mut() {
+            pixel.0[3] = (255.0 * alpha) as u8;
+        }
+        state.current_image = image.clone();
+        state.minimap_texture = Some(UTexture2D::create(&image));
+        let (width, height) = AMyCharacter::get_player().get_viewport_size();
+        state.ui.resize(width.try_into().unwrap(), height.try_into().unwrap());
         state.minimap_texture.as_mut().unwrap().set_image(&image);
         return Vec::new();
     } else{
@@ -1886,6 +1895,10 @@ fn set_relocate_image(checks: i64, seed: f64) -> Vec<f32>{
         for pixel in image.pixels_mut() {
             pixel.0[3] = 255.0 as u8;
         }
+        state.current_image = image.clone();
+        state.minimap_texture = Some(UTexture2D::create(&image));
+        let (width, height) = AMyCharacter::get_player().get_viewport_size();
+        state.ui.resize(width.try_into().unwrap(), height.try_into().unwrap());
         state.minimap_texture.as_mut().unwrap().set_image(&image);
 
         let answertotal = r#"
