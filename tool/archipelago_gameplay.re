@@ -853,9 +853,9 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     },
     on_element_released: fn(index: ElementIndex) {},
     on_key_down: fn(key: KeyCode, is_repeat: bool) {
-        if key.to_small() == KEY_F2.to_small() {
-            ARCHIPELAGO_STATE.hide_ui = !ARCHIPELAGO_STATE.hide_ui;
-        }
+        //if key.to_small() == KEY_F2.to_small() {
+        //    ARCHIPELAGO_STATE.hide_ui = !ARCHIPELAGO_STATE.hide_ui;
+        //}
 
         if key.to_small() == KEY_R.to_small() {
             ARCHIPELAGO_STATE.r_pressed = true;
@@ -884,7 +884,7 @@ static mut ARCHIPELAGO_COMPONENT = Component {
 
                 let mut xdiff = loc.x - ARCHIPELAGO_STATE.relocate_x;
                 let mut ydiff = loc.y - ARCHIPELAGO_STATE.relocate_y;
-                let mut zdiff = loc.x - ARCHIPELAGO_STATE.relocate_z;
+                let mut zdiff = loc.z - ARCHIPELAGO_STATE.relocate_z;
                 if xdiff < 0.0 { xdiff = -xdiff };
                 if ydiff < 0.0 { ydiff = -ydiff };
                 if zdiff < 0.0 { zdiff = -zdiff };
@@ -916,16 +916,16 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                 }
 
                 if ARCHIPELAGO_STATE.progress_relocate_minigame_n < 2 {
-                    archipelago_send_check(10170000);
-                    archipelago_send_check(10171000);
                     ARCHIPELAGO_STATE.progress_relocate_minigame_n += 2;
-                } else if ARCHIPELAGO_STATE.progress_relocate_minigame_n < 4 {
                     archipelago_send_check(10170001);
                     archipelago_send_check(10171001);
+                } else if ARCHIPELAGO_STATE.progress_relocate_minigame_n < 4 {
                     ARCHIPELAGO_STATE.progress_relocate_minigame_n += 2;
-                } else {
                     archipelago_send_check(10170002);
                     archipelago_send_check(10171002);
+                } else {
+                    archipelago_send_check(10170003);
+                    archipelago_send_check(10171003);
                 }
                 new_relocate_image();
             }
@@ -2011,7 +2011,8 @@ fn archipelago_relocate_start(){
     Tas::abilities_set_jump_pads(true);
     Tas::abilities_set_pipes(true);
     Tas::abilities_set_lifts(true);
-    collect_all_vanilla_cubes();
+    Tas::reset_cubes(true, true);
+    disable_collision_vanilla_cubes();
     Tas::enable_all_buttons_no_col_color(Color {red: 0., green: 0., blue: 0., alpha: 1. });
     Tas::set_reticle_width(20.);
     Tas::set_reticle_height(20.);
@@ -3433,6 +3434,12 @@ fn collect_all_vanilla_cubes(){
     let all_cubes = Tas::get_vanilla_cubes();
     for cube in all_cubes {
         Tas::collect_cube(cube);
+    }
+}
+fn disable_collision_vanilla_cubes(){
+    let all_cubes = Tas::get_vanilla_cubes();
+    for cube in all_cubes {
+        Tas::set_cube_collision(cube, false);
     }
 }
 fn archipelago_collect_one_collected_cube(id: int){
