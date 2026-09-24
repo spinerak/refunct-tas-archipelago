@@ -28,10 +28,15 @@ static AP_COLOR_CLEAR   = Color { red: 0., green: 0., blue: 0., alpha: 0.0 };
 fn create_archipelago_menu() -> Ui {
     let elements = List::new();
 
+    if GAMEMODE_STATE.started {
+        return create_minigames_menu();
+    }
+
     if !ARCHIPELAGO_STATE.ap_connected {
         elements.push(UiElement::Button(UiButton {
             label: Text { text: "Archipelago Connect" },
             onclick: fn(label: Text) {
+                add_component(AP_LOG_COMPONENT);
                 enter_ui(create_archipelago_connection_details_menu());
             },
         }));
@@ -73,6 +78,12 @@ fn create_archipelago_menu() -> Ui {
             label: Text { text: "Practice Menu" },
             onclick: fn(label: Text) {
                 enter_ui(create_practice_menu());
+            },
+        }));
+        elements.push(UiElement::Button(UiButton {
+            label: Text { text: "Offline Minigames" },
+            onclick: fn(label: Text) {
+                enter_ui(create_minigames_menu());
             },
         }));
     }
@@ -646,6 +657,10 @@ fn get_minigames_with_checks() -> List<string> {
         minigames.push("Defunct Rando");
     }
 
+    if ARCHIPELAGO_STATE.unlock_relocate_minigame && !ARCHIPELAGO_STATE.done_relocate_minigame {
+        minigames.push("Relocate");
+    }
+
     minigames
 }
 
@@ -1084,6 +1099,25 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             leave_ui();
         },
     }, ARCHIPELAGO_STATE.unlock_defunct_rando_minigame);
+    
+    make_gamemode_button(UiButton {
+        label: Text { text: {
+            if ARCHIPELAGO_STATE.unlock_relocate_minigame {
+                "Relocate"
+            } else {
+                "Relocate (locked)"
+            }
+        } },
+        onclick: fn(label: Text) {
+            if !ARCHIPELAGO_STATE.unlock_relocate_minigame {
+                // log("Relocate gamemode is locked!");
+                return;
+            }
+            // log("Set gamemode to Relocate");
+            archipelago_init(21);
+            leave_ui();
+        },
+    }, ARCHIPELAGO_STATE.unlock_relocate_minigame);
 
 
     let elems = List::of(
@@ -1312,6 +1346,13 @@ fn get_status_text_lines() -> List<ColorfulText> {
                 ColorfulText { text: "Goal: Press the buttons!\n", color: AP_COLOR_CYAN },
                 ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_defunct_rando_minigame}", color: COLOR_WHITE },
             ),
+            21 => List::of(
+                ColorfulText { text: "Archipelago - Relocate\n", color: COLOR_WHITE },
+                ColorfulText { text: "Recreate the exact picture:\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: "Find the exact location and camera orientation\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: "Press T to submit..\n", color: AP_COLOR_CYAN },
+                ColorfulText { text: f"\nProgress: {ARCHIPELAGO_STATE.progress_relocate_minigame}", color: COLOR_WHITE },
+            ),
 
             _ => List::of(
                 ColorfulText { text: "Archipelago\n", color: COLOR_WHITE },
@@ -1449,6 +1490,9 @@ fn archipelago_hud_text(text: string) -> string {
 }
 
 fn archipelago_hud_color_coded() {
+    if ARCHIPELAGO_STATE.hide_ui {
+        return;
+    }
     let viewport = Tas::get_viewport_size();
     let w = viewport.width.to_float();
     let h = viewport.height.to_float();
@@ -1601,6 +1645,9 @@ fn ap_draw_colorful_text(text_list: List<ColorfulText>, background_color: Color,
 }
 
 fn archipelago_disconnected_info_hud() {
+    if ARCHIPELAGO_STATE.hide_ui {
+        return;
+    }
     let viewport = Tas::get_viewport_size();
     let w = viewport.width.to_float();
     let h = viewport.height.to_float();

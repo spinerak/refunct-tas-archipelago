@@ -48,6 +48,7 @@ struct State {
     pawns: HashMap<u32, AMyCharacter>,
     pawn_id: u32,
     minimap_texture: Option<UTexture2D>,
+    current_image: RgbaImage,
     minimap_image: RgbaImage,
     player_minimap_image: RgbaImage,
     // will keep textures forever, even if the player doesn't exist anymore, but each texture is only a few MB
@@ -55,6 +56,8 @@ struct State {
     defunct_map: serde_json::Value,
     smol_map: serde_json::Value,
     heaven_map: serde_json::Value,
+    soon_image: RgbaImage,
+    relocate_images: Vec<RgbaImage>,
 
     last_death_link_time: std::time::Instant,
     last_bounce_update_time: std::time::Instant,
@@ -173,11 +176,12 @@ pub fn init(
     log!("rebo waiting until all this* have been acquired");
 
     const MINIMAP: &'static [u8] = include_bytes!("../../../../minimap.png");
-    const PLAYER_MINIMAP: &'static [u8] = include_bytes!("../../../../player_minimap.png");
     let mut minimap_image = image::load_from_memory(MINIMAP).unwrap().to_rgba8();
     for pixel in minimap_image.pixels_mut() {
         pixel.0[3] = 100;
     }
+    let current_image = minimap_image.clone();
+    const PLAYER_MINIMAP: &'static [u8] = include_bytes!("../../../../player_minimap.png");
     let player_minimap_image = image::load_from_memory(PLAYER_MINIMAP).unwrap().to_rgba8();
 
     const DEFUNCT_MAP: &'static [u8] = include_bytes!("../../../../defunct");
@@ -191,6 +195,100 @@ pub fn init(
     const HEAVEN_MAP: &'static [u8] = include_bytes!("../../../../heaven.rmap");
     let heaven_map: serde_json::Value =
         serde_json::from_str(str::from_utf8(&HEAVEN_MAP).unwrap()).unwrap();
+
+    const RELOCATE_SOON: &'static [u8] = include_bytes!("../../../../relocate/soon.webp");
+    let mut soon_image = image::load_from_memory(RELOCATE_SOON).unwrap().to_rgba8();
+    for pixel in soon_image.pixels_mut() {
+        pixel.0[3] = 100;
+    }
+
+    const RELOCATE_1: &'static [u8] = include_bytes!("../../../../relocate/r1.webp");
+    const RELOCATE_2: &'static [u8] = include_bytes!("../../../../relocate/r2.webp");
+    const RELOCATE_3: &'static [u8] = include_bytes!("../../../../relocate/r3.webp");
+    const RELOCATE_4: &'static [u8] = include_bytes!("../../../../relocate/r4.webp");
+    const RELOCATE_5: &'static [u8] = include_bytes!("../../../../relocate/r5.webp");
+    const RELOCATE_6: &'static [u8] = include_bytes!("../../../../relocate/r6.webp");
+    const RELOCATE_7: &'static [u8] = include_bytes!("../../../../relocate/r7.webp");
+    const RELOCATE_8: &'static [u8] = include_bytes!("../../../../relocate/r8.webp");
+    const RELOCATE_9: &'static [u8] = include_bytes!("../../../../relocate/r9.webp");
+    const RELOCATE_10: &'static [u8] = include_bytes!("../../../../relocate/r10.webp");
+    const RELOCATE_11: &'static [u8] = include_bytes!("../../../../relocate/r11.webp");
+    const RELOCATE_12: &'static [u8] = include_bytes!("../../../../relocate/r12.webp");
+    const RELOCATE_13: &'static [u8] = include_bytes!("../../../../relocate/r13.webp");
+    const RELOCATE_14: &'static [u8] = include_bytes!("../../../../relocate/r14.webp");
+    const RELOCATE_15: &'static [u8] = include_bytes!("../../../../relocate/r15.webp");
+    const RELOCATE_16: &'static [u8] = include_bytes!("../../../../relocate/r16.webp");
+    const RELOCATE_17: &'static [u8] = include_bytes!("../../../../relocate/r17.webp");
+    const RELOCATE_18: &'static [u8] = include_bytes!("../../../../relocate/r18.webp");
+    const RELOCATE_19: &'static [u8] = include_bytes!("../../../../relocate/r19.webp");
+    const RELOCATE_20: &'static [u8] = include_bytes!("../../../../relocate/r20.webp");
+    const RELOCATE_21: &'static [u8] = include_bytes!("../../../../relocate/r21.webp");
+    const RELOCATE_22: &'static [u8] = include_bytes!("../../../../relocate/r22.webp");
+    const RELOCATE_23: &'static [u8] = include_bytes!("../../../../relocate/r23.webp");
+    const RELOCATE_24: &'static [u8] = include_bytes!("../../../../relocate/r24.webp");
+    const RELOCATE_25: &'static [u8] = include_bytes!("../../../../relocate/r25.webp");
+    const RELOCATE_26: &'static [u8] = include_bytes!("../../../../relocate/r26.webp");
+    const RELOCATE_27: &'static [u8] = include_bytes!("../../../../relocate/r27.webp");
+    const RELOCATE_28: &'static [u8] = include_bytes!("../../../../relocate/r28.webp");
+    const RELOCATE_29: &'static [u8] = include_bytes!("../../../../relocate/r29.webp");
+    const RELOCATE_30: &'static [u8] = include_bytes!("../../../../relocate/r30.webp");
+    const RELOCATE_31: &'static [u8] = include_bytes!("../../../../relocate/r31.webp");
+    const RELOCATE_32: &'static [u8] = include_bytes!("../../../../relocate/r32.webp");
+    const RELOCATE_33: &'static [u8] = include_bytes!("../../../../relocate/r33.webp");
+    const RELOCATE_34: &'static [u8] = include_bytes!("../../../../relocate/r34.webp");
+    const RELOCATE_35: &'static [u8] = include_bytes!("../../../../relocate/r35.webp");
+
+    let relocate_data = [
+        RELOCATE_1,
+        RELOCATE_2,
+        RELOCATE_3,
+        RELOCATE_4,
+        RELOCATE_5,
+        RELOCATE_6,
+        RELOCATE_7,
+        RELOCATE_8,
+        RELOCATE_9,
+        RELOCATE_10,
+        RELOCATE_11,
+        RELOCATE_12,
+        RELOCATE_13,
+        RELOCATE_14,
+        RELOCATE_15,
+        RELOCATE_16,
+        RELOCATE_17,
+        RELOCATE_18,
+        RELOCATE_19,
+        RELOCATE_20,
+        RELOCATE_21,
+        RELOCATE_22,
+        RELOCATE_23,
+        RELOCATE_24,
+        RELOCATE_25,
+        RELOCATE_26,
+        RELOCATE_27,
+        RELOCATE_28,
+        RELOCATE_29,
+        RELOCATE_30,
+        RELOCATE_31,
+        RELOCATE_32,
+        RELOCATE_33,
+        RELOCATE_34,
+        RELOCATE_35,
+    ];
+
+    let mut relocate_images = Vec::new();
+
+    for bytes in relocate_data {
+        let mut image = image::load_from_memory(bytes)
+            .unwrap()
+            .to_rgba8();
+
+        for pixel in image.pixels_mut() {
+            pixel.0[3] = 100;
+        }
+
+        relocate_images.push(image);
+    }
 
     *STATE.lock().unwrap() = Some(State {
         hooks,
@@ -210,12 +308,15 @@ pub fn init(
         pawns: HashMap::new(),
         pawn_id: 0,
         minimap_texture: None,
+        current_image,
         minimap_image,
         player_minimap_image,
         player_minimap_textures: HashMap::new(),
         defunct_map,
         smol_map,
         heaven_map,
+        relocate_images,
+        soon_image,
         last_death_link_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first death link can be sent immediately
         last_bounce_update_time: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately
         last_bounce_update_time_others: std::time::Instant::now() - Duration::from_secs(10), // initialize to a time far in the past so that the first bounce can be sent immediately

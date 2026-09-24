@@ -87,6 +87,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(set_minimap_alpha)
         .add_function(draw_player_minimap)
         .add_function(player_minimap_size)
+        .add_function(set_relocate_image)
         .add_function(minimap_size)
         .add_function(project)
         .add_function(get_viewport_size)
@@ -145,6 +146,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(disable_button_keep_collision)
         .add_function(enable_all_buttons)
         .add_function(enable_button)
+        .add_function(enable_all_buttons_no_col_color)
 
         .add_function(archipelago_connect)
         .add_function(archipelago_disconnect)
@@ -294,6 +296,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_required_rebo_function(archipelago_received_death)
         .add_required_rebo_function(archipelago_received_bounce)
         .add_required_rebo_function(archipelago_tick)
+        .add_required_rebo_function(block_brawl_tick)
         .add_required_rebo_function(archipelago_init)
         .add_required_rebo_function(archipelago_set_own_id)
         .add_required_rebo_function(ap_log_error)
@@ -593,6 +596,21 @@ fn enable_all_buttons() {
                 }else {
                     button.set_beacon_color(1.0, 0.0, 0.0);
                 }
+            }
+        }
+    });
+}
+
+#[rebo::function("Tas::enable_all_buttons_no_col_color")]
+fn enable_all_buttons_no_col_color(color: Color) {
+    let levels = LEVELS.lock().unwrap();
+    UeScope::with(|scope| {
+        for level in levels.iter() {
+            for button_index in level.buttons.iter() {
+                let button = scope.get(*button_index);
+                button.set_pressed(false);
+                button.set_collision(false);
+                button.set_beacon_color(color.red, color.green, color.blue);
             }
         }
     });
@@ -967,6 +985,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
         let before = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
         
         let _ = archipelago_tick(vm, before)?;
+        let _ = block_brawl_tick(vm, before)?;
         
         tick();
 
@@ -1372,6 +1391,7 @@ extern "rebo" {
     fn archipelago_received_death(source: String, cause: String);
     fn archipelago_received_bounce(slot: i64, playername: String, timenow: i64, milliseconds: i64, xs: Vec<i64>, ys: Vec<i64>, zs: Vec<i64>);
     fn archipelago_tick(time: u64);
+    fn block_brawl_tick(time: u64);
     fn ap_log_error(message: String);
 }
 
@@ -1612,9 +1632,8 @@ fn get_location() -> Location {
 #[rebo::function("Tas::get_location_and_log")]
 fn get_location_and_log() {
     let (x, y, z) = AMyCharacter::get_player().location();
-    log!("LOG get_location: x={}, y={}, z={}", x, y, z);
     let (pitch, yaw, roll) = AMyCharacter::get_player().rotation();
-    log!("LOG get_rotation: pitch={}, yaw={}, roll={}", pitch, yaw, roll);
+    log!("LOG location: x={}, y={}, z={}, pitch={}, yaw={}, roll={}, tod={}", x, y, z, pitch, yaw, roll, UWorld::get_time_of_day());
 }
 #[rebo::function("Tas::set_location")]
 fn set_location(loc: Location) {
@@ -1775,7 +1794,7 @@ fn draw_minimap(x: f32, y: f32, scale: f32, scale_position: bool) {
 fn set_minimap_alpha(alpha: f32) {
     let mut lock = STATE.lock().unwrap();
     let state = lock.as_mut().unwrap();
-    let mut image = state.minimap_image.clone();
+    let mut image = state.current_image.clone();
     for pixel in image.pixels_mut() {
         pixel.0[3] = (255.0 * alpha).round() as u8;
     }
@@ -1832,6 +1851,116 @@ fn player_minimap_size() -> Size {
         height: image.height().try_into().unwrap(),
     }
 }
+#[rebo::function("Tas::set_relocate_image")]
+fn set_relocate_image(checks: i64, seed: f64) -> Vec<f32>{
+    let mut lock = STATE.lock().unwrap();
+    let state = lock.as_mut().unwrap();
+    let mut image;
+    if seed < 0. {
+        if checks == 0 {
+            image = state.minimap_image.clone();
+        } else {
+            image = state.soon_image.clone();
+        }
+        let alpha = - seed - 1.;
+        for pixel in image.pixels_mut() {
+            pixel.0[3] = (255.0 * alpha) as u8;
+        }
+        state.current_image = image.clone();
+        state.minimap_texture = Some(UTexture2D::create(&image));
+        let (width, height) = AMyCharacter::get_player().get_viewport_size();
+        state.ui.resize(width.try_into().unwrap(), height.try_into().unwrap());
+        state.minimap_texture.as_mut().unwrap().set_image(&image);
+        return Vec::new();
+    } else{
+        let mut possible: Vec<usize> = (0..state.relocate_images.len()).collect();
+        let mut random = seed;
+        for i in (1..possible.len()).rev() {
+            random = (random * 16807.0) % 1.0;
+            let j = (random * (i + 1) as f64) as usize;
+            possible.swap(i, j);
+        }
+        let number_1 = possible[0];
+        let number_2 = possible[1];
+        let number_3 = possible[2];
+
+        let mut number = number_1;
+        if checks >= 2 {
+            number = number_2;
+        }
+        if checks >= 4 {
+            number = number_3;
+        }
+        image = state.relocate_images[number].clone();
+        for pixel in image.pixels_mut() {
+            pixel.0[3] = 255.0 as u8;
+        }
+        state.current_image = image.clone();
+        state.minimap_texture = Some(UTexture2D::create(&image));
+        let (width, height) = AMyCharacter::get_player().get_viewport_size();
+        state.ui.resize(width.try_into().unwrap(), height.try_into().unwrap());
+        state.minimap_texture.as_mut().unwrap().set_image(&image);
+
+        let answertotal = r#"
+        LOG location: x=296.14288, y=-948.27704, z=339.25882, pitch=358.2434, yaw=309.2648, roll=0, tod=80.104256
+        LOG location: x=-308.19156, y=-3316.9536, z=1589.2604, pitch=324.53073, yaw=40.01359, roll=0, tod=846.89166
+        LOG location: x=1108.0057, y=-1629.4592, z=89.2578, pitch=357.25336, yaw=265.3416, roll=0, tod=1238.8625
+        LOG location: x=3021.606, y=-3966.153, z=50.14997, pitch=2.2833626, yaw=91.32368, roll=0, tod=535.6305
+        LOG location: x=4901.29, y=-207.55959, z=964.2559, pitch=344.62622, yaw=117.809654, roll=0, tod=1250.7474
+        LOG location: x=5691.648, y=2489.7778, z=214.26987, pitch=355.96173, yaw=139.43912, roll=0, tod=535.49023
+        LOG location: x=1409.0895, y=4909.074, z=89.14999, pitch=358.70554, yaw=46.199352, roll=0, tod=1041.2141
+        LOG location: x=-189.7602, y=2911.2566, z=964.2702, pitch=348.09384, yaw=224.69034, roll=0, tod=1398.2634
+        LOG location: x=-4726.155, y=131.22993, z=1089.2609, pitch=355.63162, yaw=310.87308, roll=0, tod=946.7359
+        LOG location: x=-4274.2656, y=-3730.841, z=1589.2606, pitch=287.77374, yaw=89.67736, roll=0, tod=342.1614
+        LOG location: x=-723.5547, y=-2275.3127, z=1589.2604, pitch=286.24695, yaw=245.88414, roll=0, tod=801.2069
+        LOG location: x=2623.9465, y=-2249.4426, z=1339.4554, pitch=270.1, yaw=134.88371, roll=0, tod=978.8405
+        LOG location: x=654.89355, y=159.00743, z=589.2696, pitch=342.38672, yaw=90.8583, roll=0, tod=1367.8937
+        LOG location: x=-2222.1921, y=-2040.7108, z=2089.2686, pitch=326.72284, yaw=43.114628, roll=0, tod=418.73975
+        LOG location: x=1785.5194, y=-4347.9307, z=714.27014, pitch=342.88077, yaw=127.883835, roll=0, tod=1037.8018
+        LOG location: x=4714.165, y=-4776.981, z=214.25882, pitch=350.6956, yaw=121.89123, roll=0, tod=329.21628
+        LOG location: x=4534.1357, y=-999.16797, z=464.27017, pitch=340.175, yaw=201.16408, roll=0, tod=156.76347
+        LOG location: x=-215.94527, y=-3436.6284, z=89.14999, pitch=2.2140949, yaw=3.9413183, roll=0, tod=512.4683
+        LOG location: x=4049.4683, y=-2141.2075, z=1089.2607, pitch=349.33264, yaw=184.22304, roll=0, tod=891.84827
+        LOG location: x=2755.6963, y=-3952.4536, z=714.2702, pitch=2.35883, yaw=69.922935, roll=0, tod=1430.7747
+        LOG location: x=1981.2139, y=199.87393, z=89.26075, pitch=340.36337, yaw=253.51132, roll=0, tod=456.4832
+        LOG location: x=2377.2295, y=-36.141155, z=89.14994, pitch=19.649492, yaw=270.23102, roll=0, tod=883.2434
+        LOG location: x=2557.0898, y=2164.4526, z=589.2697, pitch=349.47916, yaw=189.47171, roll=0, tod=27.64837
+        LOG location: x=447.54828, y=4621.1797, z=1339.2606, pitch=354.14856, yaw=359.7353, roll=0, tod=297.67276
+        LOG location: x=2851.8162, y=3975.3528, z=1839.2605, pitch=335.46695, yaw=226.31793, roll=0, tod=513.02747
+        LOG location: x=1401.9482, y=6515.981, z=214.25768, pitch=340.311, yaw=227.98186, roll=0, tod=909.7215
+        LOG location: x=-1708.8088, y=4323.0723, z=964.26953, pitch=335.5864, yaw=245.58922, roll=0, tod=1278.1
+        LOG location: x=-5596.3, y=349.5709, z=714.27014, pitch=338.00385, yaw=6.7934933, roll=0, tod=971.88776
+        LOG location: x=-5058.38, y=-413.76627, z=88.94988, pitch=347.8531, yaw=90.07907, roll=0, tod=1323.2662
+        LOG location: x=-1593.013, y=-598.3245, z=89.27018, pitch=15.748639, yaw=197.91927, roll=0, tod=418.31528
+        LOG location: x=2124.226, y=1689.5942, z=839.2705, pitch=331.8467, yaw=183.52115, roll=0, tod=777.367
+        LOG location: x=429.46487, y=2068.3206, z=964.27026, pitch=333.73962, yaw=31.838465, roll=0, tod=1161.3678
+        LOG location: x=-1015.7966, y=829.605, z=89.15002, pitch=358.27087, yaw=224.77844, roll=0, tod=448.77734
+        LOG location: x=-3415.4187, y=-4460.248, z=464.25806, pitch=15.808714, yaw=49.97342, roll=0, tod=1050.9618
+        LOG location: x=-2320.921, y=-3217.7256, z=339.2697, pitch=341.1843, yaw=20.736256, roll=0, tod=1384.3386
+        "#;
+
+        let answers: Vec<Vec<f32>> = answertotal
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| {
+                line.split(',')
+                    .map(|part| {
+                        part.split('=')
+                            .nth(1)
+                            .unwrap()
+                            .trim()
+                            .parse::<f32>()
+                            .unwrap()
+                    })
+                    .collect()
+            })
+            .collect();
+
+        return answers[number].clone();
+    }
+}
+
+
 #[derive(Debug, Clone, Copy, rebo::ExternalType)]
 struct Vector {
     x: f32,

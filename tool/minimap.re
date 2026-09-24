@@ -10,7 +10,7 @@ static mut MINIMAP_STATE = {
     state
 };
 
-if SETTINGS.minimap_enabled {
+if SETTINGS.minimap_enabled || (ARCHIPELAGO_STATE.gamemode == 21 && ARCHIPELAGO_STATE.started == 2) {
     add_component(MINIMAP_COMPONENT);
 }
 Tas::set_minimap_alpha(SETTINGS.minimap_alpha);
@@ -90,6 +90,9 @@ static MINIMAP_COMPONENT = Component {
     conflicts_with: List::of(MINIMAP_COMPONENT_ID),
     draw_hud_text: fn(text: string) -> string { text },
     draw_hud_always: fn() {
+        if ARCHIPELAGO_STATE.hide_ui {
+            return;
+        }
         Tas::draw_minimap(MINIMAP_STATE.x, MINIMAP_STATE.y, MINIMAP_STATE.scale, false);
         minimap_draw_player(Tas::get_location(), Tas::get_rotation(), Color {
             red: SETTINGS.player_color_red,
@@ -125,7 +128,19 @@ static MINIMAP_COMPONENT = Component {
 };
 
 fn minimap_draw_player(location: Location, rotation: Rotation, mut color: Color) {
-    if SETTINGS.minimap_enabled {
+    if SETTINGS.minimap_enabled && 
+        ARCHIPELAGO_STATE.gamemode != 5 &&
+        ARCHIPELAGO_STATE.gamemode != 6 &&
+        ARCHIPELAGO_STATE.gamemode != 7 &&
+        ARCHIPELAGO_STATE.gamemode != 8 &&
+        ARCHIPELAGO_STATE.gamemode != 9 &&
+        ARCHIPELAGO_STATE.gamemode != 10 &&
+        ARCHIPELAGO_STATE.gamemode != 11 &&
+        ARCHIPELAGO_STATE.gamemode != 14 &&
+        ARCHIPELAGO_STATE.gamemode != 15 &&
+        ARCHIPELAGO_STATE.gamemode != 16 &&
+        ARCHIPELAGO_STATE.gamemode != 18 &&
+        ARCHIPELAGO_STATE.gamemode != 21 {
         let minimap_size = Tas::minimap_size();
         let minimap_scale = MINIMAP_STATE.scale;
         let player_minimap_size = Tas::player_minimap_size();
