@@ -50,7 +50,8 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 - **`debug.bat` says `ParseIntError { kind: InvalidDigit }`**
   - Refunct probably has multiple processes open (some kind of overlay)?
   - Please run Refunct, then open a cmd, and run `powershell -NoProfile -Command "Get-Process -Name 'Refunct-Win32-Shipping'"`. If it shows two or more lines, then this does seem to be the case.
-  - Try to kill one of the processes (try the one with the lowest handles/cpu first) using `taskkill /Pid 8132` where `8132` is the ID. If Refunct doesn't crash, you got the correct one
+  - Try to kill **one** of the processes (try the one with the lowest handles/cpu first) using `taskkill /Pid 8132` where `8132` is the ID. If Refunct doesn't crash, you got the correct one
+  - If it says you don't have permission, run cmd as admin (type cmd in search, right click run, as administrator). If it says the process can only be force-crashed, add `/f` add the end of the taskkill command.
   - Now try to run the mod again.
   - If it only shows one process, perhaps Windows doesn't trust the process, you can run this line in powershell: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
 ### Advance - Linux
