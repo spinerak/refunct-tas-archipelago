@@ -5,7 +5,7 @@ use std::io::Write;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::sync::Arc;
+use std::sync::{Arc, MutexGuard};
 use archipelago_rs::protocol::{BounceData, ClientMessage, DataStorageOperation, DeathLink, Get, GetDataPackage, ItemsHandlingFlags, NetworkItem, RichMessageColor, RichMessagePart, RichPrint, ServerMessage, Set, SetNotify};
 use crossbeam_channel::{Sender, TryRecvError};
 use image::Rgba;
@@ -16,7 +16,7 @@ use once_cell::sync::Lazy;
 use crate::native::{character::USceneComponent, uworld::JUMP6_INDEX, CubeWrapper, PlatformWrapper};
 use crate::native::{try_find_element_index, ue::FVector, AActor, ALiftBaseUE, AMyCharacter, AMyHud, ActorWrapper, EBlendMode, FApp, FViewport, KismetSystemLibrary, Level, LevelState, LevelWrapper, ObjectIndex, ObjectWrapper, UGameplayStatics, UMyGameInstance, UObject, UTexture2D, UWorld, UeObjectWrapperType, UeScope, LEVELS};
 use crate::threads::{ArchipelagoToRebo, ReboToArchipelago, ReboToStream, StreamToRebo};
-use super::STATE;
+use super::{STATE, State};
 use serde::{Serialize, Deserialize};
 use crate::threads::ue::{Suspend, UeEvent, rebo::YIELDER};
 use crate::native::{ElementIndex, ElementType, ue::{FRotator, FLinearColor}, UEngine, TimeOfDay, UWidgetBlueprintLibrary};
@@ -647,6 +647,14 @@ fn step() -> Step {
 fn step_yield() -> Step {
     step_internal(vm, expr_span, Suspend::Yield)?
 }
+fn request_next_datapackage(mut state: MutexGuard<'_, Option<State>>) {
+    if let Some(game) = state.as_mut().unwrap().missing_datapackages.pop() {
+        let tx = &state.as_ref().unwrap().rebo_archipelago_tx;
+        tx.send(ReboToArchipelago::ClientMessage(
+            ClientMessage::GetDataPackage(GetDataPackage { games: Some(vec![game.clone()]) })
+        )).unwrap();
+    }
+}
 fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: Suspend) -> Result<Step, ExecError<'i>> {
     // get level state before and after we advance the UE frame to see changes created by Refunct itself
     let old_level_state = LevelState::get();
@@ -744,6 +752,9 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                         )).unwrap();
                     }
 
+                    let mut state = STATE.lock().unwrap();
+                    state.as_mut().unwrap().missing_datapackages = info.games.clone();
+                    request_next_datapackage(state);
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::ConnectionRefused(info))) => {
                     log!("ConnectionRefused message");
@@ -860,6 +871,9 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                             archipelago_register_game_location(vm, game_name.clone(), Arc::unwrap_or_clone(location_name), location_id.to_string())?;
                         }
                     }
+
+                    let state = STATE.lock().unwrap();
+                    request_next_datapackage(state);
                 },
                 Ok(ArchipelagoToRebo::ServerMessage(ServerMessage::Bounced(info))) => {
                     log!("Bounced message");
