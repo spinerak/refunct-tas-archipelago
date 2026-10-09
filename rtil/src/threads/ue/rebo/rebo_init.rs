@@ -744,7 +744,7 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                     let msg = format!("Archipelago ServerMessage::RoomInfo: {:?}", info);
                     log!("{}", msg);
                     
-                    let state = STATE.lock().unwrap();
+                    let mut state = STATE.lock().unwrap();
                     let tx = &state.as_ref().unwrap().rebo_archipelago_tx;
                     for game in &info.games {
                         tx.send(ReboToArchipelago::ClientMessage(
@@ -752,7 +752,6 @@ fn step_internal<'i>(vm: &mut VmContext<'i, '_, '_>, expr_span: Span, suspend: S
                         )).unwrap();
                     }
 
-                    let mut state = STATE.lock().unwrap();
                     state.as_mut().unwrap().missing_datapackages = info.games.clone();
                     request_next_datapackage(state);
                 },
