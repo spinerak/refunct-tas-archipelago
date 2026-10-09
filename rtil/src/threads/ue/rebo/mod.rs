@@ -35,6 +35,8 @@ struct State {
     is_semaphore_acquired: bool,
     event_queue: VecDeque<UeEvent>,
 
+    missing_datapackages: Vec<String>,
+
     new_version_string: Option<String>,
     delta: Option<f64>,
     stream_rebo_rx: Receiver<StreamToRebo>,
@@ -295,6 +297,7 @@ pub fn init(
         ui: ReboUi::start(),
         is_semaphore_acquired: false,
         event_queue: VecDeque::new(),
+        missing_datapackages: Vec::new(),
         new_version_string: new_version.clone(),
         delta: None,
         stream_rebo_rx,
