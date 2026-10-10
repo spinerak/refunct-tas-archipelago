@@ -338,6 +338,15 @@ fn create_archipelago_settings_menu() -> Ui {
                 SETTINGS.store();
             },
         }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Other Player Names" },
+            options: List::of(Text { text: "On" }, Text { text: "Off" }),
+            selected: if SETTINGS.player_names_enabled { 0 } else { 1 },
+            onchange: fn(index: int) {
+                SETTINGS.player_names_enabled = index == 0;
+                SETTINGS.store();
+            },
+        }),
         UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
         UiElement::Chooser(Chooser {
             label: Text { text: "Minimap" },
@@ -1489,6 +1498,32 @@ fn archipelago_hud_text(text: string) -> string {
     hud_text
 }
 
+// gap in pixels between the top of another player's platform and the bottom of their name tag
+static PLAYER_NAME_PIXEL_GAP = 8.;
+static PLAYER_NAME_PADDING = 5.;
+
+fn archipelago_draw_player_names(viewport_width: float, viewport_height: float) {
+    for key in ARCHIPELAGO_STATE.multiplayer_info.keys() {
+        let data = ARCHIPELAGO_STATE.multiplayer_info.get(key).unwrap();
+        let loc = data.current_location;
+        // platforms are 250 units tall per unit of size, centered on their location
+        let platform_top = loc.z + OTHER_PLAYER_PLATFORM_Z_OFFSET + OTHER_PLAYER_PLATFORM_SIZE.z * 125.;
+        let pos = Tas::project(Vector { x: loc.x, y: loc.y, z: platform_top });
+        // z is 0 when the location is behind the camera
+        if pos.z <= 0. {
+            continue;
+        }
+        if pos.x < 0. || pos.x > viewport_width || pos.y < 0. || pos.y > viewport_height {
+            continue;
+        }
+        let player = get_team_player(data.slot);
+        let name = player.alias;
+        let text = List::of(ColorfulText { text: name, color: COLOR_WHITE });
+        let y = pos.y - PLAYER_NAME_PIXEL_GAP - PLAYER_NAME_PADDING;
+        ap_draw_colorful_text(text, AP_COLOR_GRAY_BG, pos.x, y, Anchor::BottomCenter, PLAYER_NAME_PADDING);
+    }
+}
+
 fn archipelago_hud_color_coded() {
     if ARCHIPELAGO_STATE.hide_ui {
         return;
@@ -1496,6 +1531,10 @@ fn archipelago_hud_color_coded() {
     let viewport = Tas::get_viewport_size();
     let w = viewport.width.to_float();
     let h = viewport.height.to_float();
+
+    if SETTINGS.player_names_enabled {
+        archipelago_draw_player_names(w, h);
+    }
 
     if SETTINGS.platform_display_enabled {
 

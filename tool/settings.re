@@ -148,6 +148,7 @@ struct Settings {
     archipelago_display_position: Anchor,
     platform_display_enabled: bool,
     platform_display_position: Anchor,
+    player_names_enabled: bool,
     archipelago_last_server: string,
     archipelago_last_port: string,
     archipelago_last_slot: string,
@@ -276,6 +277,7 @@ impl Settings {
                 "BottomLeft"   => Anchor::BottomLeft,
                 pos => panic(f"unknown/invalid platform display position: {pos}"),
             },
+            player_names_enabled: get_bool("player_names_enabled", true),
             archipelago_last_server: get_string("archipelago_last_server", "archipelago.gg"),
             archipelago_last_port: get_string("archipelago_last_port", ""),
             archipelago_last_slot: get_string("archipelago_last_slot", ""),
@@ -354,6 +356,7 @@ impl Settings {
         map.insert("archipelago_display_position", f"{SETTINGS.archipelago_display_position}");
         map.insert("platform_display_enabled", f"{SETTINGS.platform_display_enabled}");
         map.insert("platform_display_position", f"{SETTINGS.platform_display_position}");
+        map.insert("player_names_enabled", f"{SETTINGS.player_names_enabled}");
         map.insert("archipelago_last_server", f"{SETTINGS.archipelago_last_server}");
         map.insert("archipelago_last_port", f"{SETTINGS.archipelago_last_port}");
         map.insert("archipelago_last_slot", f"{SETTINGS.archipelago_last_slot}");
