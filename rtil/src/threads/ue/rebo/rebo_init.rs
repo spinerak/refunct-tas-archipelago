@@ -118,6 +118,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(destroy_platform_rebo)
         .add_function(destroy_spawners)
         .add_function(disable_collision_randomly)
+        .add_function(set_platform_collision)
 
         .add_function(spawn_cube_rebo)
         .add_function(reset_cubes)
@@ -2211,6 +2212,9 @@ fn spawn_platform(loc: Location, rot: Rotation, size: Size3D) -> i32 {
     });
 
     if internal_index != -1 {
+        // a recycled platform may have had its collision disabled
+        find_platform_and(internal_index, |platform| platform.set_collision(true))
+            .unwrap_or_else(|e| log!("Could not enable collision for platform {:?}: {}", internal_index, e));
         return internal_index;
     }
 
@@ -2314,6 +2318,12 @@ fn destroy_spawners() {
     PLATFORM_SPAWNERS.with(|spawners| {
         spawners.borrow_mut().clear();
     });
+}
+
+#[rebo::function("Tas::set_platform_collision")]
+fn set_platform_collision(internal_index: i32, collision_enabled: bool) {
+    find_platform_and(internal_index, |platform| platform.set_collision(collision_enabled))
+        .unwrap_or_else(|e| log!("Could not set collision for platform {:?}: {}", internal_index, e));
 }
 
 #[rebo::function("Tas::disable_collision_randomly")]

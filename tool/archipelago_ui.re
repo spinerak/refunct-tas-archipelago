@@ -338,6 +338,27 @@ fn create_archipelago_settings_menu() -> Ui {
                 SETTINGS.store();
             },
         }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Other Player Names" },
+            options: List::of(Text { text: "On" }, Text { text: "Off" }),
+            selected: if SETTINGS.player_names_enabled { 0 } else { 1 },
+            onchange: fn(index: int) {
+                SETTINGS.player_names_enabled = index == 0;
+                SETTINGS.store();
+            },
+        }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Other Player Collision" },
+            options: List::of(Text { text: "On" }, Text { text: "Off" }),
+            selected: if SETTINGS.other_player_collision_enabled { 0 } else { 1 },
+            onchange: fn(index: int) {
+                SETTINGS.other_player_collision_enabled = index == 0;
+                SETTINGS.store();
+                for key in ARCHIPELAGO_STATE.multiplayer_info.keys() {
+                    update_other_player_collision(key);
+                }
+            },
+        }),
         UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
         UiElement::Chooser(Chooser {
             label: Text { text: "Minimap" },
@@ -1489,6 +1510,62 @@ fn archipelago_hud_text(text: string) -> string {
     hud_text
 }
 
+
+fn archipelago_draw_player_names() {
+    let camera = Tas::get_location();
+    for key in ARCHIPELAGO_STATE.multiplayer_info.keys() {
+        let data = ARCHIPELAGO_STATE.multiplayer_info.get(key).unwrap();
+        let loc = data.current_location;
+        // platforms are 250 units tall per unit of size, centered on their location
+        let platform_top = loc.z + OTHER_PLAYER_PLATFORM_Z_OFFSET + OTHER_PLAYER_PLATFORM_SIZE.z * 125.;
+        let pos = Vector { x: loc.x, y: loc.y, z: platform_top };
+        let player = get_team_player(data.slot);
+        let name = player.alias;
+        let text = List::of(ColorfulText { text: name, color: COLOR_WHITE });
+
+        archipelago_draw_label(text, pos);
+    }
+}
+
+// gap in pixels between the label position and the bottom of the label
+static LABEL_PIXEL_GAP = 8.;
+static LABEL_PADDING = 5.;
+
+// label are drawn at the normal UI scale at this distance, scaled inversely with distance and clamped
+static LABEL_REFERENCE_DISTANCE = 1500.;
+static LABEL_MIN_SCALE = 0.5;
+static LABEL_MAX_SCALE = 1.5;
+
+fn archipelago_draw_label(text: List<ColorfulText>, loc: Vector) {
+    archipelago_draw_scaled_label(text, loc, SETTINGS.ui_scale)
+}
+
+fn archipelago_draw_scaled_label(text: List<ColorfulText>, loc: Vector, scale: float) {
+    let viewport = Tas::get_viewport_size();
+    let viewport_width = viewport.width.to_float();
+    let viewport_height = viewport.height.to_float();
+
+    let camera = Tas::get_location();
+
+    let pos = Tas::project(loc);
+    // z is 0 when the location is behind the camera
+    if pos.z <= 0. {
+        return;
+    }
+    if pos.x < 0. || pos.x > viewport_width || pos.y < 0. || pos.y > viewport_height {
+        return;
+    }
+
+    let dx = loc.x - camera.x;
+    let dy = loc.y - camera.y;
+    let dz = loc.z - camera.z;
+    let distance = float::sqrt(dx * dx + dy * dy + dz * dz);
+    let factor = float::min(LABEL_MAX_SCALE, float::max(LABEL_MIN_SCALE, LABEL_REFERENCE_DISTANCE / float::max(distance, 1.)));
+    let padding = LABEL_PADDING * factor;
+    let y = pos.y - LABEL_PIXEL_GAP - padding;
+    ap_draw_colorful_text_scaled(text, AP_COLOR_GRAY_BG, pos.x, y, Anchor::BottomCenter, padding, scale * factor);
+}
+
 fn archipelago_hud_color_coded() {
     if ARCHIPELAGO_STATE.hide_ui {
         return;
@@ -1496,6 +1573,10 @@ fn archipelago_hud_color_coded() {
     let viewport = Tas::get_viewport_size();
     let w = viewport.width.to_float();
     let h = viewport.height.to_float();
+
+    if SETTINGS.player_names_enabled {
+        archipelago_draw_player_names();
+    }
 
     if SETTINGS.platform_display_enabled {
 
@@ -1582,6 +1663,10 @@ fn archipelago_hud_color_coded() {
 }
 
 fn ap_draw_colorful_text(text_list: List<ColorfulText>, background_color: Color, x_pos: float, y_pos: float, anchor: Anchor, padding: float) {
+    ap_draw_colorful_text_scaled(text_list, background_color, x_pos, y_pos, anchor, padding, SETTINGS.ui_scale);
+}
+
+fn ap_draw_colorful_text_scaled(text_list: List<ColorfulText>, background_color: Color, x_pos: float, y_pos: float, anchor: Anchor, padding: float, scale: float) {
     // Pre-process the lines
     let mut all_text = "";
     for text in text_list {
@@ -1591,11 +1676,11 @@ fn ap_draw_colorful_text(text_list: List<ColorfulText>, background_color: Color,
 
     let mut text_width = 0.0;
     for line in lines {
-        let text_size = Tas::get_text_size(line, SETTINGS.ui_scale);
+        let text_size = Tas::get_text_size(line, scale);
         text_width = float::max(text_size.width, text_width);
     }
 
-    let _size = Tas::get_text_size("TEST", SETTINGS.ui_scale);
+    let _size = Tas::get_text_size("TEST", scale);
     let line_height = _size.height;
     let text_height = line_height * lines.len().to_float();
 
@@ -1628,9 +1713,9 @@ fn ap_draw_colorful_text(text_list: List<ColorfulText>, background_color: Color,
             if line != "" {
                 Tas::draw_text(DrawText {
                     text: line, color: text.color,
-                    x: x, y: y, scale: SETTINGS.ui_scale, scale_position: false
+                    x: x, y: y, scale: scale, scale_position: false
                 });
-                let text_size = Tas::get_text_size(line, SETTINGS.ui_scale);
+                let text_size = Tas::get_text_size(line, scale);
                 x += text_size.width;
             }
 
