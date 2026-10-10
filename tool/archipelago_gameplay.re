@@ -419,9 +419,14 @@ fn fresh_archipelago_state() -> ArchipelagoState {
 static OTHER_PLAYER_PLATFORM_Z_OFFSET = 20.;
 static OTHER_PLAYER_PLATFORM_SIZE = Size3D { x: 0.25, y: 0.25, z: 0.85 };
 
+// other players never collide within this radius of the main game spawn, so they can't block it
+static MAIN_GAME_SPAWN = Location { x: -500., y: -1125., z: 90. };
+static SPAWN_NO_COLLISION_RADIUS = 350.;
+
 struct MultiplayerData {
     slot: int,
     current_location: Location,
+    collision_enabled: bool,
     time_start: int,
     milliseconds: int,
     block_id: int,
@@ -1003,16 +1008,39 @@ fn archipelago_disconnected(error_message: string) {
     ARCHIPELAGO_STATE.ap_connected = false;
 };
 
+fn other_player_should_collide(loc: Location) -> bool {
+    if !SETTINGS.other_player_collision_enabled {
+        return false;
+    }
+    let dx = loc.x - MAIN_GAME_SPAWN.x;
+    let dy = loc.y - MAIN_GAME_SPAWN.y;
+    let dz = loc.z - MAIN_GAME_SPAWN.z;
+    dx * dx + dy * dy + dz * dz > SPAWN_NO_COLLISION_RADIUS * SPAWN_NO_COLLISION_RADIUS
+}
+
+// only calls into the game when the collision state actually changes
+fn update_other_player_collision(player_name: string) {
+    let mut data = ARCHIPELAGO_STATE.multiplayer_info.get(player_name).unwrap();
+    let collide = other_player_should_collide(data.current_location);
+    if collide != data.collision_enabled {
+        Tas::set_platform_collision(data.block_id, collide);
+        data.collision_enabled = collide;
+        ARCHIPELAGO_STATE.multiplayer_info.insert(player_name, data);
+    }
+}
+
 //input par is a list of strings
 fn archipelago_received_bounce(slot: int, player_name: string, timenow: int, milliseconds: int, xs: List<int>, ys: List<int>, zs: List<int>) {
     // ap_log_1(f"{player_name}, {timenow}, {milliseconds}, {xs}, {ys}, {zs}");
     let mut last_location = Location { x: 0., y: 0., z: -1000. };
     let mut current_location = Location { x: xs.get(0).unwrap().to_float(), y: ys.get(0).unwrap().to_float(), z: zs.get(0).unwrap().to_float() };
     let mut block_id = 0;
+    let mut collision_enabled = true;
     if ARCHIPELAGO_STATE.multiplayer_info.get(player_name) != Option::None {
         let data = ARCHIPELAGO_STATE.multiplayer_info.get(player_name).unwrap();
         last_location = data.locations.get(data.locations.len() - 1).unwrap();
         current_location = data.current_location;
+        collision_enabled = data.collision_enabled;
         // ap_log_1(f"last_location X is {last_location}");
         block_id = data.block_id;
     } else {
@@ -1024,6 +1052,8 @@ fn archipelago_received_bounce(slot: int, player_name: string, timenow: int, mil
             Rotation { pitch: 0., yaw: 0., roll: 0. }, 
             OTHER_PLAYER_PLATFORM_SIZE
         );
+        collision_enabled = other_player_should_collide(current_location);
+        Tas::set_platform_collision(block_id, collision_enabled);
     }
 
     // ap_log_1(f"Last location Y for {player_name} is {last_location}, block_id is {block_id}");
@@ -1051,7 +1081,7 @@ fn archipelago_received_bounce(slot: int, player_name: string, timenow: int, mil
     }
     // ap_log_1(f"Received bounce data fromY {player_name}: ({timenow}, {locations2})");
 
-    ARCHIPELAGO_STATE.multiplayer_info.insert(player_name, MultiplayerData { slot: slot, current_location: current_location, time_start: timenow, milliseconds: milliseconds, block_id: block_id, locations: locations2 });
+    ARCHIPELAGO_STATE.multiplayer_info.insert(player_name, MultiplayerData { slot: slot, current_location: current_location, collision_enabled: collision_enabled, time_start: timenow, milliseconds: milliseconds, block_id: block_id, locations: locations2 });
 
 }
 
@@ -1252,6 +1282,7 @@ fn archipelago_tick(time: int) {
                 Tas::set_platform_location(data.block_id, Location{ x: loc.x, y: loc.y, z: loc.z + OTHER_PLAYER_PLATFORM_Z_OFFSET});
                 data.current_location = loc;
                 ARCHIPELAGO_STATE.multiplayer_info.insert(player_name, data);
+                update_other_player_collision(player_name);
             }
         }
         ARCHIPELAGO_STATE.last_bounce_time = time;

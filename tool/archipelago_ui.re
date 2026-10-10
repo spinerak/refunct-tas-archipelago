@@ -347,6 +347,18 @@ fn create_archipelago_settings_menu() -> Ui {
                 SETTINGS.store();
             },
         }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Other Player Collision" },
+            options: List::of(Text { text: "On" }, Text { text: "Off" }),
+            selected: if SETTINGS.other_player_collision_enabled { 0 } else { 1 },
+            onchange: fn(index: int) {
+                SETTINGS.other_player_collision_enabled = index == 0;
+                SETTINGS.store();
+                for key in ARCHIPELAGO_STATE.multiplayer_info.keys() {
+                    update_other_player_collision(key);
+                }
+            },
+        }),
         UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
         UiElement::Chooser(Chooser {
             label: Text { text: "Minimap" },
