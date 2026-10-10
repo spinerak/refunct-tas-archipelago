@@ -423,6 +423,9 @@ static OTHER_PLAYER_PLATFORM_SIZE = Size3D { x: 0.25, y: 0.25, z: 0.85 };
 static MAIN_GAME_SPAWN = Location { x: -500., y: -1125., z: 90. };
 static SPAWN_NO_COLLISION_RADIUS = 350.;
 
+// other players who haven't sent a position for this long (or 3 of their send intervals, if longer) are removed
+static OTHER_PLAYER_TIMEOUT_MS = 10000;
+
 struct MultiplayerData {
     slot: int,
     current_location: Location,
@@ -1274,6 +1277,12 @@ fn archipelago_tick(time: int) {
             // ap_log_1(f"Processing bounce data for {player_name}");
             let mut data = ARCHIPELAGO_STATE.multiplayer_info.get(player_name).unwrap();
             let time_since_start = time - data.time_start;
+            if time_since_start > int::max(OTHER_PLAYER_TIMEOUT_MS, 3 * data.milliseconds) {
+                // they left the AP world (or reconnected under a new id)
+                Tas::destroy_platform(data.block_id);
+                ARCHIPELAGO_STATE.multiplayer_info.remove(player_name);
+                continue;
+            }
             let index = time_since_start * data.locations.len() / data.milliseconds;
             // ap_log_1(f"Bounce data for {player_name}: time_since_start={time_since_start}, index={index}, locations_len={data.locations.len()}");
             if index < data.locations.len() {
