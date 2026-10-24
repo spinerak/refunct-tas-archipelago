@@ -1726,8 +1726,8 @@ fn archipelago_got_grass(){
 }
 
 fn archipelago_init(gamemode: int){
+    Tas::abilities_set_swim(true);
     if ARCHIPELAGO_STATE.gamemode == 18 || ARCHIPELAGO_STATE.gamemode == 19 || ARCHIPELAGO_STATE.gamemode == 20 {  // revert to og map
-        Tas::abilities_set_swim(true);
         MAP_EDITOR_STATE.map = Tas::original_map();
         Tas::apply_map(MAP_EDITOR_STATE.map);
     }
