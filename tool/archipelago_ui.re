@@ -863,10 +863,6 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         List::of(
             Text { text: "Block Brawl" },
             Text { text: "Block Brawl ALT" },
-            Text { text: "Block Brawl rot" },
-            Text { text: "Block Brawl rot ALT" },
-            Text { text: "Block Brawl ROT" },
-            Text { text: "Block Brawl ROT ALT" },
         ),
         ARCHIPELAGO_STATE.block_brawl_mode,
         ARCHIPELAGO_STATE.unlock_block_brawl,
