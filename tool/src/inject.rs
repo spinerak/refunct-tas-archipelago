@@ -13,41 +13,88 @@ use winapi::um::winnt::{PROCESS_ALL_ACCESS, MEM_RESERVE, MEM_COMMIT, PAGE_READWR
 // http://resources.infosecinstitute.com/using-createremotethread-for-dll-injection-on-windows/
 pub fn inject() {
     unsafe {
+        use std::os::windows::ffi::OsStrExt;
+
         let rtil = ::std::env::var("RTIL").unwrap_or("./rtil.dll".to_string());
         let mut path = Path::new(&rtil);
         if !path.is_file() {
             path = Path::new("../rtil/target/i686-pc-windows-msvc/release/rtil.dll");
         }
+
         let absolute = path.canonicalize().unwrap();
-        let s = absolute.to_str().unwrap();
-        println!("Trying to inject {}", s);
-        let lib = CString::new(s).unwrap();
+        println!("Trying to inject {}", absolute.display());
+
+        // Convert the path to null-terminated UTF-16
+        let lib: Vec<u16> = absolute.as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+
+        let lib_size = lib.len() * std::mem::size_of::<u16>();
+
         let pid = pidof();
         let handle = OpenProcess(PROCESS_ALL_ACCESS, 0, pid);
         if handle.is_null() {
-            panic!("Could not open process");
+            panic!("Could not open process: {}", std::io::Error::last_os_error());
         }
+
         let kernel = CString::new("kernel32.dll").unwrap();
-        let load = CString::new("LoadLibraryA").unwrap();
-        let addr = GetProcAddress(GetModuleHandleA(kernel.as_ptr()), load.as_ptr());
+        let load = CString::new("LoadLibraryW").unwrap();
+
+        let addr = GetProcAddress(
+            GetModuleHandleA(kernel.as_ptr()),
+            load.as_ptr()
+        );
+
         if addr.is_null() {
-            panic!("Cannot find LoadLibraryA in kernel32.dll");
+            panic!("Cannot find LoadLibraryW in kernel32.dll");
         }
-        println!("Found LoadLibraryA at {:?}", addr);
-        let arg = VirtualAllocEx(handle, null_mut(), lib.to_bytes_with_nul().len(), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+        println!("Found LoadLibraryW at {:?}", addr);
+
+        let arg = VirtualAllocEx(
+            handle,
+            null_mut(),
+            lib_size,
+            MEM_RESERVE | MEM_COMMIT,
+            PAGE_READWRITE
+        );
+
         if arg.is_null() {
-            panic!("Cannot allocate memory in Refunct");
+            panic!("Cannot allocate memory in Refunct: {}", std::io::Error::last_os_error());
         }
+
         println!("Alloc'ed at {:?}", arg);
-        let n = WriteProcessMemory(handle, arg, lib.as_ptr() as *const _, lib.to_bytes_with_nul().len(), null_mut());
+
+        let n = WriteProcessMemory(
+            handle,
+            arg,
+            lib.as_ptr() as *const _,
+            lib_size,
+            null_mut()
+        );
+
         if n == 0 {
-            panic!("Cannot write to Refunct");
+            panic!("Cannot write to Refunct: {}", std::io::Error::last_os_error());
         }
-        let thread_id = CreateRemoteThread(handle, null_mut(), 0, Some(mem::transmute(addr)), arg, 0, null_mut());
+
+        let thread_id = CreateRemoteThread(
+            handle,
+            null_mut(),
+            0,
+            Some(mem::transmute(addr)),
+            arg,
+            0,
+            null_mut()
+        );
+
         if thread_id.is_null() {
-            panic!("Could not start remote thread");
+            panic!("Could not start remote thread: {}", std::io::Error::last_os_error());
         }
+
         println!("thread_id: {:?}", thread_id);
+
+        CloseHandle(thread_id);
         CloseHandle(handle);
     }
 }
