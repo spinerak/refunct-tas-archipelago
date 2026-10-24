@@ -118,6 +118,8 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(destroy_platform_rebo)
         .add_function(destroy_spawners)
         .add_function(disable_collision_randomly)
+        .add_function(hide_all_vanilla_platforms)
+        .add_function(set_platform_collision)
 
         .add_function(spawn_cube_rebo)
         .add_function(reset_cubes)
@@ -2286,6 +2288,9 @@ fn spawn_platform(loc: Location, rot: Rotation, size: Size3D) -> i32 {
     });
 
     if internal_index != -1 {
+        // a recycled platform may have had its collision disabled
+        find_platform_and(internal_index, |platform| platform.set_collision(true))
+            .unwrap_or_else(|e| log!("Could not enable collision for platform {:?}: {}", internal_index, e));
         return internal_index;
     }
 
@@ -2391,12 +2396,31 @@ fn destroy_spawners() {
     });
 }
 
+#[rebo::function("Tas::set_platform_collision")]
+fn set_platform_collision(internal_index: i32, collision_enabled: bool) {
+    find_platform_and(internal_index, |platform| platform.set_collision(collision_enabled))
+        .unwrap_or_else(|e| log!("Could not set collision for platform {:?}: {}", internal_index, e));
+}
+
 #[rebo::function("Tas::disable_collision_randomly")]
 fn disable_collision_randomly(id1: i32, id2: i32) {
     let random_id = if rand::random() { id1 } else { id2 };
     find_platform_and(random_id, |platform| {
         platform.set_collision(false);
     }).unwrap_or_else(|e| log!("Could not disable collision for platform {:?}: {}", random_id, e));
+}
+
+#[rebo::function("Tas::hide_all_vanilla_platforms")]
+fn hide_all_vanilla_platforms() {
+    UeScope::with(|scope| {
+        LEVELS.lock().unwrap().iter().for_each(|level| {
+            level.platforms.iter().for_each(|platform| {
+                let platform = scope.get(platform);
+                platform.set_collision(false);
+                platform.set_hidden(true);
+            });
+        });
+    });
 }
 
 #[rebo::function("Tas::spawn_cube")]
