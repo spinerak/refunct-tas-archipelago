@@ -61,6 +61,9 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
   - In compatibility, try if legacy mode works.
 - **`debug.bat` says `thread 'main' panicked at 'called Result::unwrap()'...`**
   - Make sure that you configured `LD_PRELOAD` correctly.
+- **Vanilla doesn't launch either**, and the logs contain "Fatal glibc error: malloc.c:2371 (sysmalloc): assertion failed"
+  - Possible workaround: install a malloc replacement library, such as `apt install libmimalloc3`, and add it to the launch options:
+    `LD_PRELOAD="/usr/lib/x86_64-linux-gnu/libmimalloc.so.3.2:/path/to/practice-linux/librtil.so" %command%`
 
 ## Troubleshooting - crashes while connected to AP
 - If the game randomly crashes while playing, and the log doesn't say anything...
