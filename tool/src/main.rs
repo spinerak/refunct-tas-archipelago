@@ -18,6 +18,7 @@ fn main() {
     let mut tas;
     #[cfg(windows)]
     {
+        println!("Version number 1.8.0c (or higher if I forgot to update this line)");
         // inject dll
         println!("Testing if DLL is already injected");
         match Tas::new() {

@@ -597,6 +597,25 @@ fn create_archipelago_settings_menu() -> Ui {
                 SETTINGS.store();
             },
         }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Rotate some minigame blocks" },
+            options: List::of(
+                Text { text: "Yes" },
+                Text { text: "No" },
+            ),
+            selected: match SETTINGS.rotate_some_minigame_blocks {
+                true => 0,
+                false => 1,
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.rotate_some_minigame_blocks = true; },
+                    1 => { SETTINGS.rotate_some_minigame_blocks = false; },
+                    _ => panic(f"unknown index {index}"),
+                };
+                SETTINGS.store();
+            },
+        }),
         UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
         UiElement::Button(UiButton {
             label: Text { text: "Back" },
@@ -844,15 +863,19 @@ fn create_archipelago_gamemodes_menu() -> Ui {
         List::of(
             Text { text: "Block Brawl" },
             Text { text: "Block Brawl ALT" },
+            Text { text: "Block Brawl rot" },
+            Text { text: "Block Brawl rot ALT" },
+            Text { text: "Block Brawl ROT" },
+            Text { text: "Block Brawl ROT ALT" },
         ),
-        if ARCHIPELAGO_STATE.block_brawl_alt { 1 } else { 0 },
+        ARCHIPELAGO_STATE.block_brawl_mode,
         ARCHIPELAGO_STATE.unlock_block_brawl,
         false,
         fn(index: int) {
             if !ARCHIPELAGO_STATE.unlock_block_brawl {
                 return;
             }
-            ARCHIPELAGO_STATE.block_brawl_alt = index != 0;
+            ARCHIPELAGO_STATE.block_brawl_mode = index;
             archipelago_init(5);
             leave_ui();
         }

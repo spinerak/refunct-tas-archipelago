@@ -165,6 +165,7 @@ struct Settings {
 
     block_brawl_dash_instead: bool,
     downward_dash_enabled: bool,
+    rotate_some_minigame_blocks: bool,
 }
 static mut SETTINGS = Settings::load();
 
@@ -311,6 +312,7 @@ impl Settings {
             archipelago_log_max_count: get_int("archipelago_log_max_count", 8),
             block_brawl_dash_instead: get_bool("block_brawl_dash_instead", false),
             downward_dash_enabled: get_bool("downward_dash_enabled", true),
+            rotate_some_minigame_blocks: get_bool("rotate_some_minigame_blocks", true),
         }
     }
 
@@ -372,6 +374,7 @@ impl Settings {
         map.insert("archipelago_log_max_count", f"{SETTINGS.archipelago_log_max_count}");
         map.insert("block_brawl_dash_instead", f"{SETTINGS.block_brawl_dash_instead}");
         map.insert("downward_dash_enabled", f"{SETTINGS.downward_dash_enabled}");
+        map.insert("rotate_some_minigame_blocks", f"{SETTINGS.rotate_some_minigame_blocks}");
         Tas::store_settings(map);
     }
 

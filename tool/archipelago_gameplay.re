@@ -61,7 +61,7 @@ struct ArchipelagoState {
     og_randomizer_index: int,
 
 
-    block_brawl_alt: bool,
+    block_brawl_mode: int,
     score_block_brawl_reds: int,
     score_block_brawl_blues: int,
     score_block_brawl_greens: int,
@@ -270,7 +270,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         og_randomizer_order: List::new(),
 
 
-        block_brawl_alt: false,
+        block_brawl_mode: 0,
         score_block_brawl_reds: 0,
         score_block_brawl_blues: 0,
         score_block_brawl_greens: 0,
@@ -399,7 +399,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.8.0b",
+        mod_version: "1.8.0c",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -2178,14 +2178,14 @@ fn archipelago_block_brawl_start(){
     Tas::archipelago_ds_get(keys);
 
     let mut i = 0;
-    if !ARCHIPELAGO_STATE.block_brawl_alt {
+    if ARCHIPELAGO_STATE.block_brawl_mode % 2 == 0 {
         while i < 200 {
-            Tas::spawn_platform_rando_location(3000., 3000., 10.);
+            Tas::spawn_platform_rando_location(3000., 3000., 10., if SETTINGS.rotate_some_minigame_blocks { if i == 0 {1} else if i==1 {2} else {0} } else { 0 });
             i += 1;
         }
-    } else {
+    } else if ARCHIPELAGO_STATE.block_brawl_mode % 2 == 1 {
         while i < 200 {
-            Tas::spawn_platform_rando_location_crazy(3000.);
+            Tas::spawn_platform_rando_location_crazy(3000., if SETTINGS.rotate_some_minigame_blocks { if i == 0 {1} else if i==1 {2} else {0} } else { 0 });
             i += 1;
         }
     }
@@ -2316,7 +2316,7 @@ fn archipelago_block_blub_start(){
 
     let mut i = 0;
     while i < 200 {
-        Tas::spawn_platform_rando_location_uw();
+        Tas::spawn_platform_rando_location_uw(if SETTINGS.rotate_some_minigame_blocks { if i == 0 {1} else if i==1 {2} else {0} } else { 0 });
         i += 1;
     }
 
@@ -2362,6 +2362,8 @@ fn archipelago_block_blub_start(){
         }
         ARCHIPELAGO_STATE.block_blub_cubes_total += 5;
     }
+
+    Tas::spawn_platform(Location { x: -123.742165, y: -832.0598, z: 700. }, Rotation { pitch: 0., yaw: 0., roll: 0. }, Size3D { x: 0.1, y: 0.1, z: 8. });
 }
 
 fn archipelago_block_beat_start(){
@@ -3054,22 +3056,40 @@ fn archipelago_the_climb_start(mode: int){
     let mut ys = -573.4705;
     let mut zs = -250.;
     let mut yaw = 0.;
+    let mut first_above = 0;
     while zs < 9900. {
+        if zs > 3000. && first_above == 0 {
+            first_above = 1;
+        }
+        if zs > 6000. && first_above == 2 {
+            first_above = 3;
+        }
         let mut loc = LocationY { x: xs, y: ys, z: zs, yaw: yaw };
-        if mode == 1 {
-            loc = Tas::spawn_platform_rando_location_2(xs, ys, zs, i);
-        } else if mode == 2 {
-            loc = Tas::spawn_platform_rando_location_3(xs, ys, zs, i);
-        } else if mode == 3 {
-            loc = Tas::spawn_platform_rando_location_4(xs, ys, zs, i);
+        let rota = if SETTINGS.rotate_some_minigame_blocks {
+            if first_above == 1 { 1 } else if first_above == 3 { 2 } else { 0 }
         } else {
-            loc = Tas::spawn_platform_rando_location_5(xs, ys, zs, yaw, i);
+            0
+        };
+        if mode == 1 {
+            loc = Tas::spawn_platform_rando_location_2(xs, ys, zs, i, rota);
+        } else if mode == 2 {
+            loc = Tas::spawn_platform_rando_location_3(xs, ys, zs, i, rota);
+        } else if mode == 3 {
+            loc = Tas::spawn_platform_rando_location_4(xs, ys, zs, i, rota);
+        } else {
+            loc = Tas::spawn_platform_rando_location_5(xs, ys, zs, yaw, i, rota);
         }
         i += 1.;
         xs = loc.x;
         ys = loc.y;
         zs = loc.z;
         yaw = loc.yaw;
+        if first_above == 1 {
+            first_above = 2;
+        }
+        if first_above == 3 {
+            first_above = 4;
+        }
     }
 }
 
