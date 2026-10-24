@@ -202,24 +202,24 @@ fn block_brawl_start(){
     }
     if BLOCK_BRAWL_SETTINGS.brawl_or_blub == "Block Blub" {
         while i < BLOCK_BRAWL_SETTINGS.number_of_platforms {
-            Tas::spawn_platform_rando_location_uw();
+            Tas::spawn_platform_rando_location_uw(0);
             i += 1;
         }
     }
 
-        let mut j = 0;
-        while j < BLOCK_BRAWL_SETTINGS.number_of_cubes_per_color {
-            if BLOCK_BRAWL_SETTINGS.brawl_or_blub == "Block Brawl" {
-                let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., 3000., true),2.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
-                BLOCK_BRAWL_STATE.block_brawl_red_ids.push(id);
-            }
-            if BLOCK_BRAWL_SETTINGS.brawl_or_blub == "Block Blub" {
-                let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
-                BLOCK_BRAWL_STATE.block_brawl_red_ids.push(id);
-            }
-            j += 1;
+    let mut j = 0;
+    while j < BLOCK_BRAWL_SETTINGS.number_of_cubes_per_color {
+        if BLOCK_BRAWL_SETTINGS.brawl_or_blub == "Block Brawl" {
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location(3000., 3000., true),2.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+            BLOCK_BRAWL_STATE.block_brawl_red_ids.push(id);
         }
-        BLOCK_BRAWL_STATE.block_brawl_cubes_total += BLOCK_BRAWL_SETTINGS.number_of_cubes_per_color;
+        if BLOCK_BRAWL_SETTINGS.brawl_or_blub == "Block Blub" {
+            let id = Tas::set_cube_color(Tas::set_cube_scale(Tas::spawn_cube_rando_location_uw(),4.), Color { red: 1., green: 0., blue: 0., alpha: 1. });
+            BLOCK_BRAWL_STATE.block_brawl_red_ids.push(id);
+        }
+        j += 1;
+    }
+    BLOCK_BRAWL_STATE.block_brawl_cubes_total += BLOCK_BRAWL_SETTINGS.number_of_cubes_per_color;
 
     if BLOCK_BRAWL_SETTINGS.number_of_colors >= 2 {
         j = 0;

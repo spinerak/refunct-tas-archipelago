@@ -2105,7 +2105,7 @@ fn spawn_platform_rando_location_crazy(max_loc: f32, rotate_mode: i32) -> i32 {
     id
 }
 #[rebo::function("Tas::spawn_platform_rando_location_uw")]
-fn spawn_platform_rando_location_uw() -> i32 {
+fn spawn_platform_rando_location_uw(rotate_mode: i32) -> i32 {
     let rx = rand::random::<f32>();
     let ry = rand::random::<f32>();
     let rz = rand::random::<f32>();
@@ -2117,13 +2117,23 @@ fn spawn_platform_rando_location_uw() -> i32 {
         yaw: rand::random::<f32>() * 360. as f32,
         roll: rand::random::<f32>() * 360. as f32,
     };
-    let id = spawn_platform(loc, rot, 
-        Size3D { x: rand::random::<f32>() * 3., y: rand::random::<f32>() * 3., z: rand::random::<f32>() * 2. }
-    );
+
+    let siz = Size3D { x: rand::random::<f32>() * 3., y: rand::random::<f32>() * 3., z: rand::random::<f32>() * 2. };
+    let id = spawn_platform(loc, rot, siz);
+    if rotate_mode == 1 {
+        let speed = -15.0 + 30.0 * rand::random::<f32>();
+        set_rotate_platform(id, loc, rot, siz, Rotation { pitch: 0.0, yaw: speed, roll: 0.0 });
+    }
+    if rotate_mode == 2 {
+        let speed1 = -15.0 + 30.0 * rand::random::<f32>();
+        let speed2 = -15.0 + 30.0 * rand::random::<f32>();
+        let speed3 = -15.0 + 30.0 * rand::random::<f32>();
+        set_rotate_platform(id, loc, rot, siz, Rotation { pitch: speed1, yaw: speed2, roll: speed3 });
+    }
     id
 }
 #[rebo::function("Tas::spawn_platform_rando_location_2")]
-fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32) -> LocationY {
+fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32, rotate_mode: i32) -> LocationY {
     let rx = lx + 700. * (rand::random::<f32>()-0.4);
     let ry = ly + 600. * (rand::random::<f32>()-0.4);
     let rz = lz + 500. * (rand::random::<f32>()-0.46 + i / 1500.);
@@ -2133,12 +2143,23 @@ fn spawn_platform_rando_location_2(lx: f32, ly: f32, lz: f32, i: f32) -> Locatio
         yaw: 0.0,
         roll: 0.0,
     };
-    spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. });
+    let siz = Size3D { x: 1., y: 1., z: 1. };
+    let id = spawn_platform(loc, rot, siz);
+    if rotate_mode == 1 {
+        let speed = -15.0 + 30.0 * rand::random::<f32>();
+        set_rotate_platform(id, loc, rot, siz, Rotation { pitch: 0.0, yaw: speed, roll: 0.0 });
+    }
+    if rotate_mode == 2 {
+        let speed1 = -15.0 + 30.0 * rand::random::<f32>();
+        let speed2 = -15.0 + 30.0 * rand::random::<f32>();
+        let speed3 = -15.0 + 30.0 * rand::random::<f32>();
+        set_rotate_platform(id, loc, rot, siz, Rotation { pitch: speed1, yaw: speed2, roll: speed3 });
+    }
     LocationY { x: rx, y: ry, z: rz, yaw: 0.0 }
 }
 
 #[rebo::function("Tas::spawn_platform_rando_location_3")]
-fn spawn_platform_rando_location_3(lx: f32, ly: f32, lz: f32, i: f32) -> LocationY {
+fn spawn_platform_rando_location_3(lx: f32, ly: f32, lz: f32, i: f32, rotate_mode: i32) -> LocationY {
     // Simulate clustered randomness by averaging multiple uniform random values
     let rx = lx + (500.0 * rand::random::<f32>()) * ((0.8 - 0.01 * i) * i + rand::random::<f32>()).sin();
     let ry = ly + (500.0 * rand::random::<f32>()) * ((0.6 - 0.01 * i) * i + rand::random::<f32>()).cos();
@@ -2149,12 +2170,23 @@ fn spawn_platform_rando_location_3(lx: f32, ly: f32, lz: f32, i: f32) -> Locatio
         yaw: 0.0,
         roll: 0.0,
     };
-    spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. });
+    let siz = Size3D { x: 1., y: 1., z: 1. };
+    let id = spawn_platform(loc, rot, siz);
+    if rotate_mode == 1 {
+        let speed = -15.0 + 30.0 * rand::random::<f32>();
+        set_rotate_platform(id, loc, rot, siz, Rotation { pitch: 0.0, yaw: speed, roll: 0.0 });
+    }
+    if rotate_mode == 2 {
+        let speed1 = -15.0 + 30.0 * rand::random::<f32>();
+        let speed2 = -15.0 + 30.0 * rand::random::<f32>();
+        let speed3 = -15.0 + 30.0 * rand::random::<f32>();
+        set_rotate_platform(id, loc, rot, siz, Rotation { pitch: speed1, yaw: speed2, roll: speed3 });
+    }
     LocationY { x: rx, y: ry, z: rz, yaw: 0.0 }
 }
 
 #[rebo::function("Tas::spawn_platform_rando_location_4")]
-fn spawn_platform_rando_location_4(lx: f32, ly: f32, lz: f32, _i: f32) -> LocationY {
+fn spawn_platform_rando_location_4(lx: f32, ly: f32, lz: f32, _i: f32, rotate_mode: i32) -> LocationY {
     // Simulate clustered randomness by averaging multiple uniform random values
     let rx = lx + 400.0 * (rand::random::<f32>() + rand::random::<f32>() + rand::random::<f32>() - 1.5);
     let ry = ly + 400.0 * (rand::random::<f32>() + rand::random::<f32>() + rand::random::<f32>() - 1.5);
@@ -2165,12 +2197,23 @@ fn spawn_platform_rando_location_4(lx: f32, ly: f32, lz: f32, _i: f32) -> Locati
         yaw: 0.0,
         roll: 0.0,
     };
-    spawn_platform(loc, rot, Size3D { x: 1., y: 1., z: 1. });
+    let siz = Size3D { x: 1., y: 1., z: 1. };
+    let id = spawn_platform(loc, rot, siz);
+    if rotate_mode == 1 {
+        let speed = -15.0 + 30.0 * rand::random::<f32>();
+        set_rotate_platform(id, loc, rot, siz, Rotation { pitch: 0.0, yaw: speed, roll: 0.0 });
+    }
+    if rotate_mode == 2 {
+        let speed1 = -15.0 + 30.0 * rand::random::<f32>();
+        let speed2 = -15.0 + 30.0 * rand::random::<f32>();
+        let speed3 = -15.0 + 30.0 * rand::random::<f32>();
+        set_rotate_platform(id, loc, rot, siz, Rotation { pitch: speed1, yaw: speed2, roll: speed3 });
+    }
     LocationY { x: rx, y: ry, z: rz, yaw: 0.0 }
 }
 
 #[rebo::function("Tas::spawn_platform_rando_location_5")]
-fn spawn_platform_rando_location_5(lx: f32, ly: f32, lz: f32, yaw: f32, _i: f32) -> LocationY {
+fn spawn_platform_rando_location_5(lx: f32, ly: f32, lz: f32, yaw: f32, _i: f32, rotate_mode: i32) -> LocationY {
     let rx = lx;
     let ry = ly;
     let rz = lz;
@@ -2182,10 +2225,14 @@ fn spawn_platform_rando_location_5(lx: f32, ly: f32, lz: f32, yaw: f32, _i: f32)
     };
     let siz = Size3D { x: 10.0, y: 0.2, z: 0.2 };
     let _id = spawn_platform(loc, rot, siz);
-    // if rotate_mode == 1 {
-    //     let speed = 5.0 + 15.0 * rand::random::<f32>();
-    //     set_rotate_platform(id, loc, rot, siz, Rotation { pitch: 0.0, yaw: speed, roll: 0.0 });
-    // }
+    if rotate_mode == 1 {
+        // somehow the below code doesn't place the platform at the right place... because of the rotation but why...
+        // let speed = (5.0 + 10.0 * rand::random::<f32>()) * if rand::random::<bool>() { 1.0 } else { -1.0 };
+        // set_rotate_platform(id, loc, rot, siz, Rotation { pitch: 0.0, yaw: speed, roll: 0.0 });
+    }
+    if rotate_mode == 2 {
+        // let's don't :)
+    }
     let hlength = 10.0 * 125.0;
     let endx = rx + hlength * rot.pitch.to_radians().cos() * rot.yaw.to_radians().cos();
     let endy = ry + hlength * rot.pitch.to_radians().cos() * rot.yaw.to_radians().sin();

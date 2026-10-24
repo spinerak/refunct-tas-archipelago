@@ -576,6 +576,25 @@ fn create_archipelago_settings_menu() -> Ui {
                 SETTINGS.store();
             },
         }),
+        UiElement::Chooser(Chooser {
+            label: Text { text: "Rotate some minigame blocks" },
+            options: List::of(
+                Text { text: "Yes" },
+                Text { text: "No" },
+            ),
+            selected: match SETTINGS.rotate_some_minigame_blocks {
+                true => 0,
+                false => 1,
+            },
+            onchange: fn(index: int) {
+                match index {
+                    0 => { SETTINGS.rotate_some_minigame_blocks = true; },
+                    1 => { SETTINGS.rotate_some_minigame_blocks = false; },
+                    _ => panic(f"unknown index {index}"),
+                };
+                SETTINGS.store();
+            },
+        }),
         UiElement::Button(UiButton { label: Text { text: "--" }, onclick: fn(label: Text) {} }),
         UiElement::Button(UiButton {
             label: Text { text: "Back" },
