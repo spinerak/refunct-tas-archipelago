@@ -119,6 +119,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(destroy_spawners)
         .add_function(disable_collision_randomly)
         .add_function(hide_all_vanilla_platforms)
+        .add_function(spawn_vanilla_platform)
         .add_function(set_platform_collision)
 
         .add_function(spawn_cube_rebo)
@@ -2419,7 +2420,29 @@ fn hide_all_vanilla_platforms() {
                 platform.set_collision(false);
                 platform.set_hidden(true);
             });
+            level.buttons.iter().for_each(|platform| {
+                let platform = scope.get(platform);
+                platform.set_collision(false);
+                platform.set_hidden(true);
+            });
         });
+    });
+}
+
+#[rebo::function("Tas::spawn_vanilla_platform")]
+fn spawn_vanilla_platform(cluster_to_find: usize, platform_to_find: usize) {
+    UeScope::with(|scope| {
+        let levels = LEVELS.lock().unwrap();
+        assert_eq!(ORIGINAL_MAP.clusters.len(), levels.len());
+        for (cluster_index, (level, cluster)) in levels.iter().zip(&ORIGINAL_MAP.clusters).enumerate() {
+            level.platforms.iter().zip(&cluster.platforms).enumerate().for_each(|(element_index, _)| {
+                if cluster_index == cluster_to_find-1 && element_index == platform_to_find-1 {
+                    let platform = scope.get(&level.platforms[element_index]);
+                    platform.set_collision(true);
+                    platform.set_hidden(false);
+                }
+            });
+        }
     });
 }
 

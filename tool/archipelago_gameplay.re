@@ -1178,6 +1178,13 @@ fn archipelago_process_item(item_id: int, starting_index: int, item_index: int) 
             }
         }
     }
+
+    if ARCHIPELAGO_STATE.gamemode == 22 {
+        if item_id == 999 { 
+            // activate platform 2-2 just to test
+            Tas::spawn_vanilla_platform(2,2);
+        }
+    }
     
     if item_id == 9999901 { // Clique Button
         ARCHIPELAGO_STATE.unlock_clique_button = true;
@@ -1746,7 +1753,7 @@ fn archipelago_init(gamemode: int){
     ARCHIPELAGO_STATE.gamemode = gamemode;
     ARCHIPELAGO_STATE.triggering_clusters.clear();
 
-    if gamemode == 2 || gamemode == 11 || gamemode == 21 {
+    if gamemode == 2 || gamemode == 11 || gamemode == 21 || gamemode == 22 {
         Tas::set_level(30);
     }
 
@@ -1831,6 +1838,9 @@ fn archipelago_start(){
     if ARCHIPELAGO_STATE.gamemode == 21 {
         archipelago_relocate_start();
     }
+    if ARCHIPELAGO_STATE.gamemode == 22 {
+        archipelago_object_rando_start();
+    }
 
     let mut i = 0;
     for item in ARCHIPELAGO_STATE.received_items {
@@ -1863,6 +1873,11 @@ fn archipelago_main_start(){
 
     archipelago_activate_stepped_on_platforms(List::of());
     archipelago_collect_collected_cubes();
+}
+
+fn archipelago_object_rando_start(){
+    Tas::set_goal_animation_should_play(false);
+    Tas::hide_all_vanilla_platforms();
 }
 
 fn spawn_extra_cubes(){
@@ -3094,7 +3109,7 @@ fn archipelago_the_climb_start(mode: int){
 }
 
 fn ap_on_level_change_function(old: int, new: int) {
-    if ARCHIPELAGO_STATE.gamemode == 2 || ARCHIPELAGO_STATE.gamemode == 11 || ARCHIPELAGO_STATE.gamemode == 21 {
+    if ARCHIPELAGO_STATE.gamemode == 2 || ARCHIPELAGO_STATE.gamemode == 11 || ARCHIPELAGO_STATE.gamemode == 21 || ARCHIPELAGO_STATE.gamemode == 22 {
         // log(f"[AP] on_level_change: {old} -> {new}");
         Tas::set_level(30);
     }

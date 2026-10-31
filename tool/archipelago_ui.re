@@ -1180,7 +1180,27 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             },
             color_default: AP_COLOR_REFUNCT,
             color_selected: AP_COLOR_CYAN,
-        })
+        }),
+        UiElement::ColorButton(UiColorButton {
+            label: Text { text: {
+                if ARCHIPELAGO_STATE.just_clique {
+                    "Object rando (locked)"
+                } else {
+                    "Object rando (main)"
+                }
+            } },
+            onclick: fn(label: Text) {
+                if ARCHIPELAGO_STATE.just_clique {
+                    // log("Object rando gamemode is locked!");
+                    return;
+                }
+                // log("Set gamemode to object rando");
+                archipelago_init(22);
+                leave_ui();
+            },
+            color_default: AP_COLOR_REFUNCT,
+            color_selected: AP_COLOR_CYAN,
+        }),
     );
     elems.extend(unlocked_checks);
     elems.extend(unlocked);
