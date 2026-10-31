@@ -1085,10 +1085,12 @@ fn create_archipelago_gamemodes_menu() -> Ui {
             if preloaded {
                 MAP_EDITOR_STATE.map = Tas::load_map_included(input);
                 Tas::apply_map(MAP_EDITOR_STATE.map);
+                ARCHIPELAGO_STATE.original_map = false;
             } else {
                 if custom_maps.contains(input) {
                     MAP_EDITOR_STATE.map = Tas::load_map(input);
                     Tas::apply_map(MAP_EDITOR_STATE.map);
+                    ARCHIPELAGO_STATE.original_map = false;
                 } else {
                     MAP_EDITOR_STATE.map = Tas::current_map();
                 }

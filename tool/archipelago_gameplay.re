@@ -1,6 +1,8 @@
 
 struct ArchipelagoState {
     ap_connected: bool,
+    
+    original_map: bool,
 
     grass: int,
     wall_jump: int,
@@ -180,7 +182,10 @@ struct ArchipelagoState {
     unlock_relocate_minigame: bool,
     done_relocate_minigame: bool,
     progress_relocate_minigame: string,
-    progress_relocate_minigame_n: int,
+    progress_relocate_minigame_1: int,
+    progress_relocate_minigame_2: int,
+    progress_relocate_minigame_3: int,
+    puzzle_number_relocate: int,
     relocate_seed: float,
     relocate_x: float,
     relocate_y: float,
@@ -210,6 +215,8 @@ struct ArchipelagoState {
 fn fresh_archipelago_state() -> ArchipelagoState {
     ArchipelagoState {
         ap_connected: false,
+
+        original_map: false,
 
         grass: -10000,
         wall_jump: 0,
@@ -388,7 +395,10 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         unlock_relocate_minigame: false,
         done_relocate_minigame: false,
         progress_relocate_minigame: "0/6",
-        progress_relocate_minigame_n: 0,
+        progress_relocate_minigame_1: 0,
+        progress_relocate_minigame_2: 0,
+        progress_relocate_minigame_3: 0,
+        puzzle_number_relocate: 1,
         relocate_seed: 0.,
         relocate_x: 0.,
         relocate_y: 0.,
@@ -399,7 +409,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.8.0c",
+        mod_version: "1.8.0d",
         apworld_version: "",
 
         triggering_clusters: List::new(),
@@ -929,15 +939,13 @@ static mut ARCHIPELAGO_COMPONENT = Component {
                     return;
                 }
 
-                if ARCHIPELAGO_STATE.progress_relocate_minigame_n < 2 {
-                    ARCHIPELAGO_STATE.progress_relocate_minigame_n += 2;
+                if ARCHIPELAGO_STATE.puzzle_number_relocate == 1 {
                     archipelago_send_check(10170001);
                     archipelago_send_check(10171001);
-                } else if ARCHIPELAGO_STATE.progress_relocate_minigame_n < 4 {
-                    ARCHIPELAGO_STATE.progress_relocate_minigame_n += 2;
+                } else if ARCHIPELAGO_STATE.puzzle_number_relocate == 2 {
                     archipelago_send_check(10170002);
                     archipelago_send_check(10171002);
-                } else {
+                } else if ARCHIPELAGO_STATE.puzzle_number_relocate == 3 {
                     archipelago_send_check(10170003);
                     archipelago_send_check(10171003);
                 }
@@ -1727,9 +1735,10 @@ fn archipelago_got_grass(){
 
 fn archipelago_init(gamemode: int){
     Tas::abilities_set_swim(true);
-    if ARCHIPELAGO_STATE.gamemode == 18 || ARCHIPELAGO_STATE.gamemode == 19 || ARCHIPELAGO_STATE.gamemode == 20 {  // revert to og map
+    if !gamemode == 19 && !gamemode == 20 && !ARCHIPELAGO_STATE.original_map {
         MAP_EDITOR_STATE.map = Tas::original_map();
         Tas::apply_map(MAP_EDITOR_STATE.map);
+        ARCHIPELAGO_STATE.original_map = true;
     }
     if ARCHIPELAGO_STATE.gamemode == 21 {
         Tas::set_reticle_width(SETTINGS.reticle_w);
@@ -1759,6 +1768,7 @@ fn archipelago_init(gamemode: int){
     if gamemode == 19 || gamemode == 20 {
         MAP_EDITOR_STATE.map = Tas::load_map_included("defunct");
         Tas::apply_map(MAP_EDITOR_STATE.map);
+        ARCHIPELAGO_STATE.original_map = false;
     }
 }
 
@@ -2070,7 +2080,7 @@ fn archipelago_relocate_start(){
 }
 
 fn new_relocate_image(){
-    let ans = Tas::set_relocate_image(ARCHIPELAGO_STATE.progress_relocate_minigame_n, ARCHIPELAGO_STATE.relocate_seed);
+    let ans = Tas::set_relocate_image(ARCHIPELAGO_STATE.puzzle_number_relocate, ARCHIPELAGO_STATE.relocate_seed);
     MINIMAP_STATE.calculate_minimap_size(MINIMAP_STATE.size);
     ARCHIPELAGO_STATE.relocate_x = ans.get(0).unwrap();
     ARCHIPELAGO_STATE.relocate_y = ans.get(1).unwrap();
@@ -3395,7 +3405,14 @@ fn archipelago_checked_location(id: int){
             ARCHIPELAGO_STATE.done_relocate_minigame = true;
             ap_log(List::of(ColorfulText { text:"Completed Relocate Minigame!", color: AP_COLOR_GREEN }));
         }
-        ARCHIPELAGO_STATE.progress_relocate_minigame_n = number_pressed;
+        
+        if ARCHIPELAGO_STATE.checked_locations.contains(10170001) && ARCHIPELAGO_STATE.checked_locations.contains(10171001) {
+            ARCHIPELAGO_STATE.puzzle_number_relocate = 2;
+        }
+        if ARCHIPELAGO_STATE.checked_locations.contains(10170002) && ARCHIPELAGO_STATE.checked_locations.contains(10171002) {
+            ARCHIPELAGO_STATE.puzzle_number_relocate = 3;
+        }
+
         ARCHIPELAGO_STATE.progress_relocate_minigame = f"{number_pressed}/{relocate_locations.len()}";
     }
 
@@ -3587,6 +3604,10 @@ fn archipelago_received_slot_data(key: string, value: string){
             ap_log_error(f"You are looking for a version that starts with {ARCHIPELAGO_STATE.apworld_version} \n");
             archipelago_disconnected(f"YOU NEED VERSION {ARCHIPELAGO_STATE.apworld_version} TO LOG IN");
         }
+
+        MAP_EDITOR_STATE.map = Tas::original_map();
+        Tas::apply_map(MAP_EDITOR_STATE.map);
+        ARCHIPELAGO_STATE.original_map = true;
 
     }
     

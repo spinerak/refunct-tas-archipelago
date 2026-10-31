@@ -1867,12 +1867,12 @@ fn player_minimap_size() -> Size {
     }
 }
 #[rebo::function("Tas::set_relocate_image")]
-fn set_relocate_image(checks: i64, seed: f64) -> Vec<f32>{
+fn set_relocate_image(puzzle_number: i64, seed: f64) -> Vec<f32>{
     let mut lock = STATE.lock().unwrap();
     let state = lock.as_mut().unwrap();
     let mut image;
     if seed < 0. {
-        if checks == 0 {
+        if puzzle_number == 0 {
             image = state.minimap_image.clone();
         } else {
             image = state.soon_image.clone();
@@ -1900,10 +1900,10 @@ fn set_relocate_image(checks: i64, seed: f64) -> Vec<f32>{
         let number_3 = possible[2];
 
         let mut number = number_1;
-        if checks >= 2 {
+        if puzzle_number == 2 {
             number = number_2;
         }
-        if checks >= 4 {
+        if puzzle_number == 3 {
             number = number_3;
         }
         image = state.relocate_images[number].clone();
@@ -3042,11 +3042,11 @@ fn movement_step_cached(platform: &mut CachedPlatform, delta_seconds: f32) -> i3
             ny = cy + dy / dist * stepp;
             nz = cz + dz / dist * stepp;
         }
-        log!("Variables: cx: {}, cy: {}, cz: {}, dx: {}, dy: {}, dz: {}, dist_sq: {}, stepp: {}, dist: {}, nx: {}, ny: {}, nz: {}", cx, cy, cz, dx, dy, dz, dist_sq, stepp, dist, nx, ny, nz);
+        // log!("Variables: cx: {}, cy: {}, cz: {}, dx: {}, dy: {}, dz: {}, dist_sq: {}, stepp: {}, dist: {}, nx: {}, ny: {}, nz: {}", cx, cy, cz, dx, dy, dz, dist_sq, stepp, dist, nx, ny, nz);
         platform.set_location_and_rotation_cached(nx, ny, nz, rot_pitch, rot_yaw, rot_roll, platform.size.x, platform.size.y, platform.size.z);
         platform.movement.as_mut().unwrap().current_loc = Location { x: nx, y: ny, z: nz };
         platform.movement.as_mut().unwrap().current_rot = Rotation { pitch: rot_pitch, yaw: rot_yaw, roll: rot_roll };
-        log!("Moving platform {} to ({}, {}, {}) with rotation ({}, {}, {})", platform.platform_id, nx, ny, nz, rot_pitch, rot_yaw, rot_roll);
+        // log!("Moving platform {} to ({}, {}, {}) with rotation ({}, {}, {})", platform.platform_id, nx, ny, nz, rot_pitch, rot_yaw, rot_roll);
     }
     0
 }
