@@ -37,7 +37,7 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 - Please try it 2 or 3 times, sometimes it just crashes.
 ### Advanced - General
 - There are two ways to learn more about the error.
-  - Run `debug.bat` (after opening Refunct) and it'll print an error.
+  - Run `debug.bat` (after opening Refunct) and it'll print an error (Windows only).
   - Find the log file at `Users\user\AppData\Local\Temp\refunct-tas.log` (note that the log file may not exist).
 - **`debug.bat` says `"failed to fill whole buffer"`**
   - Do you have Spybot system tray? That program might interfere with Refunct.
