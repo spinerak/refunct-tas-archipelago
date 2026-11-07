@@ -67,6 +67,7 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
 
 ## Troubleshooting - crashes while connected to AP
 - If the game randomly crashes while playing, and the log doesn't say anything...
+  - **NEW** We are aware of issues when playing on 4K resolution. If possible play on a lower resolution for now...
   - Using an external hard drive? Please try to put both Refunct installation and the mod on your (default) C drive.
   - Above doesn't work? A wild guess is you could add this to Steam launch arguments: `cmd /V /C "set WGPU_BACKEND=gles&& %command%"`
     
