@@ -86,6 +86,12 @@ fn create_archipelago_menu() -> Ui {
                 enter_ui(create_minigames_menu());
             },
         }));
+        elements.push(UiElement::Button(UiButton {
+            label: Text { text: "Hide All Platforms lol" },
+            onclick: fn(label: Text) {
+                Tas::hide_all_vanilla_platforms();
+            },
+        }));
     }
 
     elements.push(UiElement::Button(UiButton {

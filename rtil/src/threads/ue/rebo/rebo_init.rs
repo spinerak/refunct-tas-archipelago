@@ -119,6 +119,7 @@ pub fn create_config(rebo_stream_tx: Sender<ReboToStream>) -> ReboConfig {
         .add_function(destroy_spawners)
         .add_function(disable_collision_randomly)
         .add_function(hide_all_vanilla_platforms)
+        .add_function(remove_all_vanilla_platforms)
         .add_function(set_platform_collision)
 
         .add_function(spawn_cube_rebo)
@@ -2410,13 +2411,25 @@ fn disable_collision_randomly(id1: i32, id2: i32) {
     }).unwrap_or_else(|e| log!("Could not disable collision for platform {:?}: {}", random_id, e));
 }
 
+#[rebo::function("Tas::remove_all_vanilla_platforms")]
+fn remove_all_vanilla_platforms() {
+    UeScope::with(|scope| {
+        LEVELS.lock().unwrap().iter().for_each(|level| {
+            level.platforms.iter().for_each(|platform| {
+                let platform = scope.get(platform);
+                platform.set_collision(false);
+                platform.set_hidden(true);
+            });
+        });
+    });
+}
+
 #[rebo::function("Tas::hide_all_vanilla_platforms")]
 fn hide_all_vanilla_platforms() {
     UeScope::with(|scope| {
         LEVELS.lock().unwrap().iter().for_each(|level| {
             level.platforms.iter().for_each(|platform| {
                 let platform = scope.get(platform);
-                platform.set_collision(false);
                 platform.set_hidden(true);
             });
         });
