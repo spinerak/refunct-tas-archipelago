@@ -27,7 +27,7 @@ include "player.re";
 static mut NEW_VERSION: Option<string> = Tas::new_version_string();
 
 fn create_start_menu() -> Ui {
-    let mut ttext = "Press 'm' for menu.";
+    let mut ttext = "Press 'm' for menu. (Press F2 to hide UI)";
     if ARCHIPELAGO_STATE.hide_ui {
         ttext = "";
     }
@@ -37,7 +37,7 @@ fn create_start_menu() -> Ui {
         name: start_menu_text,
         elements: List::new(),
         on_draw: Option::Some(fn() {
-            let mut text = "Press 'm' for menu.";
+            let mut text = "Press 'm' for menu. (Press F2 to hide UI)";
             if ARCHIPELAGO_STATE.hide_ui {
                 text = "";
             }
@@ -45,7 +45,11 @@ fn create_start_menu() -> Ui {
                 let draw_hud_text = comp.draw_hud_text;
                 text = draw_hud_text(text);
             }
-            start_menu_text.text = text;
+            if !ARCHIPELAGO_STATE.hide_ui{
+                start_menu_text.text = text;
+            } else {
+                start_menu_text.text = "";
+            }
         }),
         selected: 0,
     }

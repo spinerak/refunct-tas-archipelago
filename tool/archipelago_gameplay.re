@@ -210,6 +210,7 @@ struct ArchipelagoState {
     r_pressed: bool,
     r_count: int,
     hide_ui: bool,
+    hide_platforms: bool,
 }
 
 fn fresh_archipelago_state() -> ArchipelagoState {
@@ -422,6 +423,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         r_pressed: false,
         r_count: 0,
         hide_ui: false,
+        hide_platforms: false,
     }
 }
 
@@ -877,9 +879,9 @@ static mut ARCHIPELAGO_COMPONENT = Component {
     },
     on_element_released: fn(index: ElementIndex) {},
     on_key_down: fn(key: KeyCode, is_repeat: bool) {
-        //if key.to_small() == KEY_F2.to_small() {
-        //    ARCHIPELAGO_STATE.hide_ui = !ARCHIPELAGO_STATE.hide_ui;
-        //}
+        if key.to_small() == KEY_F2.to_small() {
+            ARCHIPELAGO_STATE.hide_ui = !ARCHIPELAGO_STATE.hide_ui;
+        }
 
         if key.to_small() == KEY_R.to_small() {
             ARCHIPELAGO_STATE.r_pressed = true;
@@ -998,7 +1000,11 @@ static mut ARCHIPELAGO_DISCONNECTED_INFO_COMPONENT = Component {
     on_reset: fn(old: int, new: int) {},
     on_element_pressed: fn(index: ElementIndex) {},
     on_element_released: fn(index: ElementIndex) {},
-    on_key_down: fn(key: KeyCode, is_repeat: bool) {},
+    on_key_down: fn(key: KeyCode, is_repeat: bool) {
+        if key.to_small() == KEY_F2.to_small() {
+            ARCHIPELAGO_STATE.hide_ui = !ARCHIPELAGO_STATE.hide_ui;
+        }
+    },
     on_key_down_always: fn(key: KeyCode, is_repeat: bool) {},
     on_key_up: fn(key: KeyCode) {},
     on_key_up_always: fn(key: KeyCode) {},

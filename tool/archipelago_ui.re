@@ -89,7 +89,8 @@ fn create_archipelago_menu() -> Ui {
         elements.push(UiElement::Button(UiButton {
             label: Text { text: "Hide All Platforms lol" },
             onclick: fn(label: Text) {
-                Tas::hide_all_vanilla_platforms();
+                ARCHIPELAGO_STATE.hide_platforms = !ARCHIPELAGO_STATE.hide_platforms;
+                Tas::hide_all_vanilla_platforms(ARCHIPELAGO_STATE.hide_platforms);
             },
         }));
     }
@@ -1225,6 +1226,10 @@ fn create_archipelago_gamemodes_menu() -> Ui {
 
 fn get_status_text_lines() -> List<ColorfulText> {  
     let lines = List::new();
+
+    if ARCHIPELAGO_STATE.hide_ui {
+        return lines;
+    }
 
     if INPUT_MODE_IS_UI_ONLY {
         List::extend(lines, List::of(

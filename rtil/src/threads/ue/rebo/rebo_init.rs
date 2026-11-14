@@ -2425,12 +2425,12 @@ fn remove_all_vanilla_platforms() {
 }
 
 #[rebo::function("Tas::hide_all_vanilla_platforms")]
-fn hide_all_vanilla_platforms() {
+fn hide_all_vanilla_platforms(hide: bool) {
     UeScope::with(|scope| {
         LEVELS.lock().unwrap().iter().for_each(|level| {
             level.platforms.iter().for_each(|platform| {
                 let platform = scope.get(platform);
-                platform.set_hidden(true);
+                platform.set_hidden(hide);
             });
         });
     });
