@@ -41,10 +41,10 @@ Maybe [this](https://github.com/spinerak/refunct-tas-archipelago/blob/master/AP_
   - Find the log file at `Users\user\AppData\Local\Temp\refunct-tas.log` (note that the log file may not exist).
 - **`debug.bat` says `"failed to fill whole buffer"`**
   - Do you have Spybot system tray? That program might interfere with Refunct.
-- **Log file ends with `Got code`**
+- **Log file ends with `Got code` or `Getting thread handles`**
   - You might have older graphics drivers.
-  - Right-click the game on steam and add this as launch option: `cmd /C "set WGPU_BACKEND=gles&& %command%"`
-  - Or you could try to update your graphics driver (this helped many times).
+  - You could try to update your graphics driver (this helped many times).
+  - Or: right-click the game on steam and add this as launch option: `cmd /C "set WGPU_BACKEND=gles&& %command%"`
 - **`debug.bat` says `An established connection was aborted` and the log file says `TcpError`.**
   - You might have older graphics drivers, please update them.
 - **`debug.bat` says `ParseIntError { kind: InvalidDigit }`**
