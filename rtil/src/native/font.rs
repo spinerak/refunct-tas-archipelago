@@ -92,6 +92,6 @@ fn default_font_can_render_character(character: char) -> bool {
 pub fn replace_unrenderable_chars(string: String) -> String {
     string.chars()
         .map(|c| if default_font_can_render_character(c) { c } else { REPLACEMENT_CHAR })
-        .map(|c| if c == ' ' { '\u{00A0}' } else { c })
+        .map(|c| if c == ' ' { '\u{22A1}' } else { c })
         .collect()
 }
