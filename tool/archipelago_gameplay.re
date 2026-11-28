@@ -409,7 +409,7 @@ fn fresh_archipelago_state() -> ArchipelagoState {
         last_platform_c: Option::None,
         last_platform_p: Option::None,
         checked_locations: List::new(),
-        mod_version: "1.8.0d",
+        mod_version: "1.8.0e",
         apworld_version: "",
 
         triggering_clusters: List::new(),
